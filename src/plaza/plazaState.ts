@@ -1,8 +1,13 @@
 import type { N8nState } from "../n8n/runs";
 import { n8nHealth, n8nWorkflowIds } from "../n8n/runs";
+import { AUTOMATIONS_SOURCE, N8N_SOURCE } from "../registry/telemetry";
 import type { N8nRun } from "../n8n/types";
 import type { StoredTask } from "../tasks/types";
 import type { WorkflowRun } from "../workflows/types";
+import { buildingDisplayName } from "../modules/names";
+
+/** Map keys of the buildings an agent can be given a room in (catalog/workplaces.ts), by catalog name. */
+const WORKPLACE_KEYS: Readonly<Record<string, string>> = { "Benjaire Marketing Agency": "service:benjaire-marketing" };
 
 /**
  * Atlas Automation Plaza: what the plaza shows, from the automation data Atlas already reads.
@@ -20,6 +25,20 @@ import type { WorkflowRun } from "../workflows/types";
 
 /** An n8n summary older than this is stale: its "running" runs may long have finished. */
 export const N8N_FRESH_MS = 10 * 60_000;
+
+/**
+ * A test run started by hand in the n8n editor that has sat at a wait step this long was left behind,
+ * not real work (Khaneil, 2026-11-18: a Nov 13 test showed "Running for 124 h"). Runs from triggers,
+ * webhooks, forms and agents keep showing however long they wait.
+ */
+export const MANUAL_WAIT_ABANDONED_MS = 24 * 60 * 60_000;
+
+/** True for a hand-started editor test still waiting after a day. */
+export function abandonedTest(r: Pick<N8nRun, "mode" | "status" | "startedAt">, now: number): boolean {
+  if (r.mode !== "manual" || r.status !== "waiting" || !r.startedAt) return false;
+  const age = now - Date.parse(r.startedAt);
+  return Number.isFinite(age) && age > MANUAL_WAIT_ABANDONED_MS;
+}
 
 export type ItemStatus = "running" | "waiting" | "queued" | "blocked" | "awaiting_approval" | "failed";
 
@@ -87,7 +106,11 @@ export interface AgentLike {
   id: string;
   name: string;
   projectId: string;
+  /** Where the agent works, when its manifest seats it outside its project's building. */
+  workplace?: { building: string };
   links?: { label: string; url: string }[];
+  /** The AI agent that owns this automation (catalog owned_by): the plaza names it as the one doing the work. */
+  ownedBy?: string;
 }
 
 /** The parts of an agent runtime this needs (office/model.ts Runtime). */
@@ -139,8 +162,14 @@ function n8nSource(n8n: N8nState, now: number): PlazaSource {
 /** Builds what the plaza shows from Atlas's own automation data. */
 export function plazaSnapshot(i: PlazaInputs): PlazaSnapshot {
   const agentById = new Map(i.agents.map((a) => [a.id, a]));
+  /** The agent the plaza names for a piece of work: an automation's owning agent, else itself. */
+  const lead = (a: AgentLike) => (a.ownedBy && agentById.get(a.ownedBy)) || a;
   const who = (agentId: string | undefined, fallbackName?: string, buildingId?: string) => {
     const a = agentId ? agentById.get(agentId) : undefined;
+    // An agent with a workplace does its work there (Product Lab: Growth & Marketing Studio), so
+    // the plaza names that building, by its current display name, not its project's headquarters.
+    const place = a?.workplace ? WORKPLACE_KEYS[a.workplace.building] : undefined;
+    if (a && place) return { agentId: a.id, agentName: a.name, buildingKey: place, buildingName: buildingDisplayName(place, a.workplace!.building) };
     const projectId = a?.projectId ?? (buildingId && i.projectNames.has(buildingId) ? buildingId : undefined);
     return {
       agentId: a?.id ?? agentId,
@@ -215,12 +244,13 @@ export function plazaSnapshot(i: PlazaInputs): PlazaSnapshot {
     if (t.status === "completed" || t.status === "failed" || t.status === "cancelled") finished.set(`task:${t.id}`, t.status);
   }
 
-  // 2. Agent runtimes: verified runs that no task already covers.
+  // 2. Agent runtimes: verified runs that no task already covers. n8n workflows come from their
+  // runs in step 3, and an owning agent's rolled-up runtime repeats its automations', so both skip.
   if (agents.state === "live") {
     for (const [agentId, r] of i.runtimes) {
       const a = agentById.get(agentId);
-      if (!a) continue;
-      const base = who(agentId);
+      if (!a || r.source === N8N_SOURCE || r.source?.startsWith(AUTOMATIONS_SOURCE)) continue;
+      const base = who(lead(a).id);
       const url = https(r.basis?.url);
       const link: PlazaLink[] = url ? [{ label: r.source === "github" ? "GitHub run" : "Run details", url }] : [];
       if (r.state === "working") {
@@ -249,7 +279,7 @@ export function plazaSnapshot(i: PlazaInputs): PlazaSnapshot {
     for (const a of i.agents) for (const id of n8nWorkflowIds({ links: (a.links ?? []) as Parameters<typeof n8nWorkflowIds>[0]["links"] })) if (!owner.has(id)) owner.set(id, a);
     for (const w of i.n8n.value.workflows) {
       const a = owner.get(w.id);
-      const base = a ? who(a.id) : {};
+      const base = a ? who(lead(a).id) : {};
       const execUrl = (r: N8nRun) => https(`${instance}/workflow/${w.id}/executions/${r.id}`);
       for (const r of w.runs) {
         const id = `n8n:${r.id}`;
@@ -257,6 +287,7 @@ export function plazaSnapshot(i: PlazaInputs): PlazaSnapshot {
         else if (r.status === "error" || r.status === "crashed") finished.set(id, "failed");
         else if (r.status === "canceled") finished.set(id, "cancelled");
         if (r.status !== "running" && r.status !== "waiting" && r.status !== "new") continue;
+        if (abandonedTest(r, i.now)) continue;
         const link: PlazaLink = { label: "n8n execution", url: execUrl(r) };
         if (r.status === "new") {
           queued.push({ id, source: "n8n", title: w.name, status: "queued", detail: "n8n has the run queued.", ...base, links: [link] });

@@ -16,14 +16,7 @@ The Mac app is signed with Atlas's own certificate, not an Apple Developer ID, a
 
 ## First run
 
-A fresh install opens **personal setup** (six steps). Each step is saved, so you can close the window and pick up later. An install that already has Atlas data skips it and keeps everything in a workspace named after your existing business.
-
-1. **Owner**: Set Up My Workspace, Connect Tools, or Explore Atlas (skips setup; open it again from Workspace > Setup).
-2. **Workspace**: name, purpose (Business operations, AI engineering, Infrastructure, Personal operations, or something else), the business or project it runs for, environment, time zone, optional description.
-3. **Tools**: turn on the services this workspace uses. Only services Atlas has adapters for are listed.
-4. **Agents**: add registered agents. Each keeps the tools and permissions its registry entry grants.
-5. **Workflows**: pick templates. *Executable* ones are backed by a real workflow definition; *Design only* ones aren't runnable yet.
-6. **Health check**: integrations connected, agents available, workflows ready, what's missing, security warnings, and the recommended first action. Nothing runs during setup.
+There is no setup popup: Atlas has one owner. On a device with no workspace yet, Atlas quietly creates the Benjaire workspace with every cataloged project and agent, every tool, the executable workflow templates and the time zone from Settings. Change any of it later in **Workspace**. A device that already has a workspace keeps it as it is.
 
 ## Mission Control
 
@@ -33,7 +26,7 @@ Mission Control opens with a **Command brief**: eight plain answers (what agents
 
 Open **Workspace** in the sidebar (on a phone: More > Workspace).
 
-- **Setup**: the readiness check, workspace details, **Businesses and projects** (every building grouped by category, then business, with its repositories, agents, workflows, open tasks and outputs; you can move a building to another category without moving it on the map) and the personal setup.
+- **Setup**: the readiness check, workspace details, **Businesses and projects** (every building grouped by category, then business, with its repositories, agents, workflows, open tasks and outputs; you can move a building to another category without moving it on the map).
 - **Tools**: your private tool library. Status, last check, the projects, agents and workflows that use each tool, setup steps, permissions, diagnostics and disconnect.
 - **Agents**: the agents in this workspace and the agent library.
 - **Workflows**: the workflow template library.
@@ -102,5 +95,4 @@ Workspace > Administration > Usage counts tasks, workflow runs and reported spen
 | GitHub is Degraded | Open the card's diagnostics; usually an expired token or rate limit. Replace the token. |
 | "Run can't start" in Workflow Intelligence | The message names the agent. Turn it on or raise its model limit in Workspace > Agents. |
 | A template says Design only | It has no workflow definition yet; the card names what covers that work today. |
-| Setup didn't appear on a new device | It only appears on a device with no Atlas data. Open it from Workspace > Setup > Open guided setup. |
 | Storage is full | Settings > Data > Clear and refetch removes the GitHub cache; then back up. |

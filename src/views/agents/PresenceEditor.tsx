@@ -2,8 +2,7 @@ import { useMemo, useState } from "react";
 import { agentJobs, homeLabel, type AgentJob } from "../../catalog/agentJobs";
 import { PRESENCE, PRESENCE_LABEL, presenceAt, setAssignment, usePresenceAssignments, validateAssignment, type PresenceAssignment } from "../../catalog/agentPresence";
 import { useIntel } from "../../intel/state";
-import { repoData } from "../../lib/derive";
-import { telemetryFor } from "../../registry/telemetry";
+import { agentTelemetry } from "../../registry/registry";
 import { useAtlas } from "../../state";
 import type { Agent, Catalog } from "../../catalog/types";
 import { COMMON_ZONES, getTimeZone } from "../../lib/timezone";
@@ -54,6 +53,6 @@ export function AgentPresence({ agentId }: { agentId: string }) {
   const job = useMemo(() => agentJobs(catalog, assignments).find((j) => j.agentId === agentId), [catalog, assignments, agentId]);
   const agent = catalog.agents.find((a) => a.id === agentId);
   if (!job || !agent) return <p className="muted small">Only AI agents have a home and workplace.</p>;
-  const telemetry = telemetryFor(agent, repoData(repos[agent.repository]), intel?.runs ?? null, null, intel?.agentRuns ?? null, intel?.production);
+  const telemetry = agentTelemetry(catalog, agent, repos, intel);
   return <PresenceEditor key={agentId} job={job} agent={agent} catalog={catalog} telemetry={telemetry} />;
 }

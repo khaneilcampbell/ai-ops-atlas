@@ -279,7 +279,8 @@ describe("directory", () => {
     );
     expect(filterEntries(entries, { ...EMPTY_FILTER, classification: "A", project: "commerce-pipeline" })).toHaveLength(7);
     expect(filterEntries(entries, { ...EMPTY_FILTER, query: "website quality" }).map((e) => e.profile.id)).toEqual(["benjaire-site-ci", "site-audit"]);
-    expect(filterEntries(entries, { ...EMPTY_FILTER, operational: "verified" }).map((e) => e.profile.id)).toEqual(["atlas-ci"]);
+    expect(filterEntries(entries, { ...EMPTY_FILTER, operational: "verified" }).map((e) => e.profile.id)).toEqual(["atlas-ci", "atlas-release-manager"]);
+    // Atlas Release Manager owns Atlas CI, so Atlas CI's verified run verifies it too.
   });
 
   it("groups by agent type in type order and by project", () => {
@@ -290,7 +291,7 @@ describe("directory", () => {
 
   it("sorts verified runs first and keeps the rest stable by title", () => {
     const s = sortEntries(entries, "lastRun");
-    expect(s[0].profile.id).toBe("atlas-ci");
+    expect(s.slice(0, 2).map((e) => e.profile.id).sort()).toEqual(["atlas-ci", "atlas-release-manager"]);
     const t = sortEntries(entries, "title").map((e) => e.profile.title);
     expect(t).toEqual([...t].sort((a, b) => a.localeCompare(b)));
   });
@@ -302,7 +303,9 @@ describe("directory", () => {
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    expect(s.observable).toBe(36);
+    // 36 with a source of their own, 8 with n8n workflow links (7 automations and Benjaire Product Lab,
+    // which links its hand-off workflow), and 11 owning agents through their automations.
+    expect(s.observable).toBe(55);
   });
 });
 
