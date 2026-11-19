@@ -28,7 +28,7 @@ const SUBS: { id: Sub; label: string }[] = [
   { id: "directory", label: "Directory" },
   { id: "portfolio", label: "Portfolio" },
   { id: "goals", label: "Goals & performance" },
-  { id: "manage", label: "Manage agents" },
+  { id: "manage", label: "Manage automations" },
 ];
 
 interface Prefs {
@@ -54,7 +54,9 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
     const saved = { ...DEFAULT_PREFS, ...load<Partial<Prefs>>(`registry-prefs-${kind}`, {}) };
     // A saved filter from the former mixed directory must not hide the newly separated list.
     const types = kind === "agents" ? ["A", "F"] : ["B", "C", "D", "E"];
-    return { ...saved, classification: types.includes(saved.classification) ? saved.classification : "" };
+    // Manage moved from Agents to Automations (2026-11-18): the managed GitHub workflows are automations.
+    const sub = saved.sub === "manage" && kind === "agents" ? "directory" : saved.sub;
+    return { ...saved, sub, classification: types.includes(saved.classification) ? saved.classification : "" };
   });
   const set = (p: Partial<Prefs>) => setPrefs((x) => ({ ...x, ...p }));
   useEffect(() => save(`registry-prefs-${kind}`, prefs), [prefs, kind]);
@@ -119,7 +121,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
           {kind === "agents" && <RegistryRefresh />}
         </div>
         <div className="seg" role="tablist" aria-label="Registry views">
-          {SUBS.filter((s) => s.id !== "manage" || kind === "agents").map((s) => (
+          {SUBS.filter((s) => s.id !== "manage" || kind === "automations").map((s) => (
             <button key={s.id} role="tab" aria-selected={prefs.sub === s.id} className={prefs.sub === s.id ? "on" : ""} onClick={() => set({ sub: s.id })}>
               {s.label}
             </button>
@@ -129,7 +131,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
 
       {prefs.sub === "portfolio" && <Portfolio entries={entries} summary={summary} open={open} />}
       {prefs.sub === "goals" && <Goals entries={rows} open={open} />}
-      {prefs.sub === "manage" && kind === "agents" && <Manage open={open} />}
+      {prefs.sub === "manage" && kind === "automations" && <Manage open={open} />}
 
       {prefs.sub === "directory" && kind === "agents" && (
         <div className="seg role-views" role="tablist" aria-label="Directory views">

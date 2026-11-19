@@ -1,5 +1,6 @@
 import type {Agent} from "./types";
 import {WORKSPACE} from "../modules/workspace";
+import {isAiAgent} from "./roles";
 
 /** Buildings an agent can be assigned a room in. The Skyline buildings left with the district (2026-11-08). */
 export const WORKPLACE_BUILDINGS=["Atlas Marketplace","Benjaire Marketing Agency"] as const;
@@ -13,6 +14,18 @@ export const AGENCY_WORKPLACE_ROOMS=["1-content","1-social","1-strategy","1-revi
 const LANDMARK_AGENTS=new Set(WORKSPACE.landmarks.flatMap(l=>l.agents??[]));
 export function projectOfficeAgents(agents:Agent[],projectId:string){
   return agents.filter(a=>a.projectId===projectId&&!a.workplace&&!LANDMARK_AGENTS.has(a.id));
+}
+/**
+ * The workers who get a desk in a headquarters office: AI agents only. An automation is a workflow,
+ * not a member of staff, so it never takes an agent's desk (Khaneil, 2026-11-18); the office sign
+ * still counts it.
+ */
+export function officeDeskAgents(agents:Agent[],projectId:string){
+  return projectOfficeAgents(agents,projectId).filter(a=>isAiAgent(a));
+}
+/** The automations a headquarters runs: counted on its sign, never seated at a desk. */
+export function officeAutomations(agents:Agent[],projectId:string){
+  return projectOfficeAgents(agents,projectId).filter(a=>a.status!=="retired"&&!isAiAgent(a));
 }
 /** The current agent seated in a room. A retired agent no longer runs anywhere, so its room reads vacant. */
 export function workplaceAgent(agents:Agent[],building:string,floor:number,room:string){
