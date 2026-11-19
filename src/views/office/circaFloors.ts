@@ -59,8 +59,9 @@ export const mirrorX=(x:number)=>2*CIRCA_PARTY_WALL-x;
  * The units on one tower's floor, in tower-local coordinates (the east tower draws the same plan mirrored).
  * West tower apartments are numbered n01 to n03, east tower n04 to n06.
  */
-export function circaUnits(level:number,tower:CircaTower="west"):CircaUnit[]{
+export function circaUnits(level:number,tower:CircaTower="west",design=false):CircaUnit[]{
   if(circaLevelKind(level)!=="apartments")return [];
+  if(!design)return circaUnits(level,tower,true).map(u=>({...u,x0:u.x0*CIRCA_SPREAD,x1:u.x1*CIRCA_SPREAD,z0:u.z0*CIRCA_SPREAD,z1:u.z1*CIRCA_SPREAD,door:[u.door[0]*CIRCA_SPREAD,u.door[1]*CIRCA_SPREAD] as [number,number]}));
   const n=circaFloorNumber(level),C=CIRCA_CORRIDOR,westDoor:[number,number]=[-2.1,-1.35],k=tower==="west"?0:3,id=(i:number)=>`${n}0${i+k}`;
   return [
     {id:id(1),beds:2,label:"2 bed · 2 bath · curved glass",x0:-8,x1:CIRCA_UNITS_EAST,z0:-6,z1:C.z0,door:[.2,1.1],mirror:false,tower,layout:"01"},
@@ -73,10 +74,22 @@ export function circaUnits(level:number,tower:CircaTower="west"):CircaUnit[]{
  * Every Circa floor is an oval, like the elliptical towers outside: x radius `rx`, z radius `rz`, centred on the origin.
  * It holds the shared 16 × 12 layout plus the lift landing at x ≈ 7.2..9.8; the street door sits on the rim at +z.
  */
-export const CIRCA_PLATE={rx:10.2,rz:7.4};
+/**
+ * The apartment floors are drawn 30% roomier than their design grid (Khaneil, 2026-11-19: "expand the circle floors so
+ * agents can move around in their apartments"): rooms, walls and the plate spread by CIRCA_SPREAD, furniture keeps its
+ * size (circaInteriorParts.spreadParts). Design coordinates (the 16 x 12 grid) use CIRCA_DESIGN_PLATE.
+ */
+export const CIRCA_SPREAD=1.3;
+export const CIRCA_DESIGN_PLATE={rx:10.2,rz:7.4};
+export const CIRCA_PLATE={rx:CIRCA_DESIGN_PLATE.rx*CIRCA_SPREAD,rz:CIRCA_DESIGN_PLATE.rz*CIRCA_SPREAD};
+/** The lift moves out with the spread corridor, by as much as its car (x 8.6) spreads. */
+export const CIRCA_LIFT_SHIFT=8.6*(CIRCA_SPREAD-1);
 /** Half-width of the oval at depth z, and half-depth at x (0 beyond the rim). */
 export const circaEdgeX=(z:number)=>CIRCA_PLATE.rx*Math.sqrt(Math.max(0,1-(z/CIRCA_PLATE.rz)**2));
 export const circaEdgeZ=(x:number)=>CIRCA_PLATE.rz*Math.sqrt(Math.max(0,1-(x/CIRCA_PLATE.rx)**2));
+/** The same, on the design grid before the spread. */
+export const designEdgeX=(z:number)=>circaEdgeX(z*CIRCA_SPREAD)/CIRCA_SPREAD;
+export const designEdgeZ=(x:number)=>circaEdgeZ(x*CIRCA_SPREAD)/CIRCA_SPREAD;
 /** True when (x, z) lies on the plate, at least `margin` inside the rim. */
 export const onCircaPlate=(x:number,z:number,margin=0)=>(x/(CIRCA_PLATE.rx-margin))**2+(z/(CIRCA_PLATE.rz-margin))**2<=1;
 /**
@@ -85,7 +98,8 @@ export const onCircaPlate=(x:number,z:number,margin=0)=>(x/(CIRCA_PLATE.rx-margi
  * tower mirrored, so both lifts meet at the middle of the podium.
  */
 export type CircaTower="west"|"east";
-export const CIRCA_PODIUM={w:44,d:17,towerX:11.2};
+// Wide enough for the spread towers; towerX grows by the lift shift so both lifts stay where the lobby expects them.
+export const CIRCA_PODIUM={w:56,d:20,towerX:11.2+CIRCA_LIFT_SHIFT};
 export const CIRCA_TOWERS:{id:CircaTower;x:number;mirror:boolean}[]=[{id:"west",x:-CIRCA_PODIUM.towerX,mirror:false},{id:"east",x:CIRCA_PODIUM.towerX,mirror:true}];
 /** A tower-local point in podium coordinates. */
 export const towerToPodium=(tower:CircaTower,x:number,z:number):[number,number]=>tower==="west"?[x-CIRCA_PODIUM.towerX,z]:[CIRCA_PODIUM.towerX-x,z];

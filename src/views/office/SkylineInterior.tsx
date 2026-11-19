@@ -108,7 +108,7 @@ export default function SkylineInterior({building,light,maxFloor=4}:{building:st
   const identity=financialInteriorBrand(building),displayName=identity?.name??building,shownName=identity?buildingDisplayName(`service:financial:${identity.id}`,displayName):currentBuildingName(displayName),circa=identity?.id==="circa",homes=circa,residential=homes||identity?.id==="harbor-residence";
   const [floor,setFloor]=useState(-1);
   // The Financial District interiors (Circa and the others) have walking residents and staff, so they animate.
-  const tower=towerSpec(building),spread=circa?1.75:tower?1.25:1;
+  const tower=towerSpec(building),spread=circa?2.15:tower?1.25:1;
   const reduced=useReducedMotion()||building==="Atlas Hills"||(!circa&&!tower&&(!!identity||FINANCIAL_BUILDINGS.some(b=>b.name===building)));
   const power=usePowerProfile(),visible=usePageVisible();
   const business:{accent:string;subtitle:string;rooms:string[]}|undefined=BUSINESS[building]??{accent:toolBrand(building).primary,subtitle:"SERVICE & PLATFORM OPERATIONS",rooms:["Operations studio","Integration workspace","Quality review","Planning & coordination"]};

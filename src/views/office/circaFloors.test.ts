@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {CIRCA_CORRIDOR,CIRCA_DOOR_Z,CIRCA_PODIUM,onCircaPodium,CIRCA_PLATE,CIRCA_UNITS_EAST,circaEdgeZ,circaFacadeZ,circaFloorName,circaLevelKind,circaPickerName,circaRim,circaUnits,interiorFloors,onCircaPlate} from "./circaFloors";
+import {CIRCA_CORRIDOR,CIRCA_DOOR_Z,CIRCA_LIFT_SHIFT,CIRCA_PODIUM,CIRCA_SPREAD,onCircaPodium,CIRCA_PLATE,CIRCA_UNITS_EAST,circaEdgeZ,circaFacadeZ,circaFloorName,circaLevelKind,circaPickerName,circaRim,circaUnits,interiorFloors,onCircaPlate} from "./circaFloors";
 import {circaApartmentParts,circaLobbyParts,circaPoolDeckParts,type Part,type Parts} from "./circaInteriorParts";
 import {allFloorsPose} from "./interiorPose";
 
@@ -31,11 +31,13 @@ describe("Circa floors inside Enter building",()=>{
       expect(units.map(u=>u.beds).sort()).toEqual([1,1,2]);
       for(const u of units){
         ids.add(u.id);expect(u.id.startsWith(String(level+1))).toBe(true);
-        expect(u.x0).toBeGreaterThanOrEqual(-8);expect(u.x1).toBeLessThanOrEqual(CIRCA_UNITS_EAST);
-        expect(u.z0).toBeGreaterThanOrEqual(-6);expect(u.z1).toBeLessThanOrEqual(6);
-        // Units stay off the corridor and short of the lift landing at x ≈ 7.2.
-        expect(u.z1<=CIRCA_CORRIDOR.z0||u.z0>=CIRCA_CORRIDOR.z1).toBe(true);
-        expect(u.x1).toBeLessThan(7.2);
+        // The rooms are the 16 × 12 design grid spread by CIRCA_SPREAD.
+        const S=CIRCA_SPREAD;
+        expect(u.x0).toBeGreaterThanOrEqual(-8*S);expect(u.x1).toBeLessThanOrEqual(CIRCA_UNITS_EAST*S);
+        expect(u.z0).toBeGreaterThanOrEqual(-6*S);expect(u.z1).toBeLessThanOrEqual(6*S);
+        // Units stay off the corridor and short of the lift landing, which moved out with the spread.
+        expect(u.z1<=CIRCA_CORRIDOR.z0*S||u.z0>=CIRCA_CORRIDOR.z1*S).toBe(true);
+        expect(u.x1).toBeLessThan(7.2+CIRCA_LIFT_SHIFT);
         expect(u.door[0]).toBeGreaterThan(u.x0);expect(u.door[1]).toBeLessThan(u.x1);expect(u.door[1]-u.door[0]).toBeGreaterThanOrEqual(.7);
         expect(u.label).not.toMatch(/\$|rent|available|sq/i);
       }
@@ -65,7 +67,7 @@ describe("Circa floors inside Enter building",()=>{
   it("makes every floor an oval that holds the 16 × 12 rooms' furniture, the lift landing and the street door",()=>{
     expect(CIRCA_PLATE.rx).toBeGreaterThan(CIRCA_PLATE.rz);
     // Lift landing corners (x 7.15..9.85, z ±1.25) and the street door sit on the plate.
-    expect(onCircaPlate(9.85,1.25)).toBe(true);expect(onCircaPodium(-1.2,CIRCA_DOOR_Z)).toBe(true);
+    expect(onCircaPlate(9.85+CIRCA_LIFT_SHIFT,1.25)).toBe(true);expect(onCircaPodium(-1.2,CIRCA_DOOR_Z)).toBe(true);
     // Rim segments close the loop and stay on the edge.
     const rim=circaRim(64);
     expect(rim.reduce((n,s)=>n+s.len,0)).toBeGreaterThan(2*Math.PI*Math.sqrt((CIRCA_PLATE.rx**2+CIRCA_PLATE.rz**2)/2)*.97);
@@ -95,8 +97,15 @@ describe("Circa floors inside Enter building",()=>{
       if(part.p[2]<CIRCA_CORRIDOR.z0-.05&&part.p[0]<CIRCA_UNITS_EAST)expect(part.p[2]).toBeGreaterThanOrEqual(circaFacadeZ(part.p[0])-.06);
   });
 
+  it("spreads the rooms without stretching the furniture",()=>{
+    // The beds keep their 2.05 length; the corridor walls stretch to the wider plate.
+    const parts=circaApartmentParts(2).box;
+    expect(parts.some(p=>Math.abs(p.s[0]-2.05)<1e-9||Math.abs(p.s[2]-2.05)<1e-9)).toBe(true);
+    expect(Math.max(...parts.filter(p=>p.s[1]>=1).map(p=>Math.max(p.s[0],p.s[2])))).toBeGreaterThan(8*CIRCA_SPREAD);
+  });
+
   it("varies the sofas between floors without new geometry",()=>{
-    const sofa=(l:number)=>circaApartmentParts(l).box.filter(p=>Math.abs(p.p[2]-5.45)<.01&&p.s[0]===2.1).map(p=>p.c)[0];
+    const sofa=(l:number)=>circaApartmentParts(l).box.filter(p=>Math.abs(p.p[2]-5.45*CIRCA_SPREAD)<.01&&p.s[0]===2.1).map(p=>p.c)[0];
     expect(new Set(APARTMENT_LEVELS.map(sofa)).size).toBeGreaterThan(1);
     expect(circaApartmentParts(2).box.length).toBe(circaApartmentParts(3).box.length);
   });

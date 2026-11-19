@@ -5,7 +5,7 @@ import LobbyEntrance from "./LobbyEntrance";
 import CircaLobby from "./CircaLobby";
 import {CircaApartments,CircaPoolDeck} from "./CircaUpperFloors";
 import {CircaWalkers,type CircaResidentNow} from "./CircaWalkers";
-import {CIRCA_DOOR_Z,CIRCA_LIFT,CIRCA_PLATE,CIRCA_PODIUM,CIRCA_TOWERS,circaFloorNumber,circaLevelKind} from "./circaFloors";
+import {CIRCA_DOOR_Z,CIRCA_LIFT,CIRCA_LIFT_SHIFT,CIRCA_PLATE,CIRCA_PODIUM,CIRCA_TOWERS,circaFloorNumber,circaLevelKind} from "./circaFloors";
 import {CIRCA_LIFT_OFFSET,CIRCA_LIFT_TOP} from "./circaNav";
 import {LAND_BOTTOM,LAND_TOP,type buildScene} from "../map3d/scene";
 import type {useMaterials} from "../map3d/models";
@@ -51,7 +51,7 @@ export function CircaNightFill({night}:{night:boolean}) {
 
 /** The two lift cars moving through the stack in the all-floors view, empty: no stand-in rider. */
 export function CircaLifts({reduced}:{reduced:boolean}) {
-  return <group>{CIRCA_TOWERS.map(t=><Tower key={t.id} x={t.x} mirror={t.mirror}><MovingLift reduced={reduced} rider={false} finish={CIRCA_LIFT} top={CIRCA_LIFT_TOP} offset={CIRCA_LIFT_OFFSET[t.id]}/></Tower>)}</group>;
+  return <group>{CIRCA_TOWERS.map(t=><Tower key={t.id} x={t.x} mirror={t.mirror}><group position={[CIRCA_LIFT_SHIFT,0,0]}><MovingLift reduced={reduced} rider={false} finish={CIRCA_LIFT} top={CIRCA_LIFT_TOP} offset={CIRCA_LIFT_OFFSET[t.id]}/></group></Tower>)}</group>;
 }
 
 /**
@@ -68,8 +68,8 @@ export function CircaLevel({level,stack,labels,night,reduced,residents,onPick,si
     {CIRCA_TOWERS.map(t=><Tower key={t.id} x={t.x} mirror={t.mirror}>
       {!podium&&<OvalSlab/>}
       {/* Only the agents who live here are drawn: no stand-in lift visitor. */}
-      <ElevatorLanding level={level} reduced={reduced} labels={labels} visitor={false} runner="#9a9893" edge="#1b1b1d" finish={CIRCA_LIFT} top={CIRCA_LIFT_TOP} offset={CIRCA_LIFT_OFFSET[t.id]}
-        name={podium?`${TOWER_NAME[t.id]} tower`:`${TOWER_NAME[t.id]} · Floor ${n}`}/>
+      <group position={[CIRCA_LIFT_SHIFT,0,0]}><ElevatorLanding level={level} reduced={reduced} labels={labels} visitor={false} runner="#9a9893" edge="#1b1b1d" finish={CIRCA_LIFT} top={CIRCA_LIFT_TOP} offset={CIRCA_LIFT_OFFSET[t.id]}
+        name={podium?`${TOWER_NAME[t.id]} tower`:`${TOWER_NAME[t.id]} · Floor ${n}`}/></group>
       {!podium&&<CircaApartments level={level} tower={t.id} night={night} labels={labels} onPick={onPick} residents={residents}/>}
       {!podium&&<CircaWalkers level={level} tower={t.id} residents={residents} chips={!labels} onPick={onPick}/>}
     </Tower>)}

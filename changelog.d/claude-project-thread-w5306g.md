@@ -1,1 +1,2 @@
 - 2026-11-19 · Team Residence Towers now shows all 17 agents inside, each standing in their own apartment with their portrait and name. No more walking loops or stand-in lift riders, and nobody disappears in the daytime. Each one now looks exactly like their character on the city map: same hair, glasses, beard and clothes (#495)
+- 2026-11-19 · The Team Residence Towers apartment floors are 30% roomier, so the agents have space in their apartments. Furniture stays the same size (#495)
