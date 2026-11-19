@@ -197,3 +197,14 @@ describe("the Inside button", () => {
     expect(pick.floor).toBe(defaultFloor(pick.building));
   });
 });
+
+describe("the lift keeps clear of the desks", () => {
+  it("leaves its doors and the space in front of them free of every desk and chair", () => {
+    for (const d of defs.values())
+      for (const desk of d.desks) {
+        const apart = Math.abs(desk.x - d.core.x) >= (DESK_CELL.w / 2) * d.k * 0.85;
+        const zClear = d.core.z > desk.z + 0.935 * d.k || d.core.z + 0.2 < desk.z - 0.38 * d.k;
+        expect(apart || zClear, `${d.id} ${desk.agentId}`).toBe(true);
+      }
+  });
+});

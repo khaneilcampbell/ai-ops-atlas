@@ -151,6 +151,11 @@ export function publishRoutines(r: ReadonlyMap<string, Routine>) {
   routinesNow = r;
   routineWatchers.forEach((f) => f());
 }
+/** The routines now, outside React (review shots find real moments in them). */
+export const routinesSnapshot = (): ReadonlyMap<string, Routine> => routinesNow;
+/** Review shots only (visual/agent-fit.visual.ts): a routine drawn in place of an agent's own. Always empty in the app. */
+export const routineOverride = new Map<string, Routine>();
+
 export function useRoutines(): ReadonlyMap<string, Routine> {
   return useSyncExternalStore(
     (f) => {

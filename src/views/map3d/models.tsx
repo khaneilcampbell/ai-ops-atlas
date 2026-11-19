@@ -28,6 +28,7 @@ import { PORTFOLIO_SITE, isPortfolioSite, portfolioSiteTop } from "./portfolioSi
 import { SOC_LAB, isSocLab, socLabTop } from "./socLabPlan";
 import { plazaLanes } from "./streetGraph";
 import { FLOOR_H, LAND_BOTTOM, LAND_TOP, TERRACE_H, WATER_Y, type House, type Kiosk, type Rect, type Scene3D, type StrayBuilding, type Tower } from "./scene";
+import { passWidth, standingClearHeight } from "./agentBody";
 
 // Reusable models for the 3D map. Everything repeated is drawn with instancing, so hundreds of
 // repositories cost a few dozen draw calls instead of thousands.
@@ -746,6 +747,16 @@ const boardShift = (t: Tower) => (t.identity.landmark ? t.size * 0.2 : 0);
 const LANTERN_H = 1.0;
 const SPIRE_H = 1.1;
 
+/**
+ * A headquarters door an agent walks through (buildingDefinition journeyTo): never lower than an agent
+ * standing plus clearance, nor narrower than one agent's pass width (agentBody.ts). It grows up and
+ * out from where it stands; the facade around it keeps its size. The portrait badge is not counted.
+ */
+export function fitDoor(door: Inst): Inst {
+  const [w, h, d] = door.s;
+  return { ...door, s: [Math.max(w, passWidth), Math.max(h, standingClearHeight), d] };
+}
+
 /** Commerce's lobby doors: Financial District size, in the gold glass under the canopy's middle. */
 function commerceDoor(t: Tower): Inst {
   const k = t.size / COMMERCE.refSize, f = commerceFront(k);
@@ -1036,7 +1047,7 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
       <Instanced items={P.lawn} geometry={g.box} material={m.lawn} />
       <Instanced items={P.panels} geometry={g.box} material={m.solar} />
       <Instanced items={P.glass} geometry={g.box} material={m.glass} shadow={false} />
-      <EntranceDoors doors={towers.map(t=>isCommerceTower(t.projectId)?commerceDoor(t):isSocLab(t.projectId)?{p:[t.x+t.size*(SOC_LAB.lobby.canopy.x0+SOC_LAB.lobby.canopy.x1)/2,FLOOR_BASE,t.z+t.size*SOC_LAB.lobby.z1+0.012],s:[t.size*0.2,0.36,0.025]}:isPortfolioSite(t.projectId)?{p:[t.x+t.size*0.04,FLOOR_BASE,t.z+t.size*(PORTFOLIO_SITE.core.z1-0.06)+0.005],s:[t.size*0.24,0.3,0.025]}:isIntelligenceHub(t.projectId)?{p:[t.x-t.size*0.16,FLOOR_BASE,t.z+t.size*(0.5-INTELLIGENCE_HUB.ground.inset)+0.005],s:[t.size*0.22,0.3,0.025]}:isGithubTower(t.projectId)?{p:[t.x-t.size*0.02,FLOOR_BASE,t.z+t.size*GITHUB_TOWER.podium[0].z1+0.005],s:[t.size*0.3,0.2,0.025]}:isRibbonTower(t.projectId)?{p:[t.x+LOBBY_DOOR.x*t.size/RIBBON.refSize,FLOOR_BASE,t.z+Math.max(...podiumRing(0,t.size/RIBBON.refSize).map(([,z])=>z))*0.94+0.02],s:[LOBBY_DOOR.width*t.size/RIBBON.refSize,LOBBY_DOOR.height*t.size/RIBBON.refSize,0.025]}:t.identity.landmark?{p:[t.x-t.size*0.14,FLOOR_BASE,t.z+t.size*0.335],s:[t.size*0.3,0.24,0.025]}:{p:[t.x,FLOOR_BASE,t.z+t.size/2+0.025],s:[t.size*0.38,0.24,0.025]})} g={g} m={m}/>
+      <EntranceDoors doors={towers.map(t=>fitDoor(isCommerceTower(t.projectId)?commerceDoor(t):isSocLab(t.projectId)?{p:[t.x+t.size*(SOC_LAB.lobby.canopy.x0+SOC_LAB.lobby.canopy.x1)/2,FLOOR_BASE,t.z+t.size*SOC_LAB.lobby.z1+0.012],s:[t.size*0.2,0.36,0.025]}:isPortfolioSite(t.projectId)?{p:[t.x+t.size*0.04,FLOOR_BASE,t.z+t.size*(PORTFOLIO_SITE.core.z1-0.06)+0.005],s:[t.size*0.24,0.3,0.025]}:isIntelligenceHub(t.projectId)?{p:[t.x-t.size*0.16,FLOOR_BASE,t.z+t.size*(0.5-INTELLIGENCE_HUB.ground.inset)+0.005],s:[t.size*0.22,0.3,0.025]}:isGithubTower(t.projectId)?{p:[t.x-t.size*0.02,FLOOR_BASE,t.z+t.size*GITHUB_TOWER.podium[0].z1+0.005],s:[t.size*0.3,0.2,0.025]}:isRibbonTower(t.projectId)?{p:[t.x+LOBBY_DOOR.x*t.size/RIBBON.refSize,FLOOR_BASE,t.z+Math.max(...podiumRing(0,t.size/RIBBON.refSize).map(([,z])=>z))*0.94+0.02],s:[LOBBY_DOOR.width*t.size/RIBBON.refSize,LOBBY_DOOR.height*t.size/RIBBON.refSize,0.025]}:t.identity.landmark?{p:[t.x-t.size*0.14,FLOOR_BASE,t.z+t.size*0.335],s:[t.size*0.3,0.24,0.025]}:{p:[t.x,FLOOR_BASE,t.z+t.size/2+0.025],s:[t.size*0.38,0.24,0.025]}))} g={g} m={m}/>
       <Instanced items={P.darkGlass} geometry={g.box} material={m.darkGlass} />
       <Instanced items={P.glow} geometry={g.box} material={m.glow} shadow={false} />
       <Instanced items={P.glowBalls} geometry={g.ball} material={m.glow} shadow={false} />
