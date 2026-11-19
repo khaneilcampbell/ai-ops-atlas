@@ -110,7 +110,9 @@ agents:
   it("watches the customer-facing agents, including the n8n buyer and client emails, Stripe publishing and the weekly sales email", () => {
     const { catalog, issues } = buildCatalog(loadCatalogFiles());
     expect(issues).toEqual([]);
-    const watched = catalog.agents.filter((a) => a.alerts);
+    // The Career Execution Agent is a draft, off on purpose until Khaneil publishes it: no alerts.
+    expect(catalog.agents.filter((a) => a.alerts?.notRunning).map((a) => a.id)).toEqual(["career-execution"]);
+    const watched = catalog.agents.filter((a) => a.alerts && !a.alerts.notRunning);
     expect(watched.map((a) => a.id).sort()).toEqual([
       "benjaire-contact-worker", "benjaire-flow-digest", "benjaire-flow-intake", "benjaire-flow-missed-runs", "benjaire-flow-reminders", "benjaire-flow-status",
       "benjaire-shop-delivery", "benjaire-shop-follow-ups", "dataset-census", "order-delivery", "sales-sync", "shopify-publisher",
