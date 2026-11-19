@@ -10,7 +10,7 @@ describe("agent places", () => {
     for (const a of catalog.agents) {
       const p = places.get(a.id)!;
       // Working agents: an apartment drawn inside (301 to 606). Automations: their own numbering. Off duty: none.
-      expect(p.home.label, a.id).toMatch(/apartment ([3-6]0[1-6]|\d+[A-D])$|no apartment while (planned|paused|retired)$/);
+      expect(p.home.label, a.id).toMatch(/apartment ([3-6]0[1-6]|\d+[A-D])$|suite [1-4]0[1-4]$|no apartment while (planned|paused|retired)$/);
       expect(p.work.label.length, a.id).toBeGreaterThan(0);
     }
   });
