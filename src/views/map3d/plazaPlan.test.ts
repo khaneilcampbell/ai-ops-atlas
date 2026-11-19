@@ -47,7 +47,7 @@ describe("Atlas Automation Plaza", () => {
   });
 
   it("stands taller than the Vendor & Supplier Hub next door, and below the nearby towers", () => {
-    const top = TERRACE_H + PLAZA.rise + PLAZA.enclosureHeight;
+    const top = TERRACE_H + PLAZA.rise + PLAZA.enclosureHeight + PLAZA.crownRise;
     const g = scene.galleria!;
     expect(top).toBeGreaterThan(g.y0 + Math.max(g.roof, g.column.top));
     for (const t of scene.towers.filter((t) => Math.hypot(t.x - p.cx, t.z - p.cz) < PLAZA.pathReach)) expect(top).toBeLessThan(t.height);

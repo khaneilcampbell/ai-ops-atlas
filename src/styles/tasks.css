@@ -113,3 +113,26 @@
   .task-panel { width: 100%; }
 }
 .task-table td[data-label=""] { white-space: nowrap; }
+
+/* Atlas database card (Task Center). */
+.db-card { margin: var(--space-8) 0; }
+.db-card .card-head h3 { margin: 0; }
+.db-pad { padding: 0 20px 16px; margin: 0; }
+.db-counts { display: flex; flex-wrap: wrap; gap: var(--space-8); padding: 0 20px var(--space-5); font-size: var(--text-sm); color: var(--ink-2); }
+.db-counts b { color: var(--ink); font-size: var(--text-md); }
+.db-counts .bad b { color: var(--bad); }
+.db-counts .warn b { color: var(--gold-deep); }
+.db-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-6); padding: 0 12px 12px; }
+.db-grid > div { min-width: 0; }
+.db-grid .section-title { padding: 0 8px; }
+.db-grid > div > p { padding: 0 8px; }
+.db-list { max-height: 360px; overflow: auto; padding: 0; }
+.db-list .list-row { align-items: flex-start; }
+.db-wrap { white-space: normal !important; }
+.db-text { font-size: var(--text-sm); margin-top: var(--space-1); overflow-wrap: anywhere; }
+.db-links { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin-top: var(--space-1); font-size: var(--text-sm); }
+.db-changes { margin: var(--space-2) 0; padding-left: var(--space-8); font-size: var(--text-sm); color: var(--ink-2); overflow-wrap: anywhere; }
+.db-approval .task-actions { margin-top: var(--space-3); }
+.db-focus { background: var(--gold-soft); border-radius: var(--radius-sm); }
+@media (max-width: 1180px) { .db-grid { grid-template-columns: minmax(0, 1fr); } .db-list { max-height: none; } }
+.db-list .list-row .meta { white-space: normal; }
