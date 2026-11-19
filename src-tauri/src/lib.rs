@@ -81,6 +81,8 @@ pub fn run() {
             live::live_n8n,
             live::live_n8n_steps,
             live::live_n8n_step_send,
+            live::live_n8n_start_status,
+            live::live_n8n_start,
             live::live_stripe_sales,
             live::registry_refresh,
             live::live_security,

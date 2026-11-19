@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 
 // A stand-in for api.github.com, so the views render the same data on every run with no
 // token and no network. Every repository in the catalog is answered as a public repository

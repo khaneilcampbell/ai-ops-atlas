@@ -1,0 +1,1 @@
+- 2026-11-12 · Behind the scenes: updated the YAML reader Atlas uses for its catalog and settings files to version 5. Nothing on screen changes (#385)
