@@ -10,7 +10,7 @@ or from the **Knowledge & Research Center** building (`service:financial:financi
 | What | Where | Binding |
 | --- | --- | --- |
 | Metadata (title, format, size, summary, agent, task, workflow run, project, building, checksum, states) | The site's existing D1 database `atlas-live` | `LIVE` (already bound) |
-| File bytes | A private R2 bucket, never public | `OUTPUTS` (**not bound yet**, see Setup) |
+| File bytes | The private R2 bucket `atlas-outputs`, never public | `OUTPUTS` (Production, added 2026-11-19) |
 
 Nothing is kept in browser storage. Tables are created on first use: `library_outputs` (one row per
 logical output) and `library_versions` (one row per immutable version).
@@ -71,16 +71,16 @@ All behind Cloudflare Access (`functions/_middleware.ts`), changes same-site onl
 
 The Mac app doesn't read the Library yet (it would need its own sync-key route in Rust); it says so.
 
-## Setup still needed
+## Setup
 
-1. Enable R2 on the Cloudflare account (R2 has a free tier, but Cloudflare asks for a payment method
-   to enable it): https://dash.cloudflare.com/2ff911bc5c9acdcb7f6088b9a25f002f/r2/overview
-2. Create a private bucket, e.g. `atlas-outputs` (no public access, no custom domain).
-3. Bind it to the Pages project as `OUTPUTS` (Settings → Bindings → R2 bucket):
-   https://dash.cloudflare.com/2ff911bc5c9acdcb7f6088b9a25f002f/pages/view/ai-ops-atlas/settings/production
-4. Redeploy, then press reconcile (or `POST /api/outputs/reconcile`) to archive the reports D1 still holds.
+Done on 2026-11-19: R2 enabled on the Cloudflare account (free tier), private bucket `atlas-outputs`
+created, and bound to the Pages project's Production settings as `OUTPUTS`
+(https://dash.cloudflare.com/2ff911bc5c9acdcb7f6088b9a25f002f/pages/view/ai-ops-atlas/settings/production).
 
-Until step 3, outputs are recorded with storage `failed` and the reason "File storage isn't connected".
+After the first deploy that includes the Library, press reconcile (or `POST /api/outputs/reconcile`)
+to archive the reports D1 still holds. Without the binding, outputs are recorded with storage
+`failed` and the reason "File storage isn't connected". Preview deployments don't have the binding,
+so they show that state.
 
 ## Local preview
 
