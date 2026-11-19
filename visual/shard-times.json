@@ -88,5 +88,6 @@
   "street-pavement.visual.ts": 95,
   "trackpad.visual.ts": 108,
   "views.visual.ts": 573,
-  "zoom-haze.visual.ts": 258
+  "zoom-haze.visual.ts": 258,
+  "task-table.visual.ts": 30
 }
