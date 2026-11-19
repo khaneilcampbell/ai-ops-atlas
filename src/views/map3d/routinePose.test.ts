@@ -87,6 +87,29 @@ describe("drawing the routine", () => {
     expect(near / (near + out)).toBeGreaterThan(0.6);
   });
 
+  it("keeps each agent on its own place outside its office, and a team leaving together apart mid-walk", () => {
+    const byOffice = new Map<string, typeof named.agents>();
+    for (const a of named.agents) {
+      const k = places.agents.get(a.personaId)!.office.path[0].join();
+      byOffice.set(k, [...(byOffice.get(k) ?? []), a]);
+    }
+    const team = [...byOffice.values()].sort((a, b) => b.length - a.length)[0];
+    expect(team.length).toBeGreaterThanOrEqual(3);
+    const stand = team.map((a) => {
+      const o = places.agents.get(a.personaId)!.office;
+      return poseAt({ personaId: a.personaId, segments: [{ kind: "stay", t0: NOW, t1: NOW + MIN, at: o.id, activity: "relaxing", phase: null, note: "Outside" }], validUntil: NOW, episodes: [], held: false }, a.personaId, named.agents.indexOf(a), NOW + 1)!;
+    });
+    for (let j = 0; j < stand.length; j++) for (let k = j + 1; k < stand.length; k++) expect(Math.hypot(stand[j].x - stand[k].x, stand[j].z - stand[k].z)).toBeGreaterThan(0.3);
+    // The whole team walks from the office to the Commons at once.
+    const to = places.leisure.find((o) => o.kind === "park")!.spot;
+    const walk = team.map((a) => {
+      const o = places.agents.get(a.personaId)!.office;
+      const seg: Segment = { kind: "walk", t0: NOW, t1: NOW + 2 * MIN, from: { spot: o.id }, to, activity: "walking", phase: null, note: "Walking" };
+      return poseAt({ personaId: a.personaId, segments: [seg], validUntil: NOW, episodes: [], held: false }, a.personaId, named.agents.indexOf(a), NOW + MIN)!;
+    });
+    for (let j = 0; j < walk.length; j++) for (let k = j + 1; k < walk.length; k++) expect(Math.hypot(walk[j].x - walk[k].x, walk[j].z - walk[k].z), `${team[j].personaId} / ${team[k].personaId}`).toBeGreaterThan(0.08);
+  });
+
   it("never stacks two agents on one standing spot", () => {
     const rs = named.agents.map((a) => planRoutine({ personaId: a.personaId, ops: quiet(a.personaId), env: routineEnv(routes, a.personaId, () => NOW)!, now: NOW }));
     for (let t = NOW - 6 * 60 * MIN; t < NOW + 60 * MIN; t += 60_000) {

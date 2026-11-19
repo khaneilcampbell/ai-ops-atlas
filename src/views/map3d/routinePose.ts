@@ -79,7 +79,11 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
       if (!p) return null;
       return at(p[0], p[1], p[2], target!.yaw, { place: target!.label });
     }
-    const q = along(r, r.length * f, place5(c.slot).col * 0.035);
+    // Agents leaving together (one run finishing for a whole team) spread out along and across the
+    // street mid-walk instead of walking as one stacked figure; the offsets fade to nothing at both
+    // ends, so each still starts and stops exactly at its own spot.
+    const mid = Math.sin(Math.PI * f), lag = ((c.slot * 3 + Math.floor(c.slot / 5)) % 5) * 0.14 * mid;
+    const q = along(r, Math.max(0, r.length * f - lag), place5(c.slot).col * (0.035 + 0.035 * mid));
     return at(q.x, q.y, q.z, q.yaw, { walking: c.wall < seg.t1, place: `On the way to ${target?.label ?? "the next place"}` });
   }
 
@@ -148,6 +152,8 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
     if (seg.at === mine.home.id) return { x: stand[0], y: stand[1], z: stand[2], yaw: spot.yaw, figure: false, badge: null, sit: 0, typing: false, walking: false, officeScale: null, place: mine.homeLabel };
     return { x: stand[0], y: stand[1], z: stand[2], yaw: spot.yaw, figure: false, badge: [stand[0], stand[1] + 0.55, stand[2]], sit: 0, typing: false, walking: false, officeScale: null, place: spot.label };
   }
+  // Its own place in the row outside its office is already its own: no shuffle, or neighbours land on each other.
+  if (seg.at === mine.office.id) return at(stand[0], stand[1], stand[2], spot.yaw, { place: spot.label });
   const { col, row } = place5(c.slot), gap = spot.spread ?? 0.14;
   // Side by side across the way it faces, further rows behind.
   const x = stand[0] + Math.cos(spot.yaw) * gap * col - Math.sin(spot.yaw) * gap * row, z = stand[2] - Math.sin(spot.yaw) * gap * col - Math.cos(spot.yaw) * gap * row;
