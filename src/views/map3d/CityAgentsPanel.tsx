@@ -7,6 +7,7 @@ import { ExternalLink } from "../../components/bits";
 import { Icon } from "../../components/Icon";
 import { mapBuildings, useInsideFloors } from "../../buildings/insideFloors";
 import { useN8nRuns } from "../../n8n/runs";
+import { FREE_TIME_CHOICES, freeTimeAvailability, requestFreeTime, type FreeTimeChoice } from "../../routine/freeTime";
 import { CONNECTION_LABEL, RUN_LABEL, type AgentOps, type OwnedWorkflow } from "../../routine/operations";
 import { clock, segmentAt } from "../../routine/routine";
 import { setRoutineHeld, useRoutineHeld, useRoutineOps, useRoutines, useWhereAll } from "../../routine/useRoutineOps";
@@ -100,11 +101,29 @@ export function CityAgentsPanel(p: CityAgentsPanelProps) {
   const [locateNote, setLocateNote] = useState<{ id: string; text: string; office: boolean } | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [freeOpen, setFreeOpen] = useState(false);
+  const [freeNote, setFreeNote] = useState<{ id: string; text: string } | null>(null);
   const actions = useActions();
   useEffect(() => {
     setLocateNote(null);
     setScheduleOpen(false);
+    setFreeOpen(false);
   }, [selected]);
+
+  // Free time: only for agents in their free time now (freeTime.ts). Map picture only.
+  const segOf = (id: string) => (routines.get(id) ? segmentAt(routines.get(id)!, Date.now()) : null);
+  const idle = rows.filter((r) => freeTimeAvailability(segOf(r.personaId), held.has(r.personaId)).ok);
+  const sendFree = (r: RosterRow, kind: FreeTimeChoice) => {
+    requestFreeTime([r.personaId], kind);
+    setFreeOpen(false);
+    const going = FREE_TIME_CHOICES.find((c) => c.kind === kind)?.going ?? "free time";
+    setFreeNote({ id: r.personaId, text: `${r.identity.name} is off to ${going}. Only the map changes: runs, schedules and permissions stay as they are, and a run that comes due still calls ${r.identity.name} back.` });
+  };
+  const sendAllFree = () => {
+    if (!idle.length) return;
+    requestFreeTime(idle.map((r) => r.personaId), "any");
+    setFreeNote({ id: "*", text: `Sent ${idle.length} free ${idle.length === 1 ? "agent" : "agents"} off to something they like. Only the map changes.` });
+  };
 
   // The list keeps its scroll position across details (the detail sits above it, the list never remounts).
   const list = useRef<HTMLUListElement>(null);
@@ -235,6 +254,19 @@ export function CityAgentsPanel(p: CityAgentsPanelProps) {
         <i aria-hidden /> {freshness.text}
       </p>
 
+      {!current && (
+        <div className="ca-freeall">
+          <button type="button" onClick={sendAllFree} disabled={!idle.length || !p.mapOn} title={p.mapOn ? "Send every agent in its free time to the Ferris wheel, yacht, train, parks and more. Map picture only." : "Switch on the 3D map to send agents on free time"}>
+            <Icon name="sun" size={14} /> Free time for idle agents <span className="n">{idle.length}</span>
+          </button>
+          {freeNote?.id === "*" && (
+            <p className="ca-note" role="status">
+              {freeNote.text}
+            </p>
+          )}
+        </div>
+      )}
+
       {current && (
         <section className="ca-detail" aria-label={`${current.identity.name} details`}>
           <div className="ca-who">
@@ -285,6 +317,9 @@ export function CityAgentsPanel(p: CityAgentsPanelProps) {
             <button type="button" aria-expanded={scheduleOpen} onClick={() => setScheduleOpen((o) => !o)}>
               <Icon name="clock" size={14} /> Schedule
             </button>
+            <button type="button" aria-expanded={freeOpen} onClick={() => setFreeOpen((o) => !o)} disabled={!p.mapOn} title={p.mapOn ? "Send this agent off to the Ferris wheel, yacht, train or a park. Map picture only." : "Switch on the 3D map to send agents on free time"}>
+              <Icon name="sun" size={14} /> Free time
+            </button>
             <button type="button" onClick={() => fullProfile(current)}>
               <Icon name="agents" size={14} /> Full profile
             </button>
@@ -300,6 +335,12 @@ export function CityAgentsPanel(p: CityAgentsPanelProps) {
             </p>
           )}
           {followed === current.personaId && <p className="ca-note">Following {current.identity.name}. Move the map yourself or press Stop following to let go.</p>}
+          {freeOpen && <FreeTime row={current} availability={freeTimeAvailability(segOf(current.personaId), held.has(current.personaId))} onPick={(k) => sendFree(current, k)} />}
+          {freeNote?.id === current.personaId && !freeOpen && (
+            <p className="ca-note" role="status">
+              {freeNote.text}
+            </p>
+          )}
           {scheduleOpen && <Schedule ops={ops.get(current.personaId)} held={held.has(current.personaId)} personaId={current.personaId} now={now} live={source === "live"} />}
         </section>
       )}
@@ -361,6 +402,29 @@ export function CityAgentsPanel(p: CityAgentsPanelProps) {
         />
       )}
     </aside>
+  );
+}
+
+/** What the agent can go and do, or why it can't go now. */
+function FreeTime({ row, availability, onPick }: { row: RosterRow; availability: ReturnType<typeof freeTimeAvailability>; onPick(kind: FreeTimeChoice): void }) {
+  return (
+    <div className="ca-freetime" role="group" aria-label={`Free time for ${row.identity.name}`}>
+      {availability.ok ? (
+        <>
+          <p className="sub">Where should {row.identity.name} go?</p>
+          <div className="ca-freechoices">
+            {FREE_TIME_CHOICES.map((c) => (
+              <button key={c.kind} type="button" onClick={() => onPick(c.kind)}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="sub">{availability.reason}</p>
+      )}
+      <p className="sub hint">Only changes the map picture. Runs, schedules, workflows and permissions stay as they are.</p>
+    </div>
   );
 }
 

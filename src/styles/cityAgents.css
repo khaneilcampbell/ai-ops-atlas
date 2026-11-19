@@ -120,3 +120,18 @@
 }
 /* The map stage stretches every svg to fill it (the flat map); icons here keep their own size. */
 .city-agents svg, .map-controls .map-agents-btn svg { width: auto; height: auto; display: inline-block; flex: none; }
+
+/* Free time: send agents with nothing to do off to the wheel, yacht, train or a park (map picture only). */
+.ca-actions button:last-child:nth-child(3n + 1) { grid-column: 1 / -1; }
+.ca-freeall { flex: none; padding: var(--space-4) var(--space-8); border-bottom: 1px solid var(--sage-200); }
+.ca-freeall > button { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 32px; padding: 0 var(--space-5); border: 1px solid var(--sage-300); border-radius: var(--radius-pill); background: var(--sage-50); color: var(--ink); font: 600 var(--text-sm) var(--sans); cursor: pointer; }
+.ca-freeall > button:hover:not(:disabled) { border-color: var(--gold); background: var(--gold-soft); }
+.ca-freeall > button:disabled { opacity: 0.5; cursor: not-allowed; }
+.ca-freeall .n { color: var(--ink-2); font-weight: 500; }
+.ca-freeall .ca-note { margin-top: var(--space-3); }
+.ca-freetime { margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px dashed var(--sage-300); font-size: var(--text-sm); }
+.ca-freetime .sub { display: block; margin: 0 0 var(--space-3); color: var(--ink-2); }
+.ca-freetime .hint { margin: var(--space-4) 0 0; font-size: var(--text-xs); }
+.ca-freechoices { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.ca-freechoices button { min-height: 32px; padding: 0 var(--space-5); border: 1px solid var(--sage-300); border-radius: var(--radius-pill); background: var(--sage-50); color: var(--ink); font: 600 var(--text-sm) var(--sans); cursor: pointer; }
+.ca-freechoices button:hover { border-color: var(--gold); background: var(--gold-soft); }
