@@ -14,7 +14,7 @@ async function run(page: Page, tag: string) {
   await page.getByRole("button", { name: "Enter building", exact: true }).click();
   await settle(page, 2);
   await waitForOffice(page);
-  await page.getByRole("button", { name: "Floor 4 · Agents", exact: true }).click();
+  await page.getByRole("button", { name: "Floor 4", exact: true }).click();
   await settle(page, 4);
   await waitForOffice(page);
   await page.screenshot({ path: join(OUT, `office-holo-floor-${tag}.png`) });

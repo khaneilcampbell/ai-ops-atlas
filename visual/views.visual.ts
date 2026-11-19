@@ -61,7 +61,7 @@ test("mission control, active agents", async ({ page }) => {
 test("agents, manage", async ({ page }) => {
   await openManage(page);
   // Keyboard: the details button is reachable and toggles.
-  const toggle = page.getByRole("button", { name: /Hide for Merge Flow/ });
+  const toggle = page.getByRole("button", { name: /Hide for GitHub · Pull Request Merge Lanes/ });
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await check(page, "agents-manage");
   // The building opens the map with that building selected.
