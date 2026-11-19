@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
+import { focusable } from "./materials";
 import { GLASS_GLOW, glowWeight, INTERIOR_GLOW, lightUp, restore, WINDOW_GLOW, type GlowCopies } from "./activity";
 
 const tex = () => new THREE.Texture();
@@ -42,6 +43,18 @@ describe("whole-building glow follows the building's design", () => {
     expect(b.material).toEqual([lit, wall, basic]);
     expect(windows.emissiveIntensity).toBe(0);
     expect(other.material).toBe(windows);
+  });
+
+  it("keeps the Inside cut on a lit copy, so a glowing building still opens to its floor", () => {
+    const { windows, root, a } = building();
+    focusable(windows);
+    lightUp(root, new Map(), new THREE.Color(0.2, 0.2, 0.2));
+    const lit = a.material as THREE.MeshStandardMaterial;
+    expect(lit).not.toBe(windows);
+    expect(lit.customProgramCacheKey()).toContain("|focus");
+    const sh = { uniforms: {}, vertexShader: "#include <project_vertex>", fragmentShader: "#include <clipping_planes_fragment>\n#include <dithering_fragment>" } as unknown as THREE.WebGLProgramParametersWithUniforms;
+    lit.onBeforeCompile(sh, {} as THREE.WebGLRenderer);
+    expect(sh.uniforms).toHaveProperty("uCutRects");
   });
 
   it("keeps a night facade's own light under the glow", () => {
