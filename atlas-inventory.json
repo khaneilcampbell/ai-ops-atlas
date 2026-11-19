@@ -136,10 +136,11 @@
     "site-builder",
     "site-audit",
     "security-check",
-    "site-ci"
+    "site-ci",
+    "career-execution"
    ],
    "ai_agents": 1,
-   "automations": 3
+   "automations": 4
   },
   {
    "id": "project:github-profile",
@@ -1245,6 +1246,20 @@
    "source": ".github/workflows/site-ci.yml"
   },
   {
+   "id": "career-execution",
+   "name": "Career Application Coordinator",
+   "kind": "Automation",
+   "status": "paused",
+   "building_id": "project:portfolio-site",
+   "building_name": "Portfolio Web Studio",
+   "placement": "Runs from its project building",
+   "owned_by": "site-builder",
+   "project": "portfolio-site",
+   "runtime": "n8n Cloud",
+   "trigger": "Job form, plus a Monday 9am summary and a daily 10am review nudge",
+   "source": ""
+  },
+  {
    "id": "github-merge-flow",
    "name": "GitHub · Pull Request Merge Lanes",
    "kind": "Automation",
@@ -2088,6 +2103,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-19T05:39:16.225Z",
- "commit": "a1726bd8d94e7ea87c1dae10330c0a3958080118"
+ "generated_at": "2026-11-19T06:11:29.173Z",
+ "commit": "23e46a80f09170c7330d065f25de52e59ae2fabc"
 }
