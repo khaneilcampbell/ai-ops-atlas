@@ -242,6 +242,14 @@ it("has no Skyline project or district, and no stray for its old repository", ()
   expect(layout.parks.flatMap(p => p.strays).some(p => p.name === "khaneilcampbell/skyline")).toBe(false);
 });
 
+it("adds no kiosk for an agent that is off on purpose, so a draft doesn't move the city", () => {
+  const draft = catalog.agents.find(a => a.id === "career-execution");
+  expect(draft?.alerts?.notRunning).toBeTruthy();
+  const without: Catalog = { ...catalog, agents: catalog.agents.filter(a => a !== draft) };
+  const where = (l: Layout) => rects(l).map(r => `${r.id}:${r.x},${r.y},${r.w},${r.h}`).sort();
+  expect(where(layoutMap(catalog, [], "district"))).toEqual(where(layoutMap(without, [], "district")));
+});
+
 describe("keepRemovedLots", () => {
   it("leaves the live catalog alone when no removed lot is missing from it", () => {
     const live: Catalog = { ...catalog, projects: catalog.projects.filter(p => p.id !== "soc-lab") };
