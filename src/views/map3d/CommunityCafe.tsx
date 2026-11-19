@@ -112,44 +112,18 @@ export function cafeParts(p: CafePlan): CafeParts {
   for (const z of [(z0 + p.door.z0) / 2, (p.door.z1 + z1) / 2]) solid.push(block(x0 - 0.004, z - 0.006, x0 + 0.01, z + 0.006, F + sill, top, C.gold));
   for (const x of [(x0 + mid) / 2, (mid + x1) / 2]) solid.push(block(x - 0.006, z1 - 0.01, x + 0.006, z1 + 0.004, F + sill, top, C.gold));
 
-  // The upper floor, the roof and the signs (they lift away in the Inside view, so the café shows from above).
-  // A stone floor band with a gold line, then the upper storey: cream walls with a row of tall windows
-  // between stone pilasters (the windows light up warm at night), a cornice, and the green hipped roof.
-  const u0 = top + CAFE.floorBand, u1 = u0 + CAFE.upper;
-  roof.push(block(x0 - 0.03, z0 - 0.03, x1 + 0.03, z1 + 0.03, top, u0, C.stone));
-  roof.push(block(x0 - 0.035, z0 - 0.035, x1 + 0.035, z1 + 0.035, u0 - 0.018, u0 - 0.006, C.gold));
-  roof.push(block(x0, z0, x1, z1, u0, u1, C.cream));
-  const winLow = u0 + 0.1, winHigh = u1 - 0.12, pil = 0.06;
-  const face = (ax: number, az: number, bx: number, bz: number, nx: number, nz: number) => {
-    const L = Math.hypot(bx - ax, bz - az), n = Math.max(2, Math.round(L / 0.42));
-    const at = (f: number) => [ax + (bx - ax) * f, az + (bz - az) * f] as const;
-    // The window band, set just proud of the wall, then pilasters over it.
-    const [cx, cz] = at(0.5), ux = Math.abs(bx - ax) > 1e-6;
-    out.glow.push({ p: [cx + nx * 0.006, winLow, cz + nz * 0.006], s: [ux ? L - 0.16 : 0.012, winHigh - winLow, ux ? 0.012 : L - 0.16], c: "#a9c6cc" });
-    for (let i = 0; i <= n; i++) {
-      const [px, pz] = at(0.04 + (0.92 * i) / n);
-      roof.push({ p: [px + nx * 0.012, u0, pz + nz * 0.012], s: [ux ? pil : 0.03, CAFE.upper, ux ? 0.03 : pil], c: C.stone });
-    }
-    // A sill and a lintel band in stone.
-    roof.push({ p: [cx + nx * 0.015, winLow - 0.025, cz + nz * 0.015], s: [ux ? L : 0.035, 0.025, ux ? 0.035 : L], c: C.stone });
-    roof.push({ p: [cx + nx * 0.015, winHigh, cz + nz * 0.015], s: [ux ? L : 0.035, 0.03, ux ? 0.035 : L], c: C.stone });
-  };
-  face(x0, z1, x1, z1, 0, 1);
-  face(x0, z0, x1, z0, 0, -1);
-  face(x0, z0, x0, z1, -1, 0);
-  face(x1, z0, x1, z1, 1, 0);
-  // Cornice, gold fascia band, green hipped roof, gold ridge.
-  roof.push(block(x0 - 0.04, z0 - 0.04, x1 + 0.04, z1 + 0.04, u1, u1 + CAFE.slab, C.stone));
-  roof.push(block(x0 - CAFE.overhang, z0 - CAFE.overhang, x1 + CAFE.overhang, z1 + CAFE.overhang, u1 + CAFE.slab, u1 + CAFE.slab + CAFE.fascia, C.gold));
-  const roofY = u1 + CAFE.slab + CAFE.fascia;
+  // The roof and the signs on its fascia (they lift away in the Inside view): ceiling slab, gold fascia band, green hipped roof, gold ridge.
+  roof.push(block(x0 - 0.02, z0 - 0.02, x1 + 0.02, z1 + 0.02, top, top + CAFE.slab, C.stone));
+  roof.push(block(x0 - CAFE.overhang, z0 - CAFE.overhang, x1 + CAFE.overhang, z1 + CAFE.overhang, top + CAFE.slab, top + CAFE.slab + CAFE.fascia, C.gold));
+  const roofY = top + CAFE.slab + CAFE.fascia;
   out.hip.push({ p: [mid, roofY, (z0 + z1) / 2], s: [b.w + 2 * CAFE.overhang, CAFE.roofRise, b.d + 2 * CAFE.overhang], c: C.roof });
   roof.push({ p: [mid, roofY + CAFE.roofRise - 0.012, (z0 + z1) / 2], s: [(b.w + 2 * CAFE.overhang) * 0.44, 0.024, 0.03], c: C.gold });
   // The sign over the door and along the south front, on the fascia's face below the band.
-  const signH = 0.14;
-  roof.push(block(x0 - 0.035, p.door.z0 - 0.22, x0, p.door.z1 + 0.22, top - signH - 0.02, top, C.green));
-  out.signs.push({ x: x0 - 0.037, y: top - signH / 2 - 0.01, z: (p.door.z0 + p.door.z1) / 2, w: p.door.z1 - p.door.z0 + 0.4, h: signH * 0.86, yaw: -Math.PI / 2 });
-  roof.push(block(mid - 0.72, z1, mid + 0.72, z1 + 0.035, top - signH - 0.02, top, C.green));
-  out.signs.push({ x: mid, y: top - signH / 2 - 0.01, z: z1 + 0.037, w: 1.4, h: signH * 0.86, yaw: 0 });
+  const signH = 0.11;
+  roof.push(block(x0 - 0.035, p.door.z0 - 0.18, x0, p.door.z1 + 0.18, top - signH - 0.02, top, C.green));
+  out.signs.push({ x: x0 - 0.037, y: top - signH / 2 - 0.01, z: (p.door.z0 + p.door.z1) / 2, w: p.door.z1 - p.door.z0 + 0.32, h: signH * 0.86, yaw: -Math.PI / 2 });
+  roof.push(block(mid - 0.62, z1, mid + 0.62, z1 + 0.035, top - signH - 0.02, top, C.green));
+  out.signs.push({ x: mid, y: top - signH / 2 - 0.01, z: z1 + 0.037, w: 1.2, h: signH * 0.86, yaw: 0 });
 
   // Counter: stone body, marble top with a gold edge, an espresso machine and a pastry case; a back bar on the wall.
   const k = p.counter;
@@ -162,9 +136,7 @@ export function cafeParts(p: CafePlan): CafeParts {
   solid.push(block(k.x, z0 + W, k.x + k.w, z0 + W + 0.05, F + 0.3, F + 0.315, C.wood), block(k.x, z0 + W, k.x + k.w, z0 + W + 0.05, F + 0.42, F + 0.435, C.wood));
   for (let i = 0; i < 9; i++) solid.push(block(k.x + 0.08 + i * 0.12, z0 + W + 0.01, k.x + 0.11 + i * 0.12, z0 + W + 0.04, F + 0.315, F + 0.35, i % 3 ? C.cream : C.green));
   // Pendant lights over the counter and indoor tables, and a warm ceiling panel.
-  // Pendants hang on long cords to a fixed height over the counter and tables, whatever the ceiling height.
-  const hang = F + 0.56;
-  for (const s of p.counterSpots) out.lamps.push({ p: [s.x, hang, k.z + k.d / 2], s: [0.03, 0.03, 0.03] }, { p: [s.x, hang + 0.015, k.z + k.d / 2], s: [0.004, top - hang - 0.015, 0.004], c: C.dark });
+  for (const s of p.counterSpots) out.lamps.push({ p: [s.x, top - 0.14, k.z + k.d / 2], s: [0.025, 0.025, 0.025] }, { p: [s.x, top - 0.12, k.z + k.d / 2], s: [0.004, 0.12, 0.004], c: C.dark });
   out.glow.push(block(x0 + 0.2, z0 + 0.25, x1 - 0.2, z1 - 0.25, top - 0.008, top, C.cream));
 
   // Tables and chairs.
@@ -172,7 +144,7 @@ export function cafeParts(p: CafePlan): CafeParts {
     const g = t.area === "indoor" ? F : G + 0.01;
     solid.push({ p: [t.x, g, t.z], s: [0.03, CAFE.tableTop - 0.012, 0.03], c: C.iron }, { p: [t.x, g, t.z], s: [0.1, 0.008, 0.1], c: C.iron });
     out.tops.push({ p: [t.x, g + CAFE.tableTop - 0.012, t.z], s: [CAFE.tableRadius * 2, 0.012, CAFE.tableRadius * 2], c: C.marble });
-    if (t.area === "indoor") out.lamps.push({ p: [t.x, hang - 0.04, t.z], s: [0.032, 0.032, 0.032] }, { p: [t.x, hang - 0.025, t.z], s: [0.004, top - hang + 0.025, 0.004], c: C.dark });
+    if (t.area === "indoor") out.lamps.push({ p: [t.x, top - 0.16, t.z], s: [0.028, 0.028, 0.028] }, { p: [t.x, top - 0.14, t.z], s: [0.004, 0.14, 0.004], c: C.dark });
     if (t.umbrella) {
       const U = CAFE.umbrella;
       solid.push({ p: [t.x, g + CAFE.tableTop, t.z], s: [0.014, U.low + U.rise - CAFE.tableTop, 0.014], c: C.cream });

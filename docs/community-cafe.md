@@ -6,9 +6,6 @@ free time there. It shows on the 3D map in the District grouping only (the other
 square up).
 
 ## What is built
-- Two floors (Khaneil, 2026-11-19): the café on the ground floor, then a stone floor band and an upper
-  storey with a row of tall windows between stone pilasters, which light up warm at night. Agents use
-  the ground floor only; the upper floor and roof lift away with the Inside toggle.
 - Cream stone walls, a forest-green hipped roof with a gold fascia and ridge, and glass fronts on the
   west (the entrance, facing the walk down from the plaza crossing) and the south, with gold mullions.
 - Inside: a counter with an espresso machine, pastry case and back-bar shelves, pendant lights and two

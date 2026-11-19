@@ -26,19 +26,16 @@ export const CAFE_GROUND = 0.63;
 export const CAFE = {
   /** Interior floor: one shallow step above the paving. */
   floor: CAFE_GROUND + 0.03,
-  /** Ground floor to ceiling: a standing agent and its clearance, with room for pendant lights above. */
-  ceiling: 0.7,
-  /** Two floors (Khaneil, 2026-11-19): a stone floor band, then an upper storey of windows under the roof. */
-  floorBand: 0.08,
-  upper: 0.62,
+  /** Floor to ceiling: a standing agent and its clearance, with room for pendant lights above. */
+  ceiling: 0.66,
   wall: 0.05,
   /** The double entrance door: two agents abreast (one in, one out), and a standing agent's clear height. */
-  door: { width: 2 * passWidth, height: standingClearHeight + 0.12 },
+  door: { width: 2 * passWidth, height: standingClearHeight + 0.09 },
   /** The roof: a slab, a gold fascia band, then the green hipped roof with a small overhang. */
-  slab: 0.06,
-  fascia: 0.08,
-  roofRise: 0.48,
-  overhang: 0.12,
+  slab: 0.05,
+  fascia: 0.06,
+  roofRise: 0.32,
+  overhang: 0.1,
   /** Counter top at about an agent's waist (1.05 m on a 1.8 m agent); table tops a little lower. */
   counterTop: AGENT_BODY.standingHeight * 0.58,
   counterDepth: 0.2,
