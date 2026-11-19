@@ -21,6 +21,15 @@ pedestal; the sign in front reads **ATLAS AUTOMATION PLAZA** with the real count
 If neither agent runs nor n8n are current, the sign says **Status unavailable** and the panel names
 the integrations to connect. Stale agent reports and old n8n summaries count as unavailable.
 
+## Look
+
+Concept A from Higgsfield, chosen by Khaneil on 2026-11-19 (pictures in the project files under
+`automation-plaza/higgsfield-concepts`): a solid gold dome caps the glass, 16 fine gold mullions frame it,
+a gold collar sits at its foot, the three rings are gathered in the middle of the lantern over a warm
+glowing floor, and a gold ring is inlaid in the paving round the glass. The glass and dome together keep
+the old 5.7 height, so the plaza still stands above the Vendor & Supplier Hub and below the nearest tower.
+All of it is decoration; none of it shows status.
+
 ## What each state looks like
 
 The sculpture always moves (Khaneil, 2026-11-18): the whole gyroscope turns slowly in a circle round
