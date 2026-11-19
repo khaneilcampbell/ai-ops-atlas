@@ -3,13 +3,13 @@ import { check, goTo, openAtlas, selectBuilding, settle, waitForOffice, waitForS
 
 // Each key view, compared against visual/baselines/<local|ci>/<name>.png (see check in atlas.ts).
 
-/** Agents → Manage agents, with one agent's details open. */
+/** Automations → Manage automations, with one automation's details open. */
 async function openManage(page: Page) {
-  await openAtlas(page, { storage: { "registry-prefs-agents": { sub: "manage" } } });
-  await goTo(page, "Agents");
-  await expect(page.getByRole("heading", { name: "Manage agents" })).toBeVisible();
+  await openAtlas(page, { storage: { "registry-prefs-automations": { sub: "manage" } } });
+  await goTo(page, "Automations");
+  await expect(page.getByRole("heading", { name: "Manage automations" })).toBeVisible();
   await expect(page.locator(".manage-table .status").first()).toHaveText("Enabled");
-  await page.getByRole("button", { name: /Details for Merge Flow/ }).click();
+  await page.getByRole("button", { name: /Details for GitHub · Pull Request Merge Lanes/ }).click();
   await settle(page, 1);
 }
 
@@ -61,7 +61,7 @@ test("mission control, active agents", async ({ page }) => {
 test("agents, manage", async ({ page }) => {
   await openManage(page);
   // Keyboard: the details button is reachable and toggles.
-  const toggle = page.getByRole("button", { name: /Hide for Merge Flow/ });
+  const toggle = page.getByRole("button", { name: /Hide for GitHub · Pull Request Merge Lanes/ });
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await check(page, "agents-manage");
   // The building opens the map with that building selected.

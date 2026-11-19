@@ -60,9 +60,10 @@ describe("bundled registry", () => {
   });
 
   it("keeps stable ids and the original name when a display title is set", () => {
-    const ci = entries.find((e) => e.profile.id === "atlas-ci")!.profile;
-    expect(ci.title).toBe("Build and Release Engineer");
-    expect(ci.originalName).toBe("Atlas CI");
+    const ci = entries.find((e) => e.profile.id === "benjaire-site-ci")!.profile;
+    expect(ci.title).toBe("Benjaire Site · Build and Test");
+    expect(ci.originalName).toBe("Site CI");
+    expect(entries.find((e) => e.profile.id === "atlas-ci")!.profile.originalName).toBe("Atlas CI");
     expect(catalog.agents.find((a) => a.id === "atlas-ci")?.observe?.githubWorkflow).toBe("ci.yml");
   });
 
@@ -278,7 +279,7 @@ describe("directory", () => {
       ["bruteforce-detection", "security-check", "soc-case-notes", "soc-detection-lead"].sort(),
     );
     expect(filterEntries(entries, { ...EMPTY_FILTER, classification: "A", project: "commerce-pipeline" })).toHaveLength(7);
-    expect(filterEntries(entries, { ...EMPTY_FILTER, query: "website quality" }).map((e) => e.profile.id)).toEqual(["benjaire-site-ci", "site-audit"]);
+    expect(filterEntries(entries, { ...EMPTY_FILTER, query: "site ci" }).map((e) => e.profile.id).sort()).toEqual(["benjaire-site-ci", "site-ci"]);
     expect(filterEntries(entries, { ...EMPTY_FILTER, operational: "verified" }).map((e) => e.profile.id)).toEqual(["atlas-ci", "atlas-release-manager"]);
     // Atlas Release Manager owns Atlas CI, so Atlas CI's verified run verifies it too.
   });
