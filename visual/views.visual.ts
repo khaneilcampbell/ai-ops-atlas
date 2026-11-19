@@ -3,13 +3,13 @@ import { check, goTo, openAtlas, selectBuilding, settle, waitForOffice, waitForS
 
 // Each key view, compared against visual/baselines/<local|ci>/<name>.png (see check in atlas.ts).
 
-/** Agents → Manage agents, with one agent's details open. */
+/** Automations → Manage automations, with one automation's details open. */
 async function openManage(page: Page) {
-  await openAtlas(page, { storage: { "registry-prefs-agents": { sub: "manage" } } });
-  await goTo(page, "Agents");
-  await expect(page.getByRole("heading", { name: "Manage agents" })).toBeVisible();
+  await openAtlas(page, { storage: { "registry-prefs-automations": { sub: "manage" } } });
+  await goTo(page, "Automations");
+  await expect(page.getByRole("heading", { name: "Manage automations" })).toBeVisible();
   await expect(page.locator(".manage-table .status").first()).toHaveText("Enabled");
-  await page.getByRole("button", { name: /Details for Merge Flow/ }).click();
+  await page.getByRole("button", { name: /Details for GitHub · Pull Request Merge Lanes/ }).click();
   await settle(page, 1);
 }
 
