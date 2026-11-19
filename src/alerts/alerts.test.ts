@@ -107,11 +107,14 @@ agents:
     expect(bad.issues.map((i) => i.message)).toEqual([expect.stringContaining("report_within"), expect.stringContaining("alerts.page")]);
   });
 
-  it("watches the customer-facing agents, including n8n order delivery and Stripe publishing", () => {
+  it("watches the customer-facing agents, including the n8n buyer and client emails, Stripe publishing and the weekly sales email", () => {
     const { catalog, issues } = buildCatalog(loadCatalogFiles());
     expect(issues).toEqual([]);
     const watched = catalog.agents.filter((a) => a.alerts);
-    expect(watched.map((a) => a.id).sort()).toEqual(["benjaire-contact-worker", "benjaire-flow-intake", "dataset-census", "marketplace-steward", "order-delivery", "shopify-publisher", "signal-watch"]);
+    expect(watched.map((a) => a.id).sort()).toEqual([
+      "benjaire-contact-worker", "benjaire-flow-digest", "benjaire-flow-intake", "benjaire-flow-missed-runs", "benjaire-flow-reminders", "benjaire-flow-status",
+      "benjaire-shop-delivery", "benjaire-shop-follow-ups", "dataset-census", "order-delivery", "sales-sync", "shopify-publisher",
+    ]);
     for (const a of watched) {
       expect(a.observe?.agentFeed).toBe(true);
       expect(a.alerts!.notRunning).toBeNull();

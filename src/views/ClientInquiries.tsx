@@ -13,7 +13,7 @@ const TICK_MS = 60_000;
 
 /**
  * Puts the branded version of the draft on the clipboard and opens a Gmail compose window with the
- * recipient and subject filled in. KC pastes (Cmd+V) into the message; Gmail keeps the design.
+ * recipient and subject filled in. Khaneil pastes (Cmd+V) into the message; Gmail keeps the design.
  * Nothing is sent from Atlas. If the clipboard is refused, the plain text is in the Gmail link.
  */
 async function openDraft(to: string, draft: { subject: string; body: string }): Promise<string> {

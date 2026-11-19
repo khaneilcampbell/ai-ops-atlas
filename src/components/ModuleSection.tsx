@@ -15,7 +15,7 @@ import { MODULE_HEALTH, ModuleWorkspaceLists } from "./ModuleWorkspaceLists";
 
 /** Labels match the app's navigation (App.tsx NAV). */
 const VIEW_LABEL: Record<ModuleView, string> = {
-  map: "Projects", agents: "Agents", automations: "Automations", repos: "Repositories", overview: "Mission",
+  map: "Projects", business: "Business", agents: "Agents", automations: "Automations", repos: "Repositories", overview: "Mission",
   activity: "Activity", intel: "Intel", usage: "API Usage", settings: "Settings", grid: "Grid",
 };
 
@@ -75,6 +75,7 @@ export function ModuleSection() {
           {feed ? (
             <dd data-state={feed.state} aria-label="Live feed">
               <HealthBadge health={feed.health} /> <span className="muted small">{feed.summary}</span>
+              <div className="muted small">Source: live agent feed · updates automatically</div>
               <ul className="module-feed">
                 {feed.watches.map((w) => (
                   <li key={w.agent.id} className="muted small">

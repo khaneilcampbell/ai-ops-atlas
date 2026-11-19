@@ -28,6 +28,7 @@ const PATHS: Record<string, string> = {
   grid: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
   more: "M4.5 12a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0M10.75 12a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0M17 12a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0",
   sun: "M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41",
+  keyboard: "M3 6h18v12H3zM7 10h.01M11 10h.01M15 10h.01M7 14h10",
   rotate: "M21 12a9 9 0 1 1-2.64-6.36L21 8M21 3v5h-5",
   // A building in section: the roof lifted off, a floor and a desk inside.
   cutaway: "M3 10l9-6 9 6M5 13v7h14v-7M5 16h14M10 20v-2h4v2M8 9.5l4-2.7 4 2.7",
@@ -38,6 +39,11 @@ const PATHS: Record<string, string> = {
   spark: "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 1.7 1.7.8-1.7.8L19 20l-.8-1.7-1.7-.8 1.7-.8z",
   copy: "M9 9h11v11H9zM5 15H4V4h11v1",
   download: "M12 3v12M7 10l5 5 5-5M5 21h14",
+  // A checklist: three ticked rows.
+  tasks: "M10 6h10M10 12h10M10 18h10M3.5 6l1.5 1.5L7.5 5M3.5 12l1.5 1.5 2.5-2.5M3.5 18l1.5 1.5 2.5-2.5",
+  // A workflow: one step branching to two.
+  briefcase: "M4 8h16v11H4zM9 8V5h6v3M4 13h16M11 13v2h2v-2",
+  flow: "M3 10h5v4H3zM16 4h5v4h-5zM16 16h5v4h-5zM8 12h4M12 6v12M12 6h4M12 18h4",
 };
 
 export type IconName = keyof typeof PATHS;

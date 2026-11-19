@@ -79,7 +79,10 @@ pub fn check(
     let Some(p) = price_for(config, model) else {
         return Err((format!("No price is configured for {model}. Add it under Settings → Repository intelligence before running."), None));
     };
-    let worst = (input_tokens_est as f64 * p.input + max_tokens as f64 * p.output) / 1_000_000.0;
+    // Worst case prices every input token as a cache write, the dearest way input is billed
+    // now that the fixed part of each prompt is marked for caching.
+    let input = p.cache_write.unwrap_or(p.input * 1.25).max(p.input);
+    let worst = (input_tokens_est as f64 * input + max_tokens as f64 * p.output) / 1_000_000.0;
     let est = CostEstimate {
         model: model.to_string(),
         input_tokens_est,

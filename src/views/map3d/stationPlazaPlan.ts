@@ -1,15 +1,16 @@
 import type {Rect,Scene3D} from './scene';
 import {distanceToRoad} from './highway';
 import {TRANSPORT} from './transportScale';
-import {COMMUNITY} from './hillsCommunityPlan';
 import {stadiumCrown} from './stadiumGeometry';
 type Pt=[number,number];
 /**
- * One skyline for the stadium centre (KC, 2026-11-09): the wheel's hub sits at the station
+ * One skyline for the stadium centre (Khaneil, 2026-11-09): the wheel's hub sits at the station
  * platform's height and its rim tops out at the stadium roof's crown, so wheel, station and
  * stadium line up. The base scales with the wheel.
  */
-const HUB=COMMUNITY.platformRise+.3;
+// The hub stays at the old raised platform's height (2.06 + .3) now the rail runs on the ground (Khaneil, 2026-11-15),
+// so the wheel keeps its size and the forecourt its footprint.
+const HUB=2.36;
 export const WHEEL={hub:HUB,radius:stadiumCrown()-.04-HUB} as const;
 export const PLAZA_WHEEL={width:4.1*WHEEL.radius/1.65,depth:1.5} as const;
 /** The pavilion's footprint, slab included. */

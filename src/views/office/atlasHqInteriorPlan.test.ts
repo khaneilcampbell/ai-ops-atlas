@@ -1,8 +1,9 @@
 import {describe,expect,it} from 'vitest';
 import {catalog} from '../../catalog';
 import {planOffice} from './model';
-import {HQ_INTERIOR,core,glassHeight,goldReach,isAtlasHq,isGold,isTall,shellAxes,shellOutline,shellValue,terrace} from './atlasHqInteriorPlan';
+import {HQ_INTERIOR,core,floorDoor,glassHeight,goldReach,isAtlasHq,isGold,isTall,shellAxes,shellOutline,shellValue,terrace,wallPieces} from './atlasHqInteriorPlan';
 import {wingSway} from '../map3d/atlasHqPlan';
+import {doorWalk} from './BuildingCirculation';
 
 const project=catalog.projects.find(p=>p.id==='ai-ops-atlas')!;
 const agents=catalog.agents.filter(a=>a.projectId===project.id);
@@ -40,5 +41,19 @@ describe('Atlas HQ interior',()=>{
   const T=terrace(plan.w,plan.d),{a}=shellAxes(plan.w,plan.d);
   expect(T.x1).toBeGreaterThan(a);for(const [x,z] of T.trees){expect(shellValue(plan.w,plan.d,x,z)).toBeGreaterThan(1);expect(x).toBeLessThan(T.x1);expect(z).toBeGreaterThan(T.z0);expect(z).toBeLessThan(T.z1);}
   expect(shellOutline(plan.w,plan.d)).toHaveLength(HQ_INTERIOR.points);
+ });
+ it('opens a clear door in the front glass of each floor, on the route from the lift to the desks',()=>{
+  const {w,d}=plan,door=floorDoor(w,d),pts=shellOutline(w,d),n=pts.length,h=door.width/2;
+  const len=(l:number)=>pts.reduce((sum,p,i)=>sum+wallPieces(p,pts[(i+1)%n],l,w,d).reduce((t,[a,b])=>t+Math.hypot(b[0]-a[0],b[1]-a[1]),0),0);
+  const whole=len(0);
+  // The lobby keeps its glass (it has the entrance); every upper floor loses just the doorway.
+  for(const l of [1,2,3,4]){expect(whole-len(l)).toBeGreaterThan(door.width);expect(whole-len(l)).toBeLessThan(door.width+.5);}
+  for(let i=0;i<n;i++)for(const [a,b] of wallPieces(pts[i],pts[(i+1)%n],2,w,d))if(a[1]>0)expect(Math.min(a[0],b[0])>=h||Math.max(a[0],b[0])<=-h).toBe(true);
+  expect(shellValue(w,d,door.x,door.z)).toBeCloseTo(1);
+  // The walker (lift landing at z = d/2 + 1.1) passes the glass line inside the doorway and ends inside the floor.
+  const landing=d/2+1.1,start=doorWalk(0,0),out=doorWalk(.3,0);
+  expect(landing+start.z).toBeLessThan(door.z);expect(landing+out.z).toBeGreaterThan(door.z);
+  expect(Math.abs(start.x*w/16-door.x)).toBeLessThan(door.width/2);
+  expect(shellValue(w,d,start.x,landing+start.z)).toBeLessThan(1);
  });
 });

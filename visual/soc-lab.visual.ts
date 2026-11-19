@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
 /**
- * The SOC Lab rebuilt as a braced glass tower with three cyan-lit green terraces (KC, 2026-11-09).
+ * The SOC Lab rebuilt as a braced glass tower with three cyan-lit green terraces (Khaneil, 2026-11-09).
  * Writes day/night camera views around it when SOC_LAB_SHOTS=1.
  */
 const out=process.env.SHOT_DIR??'artifacts/soc-lab';

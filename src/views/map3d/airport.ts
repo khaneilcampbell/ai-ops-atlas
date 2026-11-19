@@ -102,7 +102,7 @@ export function planAirport(land: Rect[], paving: Slab[], lot?: Rect): AirportPl
   return { x: edge + 1.2, z: accessZ - 6, accessX: access.x+access.w-.1, accessZ };
 }
 
-/** Landside plaza joining the terminal entrance to the district terrace across from it (KC, 2026-10-31):
+/** Landside plaza joining the terminal entrance to the district terrace across from it (Khaneil, 2026-10-31):
  * terrace-height land over the meadow gap, centred on the entrance and clipped to the facing terrace. */
 export const AIRPORT_FORECOURT={reach:5,half:3.2} as const;
 export function airportForecourt(a:AirportPlan,terraces:Rect[]):Rect|undefined{

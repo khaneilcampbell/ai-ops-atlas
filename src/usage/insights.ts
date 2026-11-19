@@ -101,7 +101,7 @@ export interface Finding {
   detail: string;
 }
 
-/** Frontier tiers: the most expensive models. KC's rule: Haiku classifies, Sonnet summarises and reviews, Opus writes code. */
+/** Frontier tiers: the most expensive models. Khaneil's rule: Haiku classifies, Sonnet summarises and reviews, Opus writes code. */
 export function isFrontier(model: string): boolean {
   const m = model.toLowerCase();
   if (/opus|fable/.test(m)) return true;

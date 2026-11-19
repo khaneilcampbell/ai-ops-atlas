@@ -29,13 +29,14 @@ export function RibbonTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;bas
  const geo=useMemo(()=>packNormals(ribbonGeometry(k,height)),[k,height]);
  useEffect(()=>()=>{for(const v of Object.values(geo))if(v instanceof THREE.BufferGeometry)v.dispose();},[geo]);
  const mats=useMemo(()=>{
-  const dark=glassTexture('#2a333c','#5b6874','#1f262c',61);
+  // Deep forest-green glass in place of charcoal, like the city artwork (2026-11-17); the cream ribbon stays.
+  const dark=glassTexture('#26392f','#557161','#1d2c24',61);
   return {
    textures:[dark.map,dark.glow],
    glass:focusable(new THREE.MeshStandardMaterial({map:dark.map,emissiveMap:dark.glow,emissive:'#ffd6a0',emissiveIntensity:0,roughness:.15,metalness:.35})),
    ribbon:focusable(new THREE.MeshStandardMaterial({color:'#e9dfcc',roughness:.35,metalness:.45})),
    white:focusable(new THREE.MeshStandardMaterial({color:'#f3f1ec',roughness:.6})),
-   pglass:focusable(new THREE.MeshStandardMaterial({color:'#3a4650',roughness:.15,metalness:.4,emissive:'#ffd6a0',emissiveIntensity:0})),
+   pglass:focusable(new THREE.MeshStandardMaterial({color:'#35493e',roughness:.15,metalness:.4,emissive:'#ffd6a0',emissiveIntensity:0})),
    sky:focusable(new THREE.MeshStandardMaterial({color:'#7fa3b8',roughness:.05,metalness:.5,emissive:'#bfe3ff',emissiveIntensity:0})),
    umbrella:focusable(new THREE.MeshStandardMaterial({color:'#faf8f2',roughness:.7})),
   };

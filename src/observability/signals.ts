@@ -97,6 +97,8 @@ export function signalRows(i: SignalInputs): SignalRow[] {
     "usage-sync": () => usage(i.usage),
     n8n: () => fromSnapshot(i.n8n, (v) => ("workflows" in v ? `${plural(v.workflows.length, "workflow")}, ${v.workflows.filter((w) => w.active).length} on` : "")),
     "github-security": () => fromSnapshot(i.security, (v) => ("repos" in v ? plural(v.repos.length, "repository", "repositories") + " read" : "")),
+    // Never polled: it reads Stripe only when Khaneil presses Sync from Stripe in the Business view.
+    "stripe-sales": () => ({ state: "off", at: null, detail: "Read on demand from Business, Finance" }),
   };
   return INTEGRATION_SOURCE.map((c) => ({ id: c.id, label: c.label, ...by[c.id]() }));
 }

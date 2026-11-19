@@ -18,7 +18,7 @@ export interface DealershipPlan extends Rect {lot:Rect;road:Pt[];walk:Pt[];servi
  */
 export interface Showroom {cx:number;cz:number;w:number;d:number;height:number;floors:number}
 export const SHOWROOM_FRONT=3.7;
-/** KC, 2026-10-31: BMW scales with the district: the widest tower's footprint, the shortest tower's height. */
+/** Khaneil, 2026-10-31: BMW scales with the district: the widest tower's footprint, the shortest tower's height. */
 export function dealershipShowroom(buildings:readonly {id:string;height:number}[]=[]):Showroom{
  if(!buildings.length)return {cx:DEALERSHIP.showroomX,cz:DEALERSHIP.showroomZ,w:DEALERSHIP.showroomWidth,d:DEALERSHIP.showroomDepth,height:DEALERSHIP.height,floors:DEALERSHIP.floorCount};
  const dims=buildings.map(b=>financialDimensions(b.id)),w=Math.max(...dims.map(x=>x.width)),d=Math.max(...dims.map(x=>x.depth));

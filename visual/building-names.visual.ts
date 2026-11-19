@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 import {mkdirSync} from 'node:fs';
 import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
 /**
- * Original building names (docs/building-names.md, KC 2026-11-07): no real company name on a nameplate.
+ * Original building names (docs/building-names.md, Khaneil 2026-11-07): no real company name on a nameplate.
  * NAMES_SHOT_DIR saves before/after screenshots; the name checks always run.
  */
 const dir=process.env.NAMES_SHOT_DIR;

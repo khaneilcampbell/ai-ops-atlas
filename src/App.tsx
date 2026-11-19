@@ -1,6 +1,6 @@
 import {financialBuildingMatches,financialBuildingAliases,financialDisplayName,landmarkMatches} from './lib/financialSearch';
 import { isHostedWeb, isTauri } from "./lib/env";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { AtlasMark, Icon, type IconName } from "./components/Icon";
 import { DetailPanel } from "./components/DetailPanel";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -19,6 +19,9 @@ import { MapView } from "./views/Map";
 import { SettingsView } from "./views/Settings";
 import { IntelligenceView } from "./views/Intelligence";
 import { UsageView } from "./views/Usage";
+import { TaskCenterView } from "./views/tasks/TaskCenter";
+import { WorkflowIntelligenceView } from "./views/workflows/WorkflowIntelligence";
+import { BusinessView } from "./views/business/Business";
 import { useAutoPush } from "./usage/sync";
 import { useLiveFeed } from "./live/feed";
 import { LivePill } from "./components/LivePill";
@@ -28,13 +31,17 @@ import { PHONE_QUERY, useMedia } from "./lib/media";
 import { publishWatches, useAlertNotifications, useAlerts } from "./alerts/state";
 import { AlertPill } from "./views/AgentAlerts";
 import { usePropertyIncidents, usePropertyNotifications, usePropertyPolling } from "./properties/state";
-import { startStewardScheduler } from "./steward/store";
-import { StewardNotice } from "./steward/Notice";
 import { InstallHint } from "./components/InstallHint";
 import { formatDateTime, useTimeZone } from "./lib/timezone";
+import { ensureWorkspace } from "./views/product/ensureWorkspace";
+
+// Workspace and administration load only when opened, so the map's first paint doesn't wait on them.
+const WorkspaceView = lazy(() => import("./views/product/Workspace").then((m) => ({ default: m.WorkspaceView })));
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Projects", icon: "map" },
+  { view: "tasks", label: "Task Center", icon: "tasks" },
+  { view: "business", label: "Business", icon: "briefcase" },
   { view: "agents", label: "Agents", icon: "agents" },
   { view: "automations", label: "Automations", icon: "network" },
   { view: "repos", label: "Repositories", icon: "repos" },
@@ -42,13 +49,16 @@ const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "activity", label: "Activity", icon: "pulse" },
   { view: "intel", label: "Intel", icon: "spark" },
   { view: "usage", label: "API Usage", icon: "usage" },
+  { view: "workspace", label: "Workspace", icon: "compass" },
 ];
+
+/** Workflow Intelligence opens from Mission Control, so Mission stays highlighted there. */
+const onSection = (view: View, nav: View) => view === nav || (nav === "overview" && view === "workflows");
 
 /** On a phone the bar holds these four plus More; the rest open from the More sheet. */
 export const PHONE_TABS: View[] = ["map", "agents", "overview", "activity"];
 
 export default function App() {
-  useEffect(startStewardScheduler, []);
   const { view, setView, catalog, repos, uncataloged, manifestIssues, refreshing, refresh, selection } = useAtlas();
   const phone = useMedia(PHONE_QUERY);
   useAutoPush();
@@ -60,6 +70,8 @@ export default function App() {
   useEffect(() => publishWatches(watches), [watches]);
   usePropertyPolling();
   usePropertyNotifications(usePropertyIncidents().open);
+  // Single owner: no setup popup. A device without a workspace gets the Benjaire one silently.
+  useEffect(() => ensureWorkspace(), []);
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
 
   const trackedRepositories = new Set([...catalog.projects.map(p => p.repository), ...catalog.agents.map(a => a.repository), ...uncataloged]);
@@ -127,7 +139,7 @@ export default function App() {
       ) : (
         <nav className="sidebar" aria-label="Sections">
           {NAV.map((n) => (
-            <button key={n.view} className={`nav-item ${view === n.view ? "active" : ""}`} onClick={() => setView(n.view)} aria-label={n.label} title={n.label} aria-current={view === n.view ? "page" : undefined}>
+            <button key={n.view} className={`nav-item ${onSection(view, n.view) ? "active" : ""}`} onClick={() => setView(n.view)} aria-label={n.label} title={n.label} aria-current={onSection(view, n.view) ? "page" : undefined}>
               <Icon name={n.icon} size={20} />
               <span className={n.label.length > 9 ? "nav-label-long" : undefined}>{n.label}</span>
               {n.view === "overview" && attention.length + alerts.length > 0 && <span className="badge">{attention.length + alerts.length}</span>}
@@ -142,7 +154,6 @@ export default function App() {
       )}
 
       <main className="main">
-        <StewardNotice />
         <InstallHint />
         {/* Keep one graphics context across navigation; MapView pauses while hidden. */}
         <div className={`projects-host${view === "map" ? "" : " inactive"}`} aria-hidden={view !== "map"} ref={el => { if (el) el.inert = view !== "map"; }}>
@@ -151,6 +162,9 @@ export default function App() {
         {/* Other pages still clear their own crashes when switching views. */}
         <ErrorBoundary key={view}>
           {view === "overview" && <MissionControl attention={attention} />}
+          {view === "tasks" && <TaskCenterView />}
+          {view === "workflows" && <WorkflowIntelligenceView />}
+          {view === "business" && <BusinessView />}
           {view === "grid" && <GridView />}
           {view === "activity" && <ActivityView />}
           {view === "agents" && <AgentsView key="agents" kind="agents" />}
@@ -158,6 +172,11 @@ export default function App() {
           {view === "repos" && <ReposView />}
           {view === "intel" && <IntelligenceView />}
           {view === "usage" && <UsageView />}
+          {view === "workspace" && (
+            <Suspense fallback={<div className="page muted">Loading…</div>}>
+              <WorkspaceView />
+            </Suspense>
+          )}
           {view === "settings" && <SettingsView />}
         </ErrorBoundary>
       </main>
@@ -195,7 +214,7 @@ function PhoneNav({ attention, status }: { attention: number; status: PhoneStatu
     <>
       <nav className="sidebar phone-tabs" aria-label="Sections">
         {tabs.map((n) => (
-          <button key={n.view} className={`nav-item ${view === n.view && !open ? "active" : ""}`} onClick={() => go(n.view)} aria-label={n.label} aria-current={view === n.view ? "page" : undefined}>
+          <button key={n.view} className={`nav-item ${onSection(view, n.view) && !open ? "active" : ""}`} onClick={() => go(n.view)} aria-label={n.label} aria-current={onSection(view, n.view) ? "page" : undefined}>
             <Icon name={n.icon} size={20} />
             <span>{n.label}</span>
             {n.view === "overview" && attention > 0 && <span className="badge">{attention}</span>}
@@ -219,7 +238,7 @@ function PhoneNav({ attention, status }: { attention: number; status: PhoneStatu
             <ul className="more-list">
               {more.map((n) => (
                 <li key={n.view}>
-                  <button className={view === n.view ? "active" : undefined} onClick={() => go(n.view)} aria-current={view === n.view ? "page" : undefined}>
+                  <button className={onSection(view, n.view) ? "active" : undefined} onClick={() => go(n.view)} aria-current={onSection(view, n.view) ? "page" : undefined}>
                     <Icon name={n.icon} size={18} />
                     <span>{n.label}</span>
                     <span className="more-go" aria-hidden>›</span>

@@ -19,7 +19,7 @@ describe("agent jobs", () => {
   });
   it("sends agents with a declared workplace there, others to their headquarters", () => {
     // Exercise declared-workplace mapping independently of the real workflow's classification.
-    const original = catalog.agents.find(a => a.id === "atlas-system-improvements")!;
+    const original = catalog.agents.find(a => a.id === "atlas-production-coordinator")!;
     const fixture = { ...original, workplace: { building: "Atlas Marketplace" as const, floor: 1, room: "108" }, registry: { ...original.registry, classification: { type: "A" as const, confidence: "verified" as const } } };
     const suite = agentJobs({ ...catalog, agents: [fixture] })[0];
     expect(suite.work).toMatchObject({ kind: "workplace", building: "Atlas Marketplace" });
@@ -49,11 +49,11 @@ describe("agent jobs", () => {
     const planned: Agent = { ...base, id: "planned-agent", registry: { ...base.registry, classification: { type: "F", confidence: "verified" } } };
     expect(agentJobs({ ...catalog, agents: [planned] })[0].offDuty).toBe("planned");
   });
-  it("reads a person from the credential owner, and falls back to KC otherwise", () => {
+  it("reads a person from the credential owner, and falls back to Khaneil otherwise", () => {
     const with_ = (credentialOwner: string) => ({ registry: { governance: { credentialOwner } } }) as unknown as Agent;
-    expect(ownerOf(with_("KC (macOS Keychain)"))).toMatchObject({ value: "KC", provenance: "declared" });
-    expect(ownerOf(with_("GitHub ephemeral GITHUB_TOKEN, contents read"))).toMatchObject({ value: "KC", provenance: "inferred" });
-    expect(ownerOf(with_("None needed (reads local files only)"))).toMatchObject({ value: "KC", provenance: "inferred" });
+    expect(ownerOf(with_("Khaneil (macOS Keychain)"))).toMatchObject({ value: "Khaneil", provenance: "declared" });
+    expect(ownerOf(with_("GitHub ephemeral GITHUB_TOKEN, contents read"))).toMatchObject({ value: "Khaneil", provenance: "inferred" });
+    expect(ownerOf(with_("None needed (reads local files only)"))).toMatchObject({ value: "Khaneil", provenance: "inferred" });
   });
   it("formats shift hours", () => {
     expect(clock(9.5)).toBe("9:30");

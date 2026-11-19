@@ -1,8 +1,13 @@
 import {StationFerrisWheel} from "./StationFerrisWheel";
 import {StationPlaza} from "./StationPlaza";
 import Commons from './Commons';
+import AutomationPlaza,{type PlazaView} from './AutomationPlaza';
+import {PLAZA,PLAZA_KEY,PLAZA_NAME} from './plazaPlan';
+import type {PlazaEffects} from '../../plaza/usePlaza';
 import {COMMONS_KEY,COMMONS_NAME} from './commonsPlan';
 import {marinaFootprint,marinaSite} from './marinaPlan';
+import {planHarbourPlatform} from './harbourPlatform';
+import {TransitGateway} from './TransitGatewayBuilding';
 import {YACHT_KEY,YACHT_NAME,YACHT_OFFICE_ID,yachtBerth,yachtBounds,yachtFootprint} from './yachtPlan';
 import {YACHT_BOX,yachtBoundsAt,yachtLivePose} from './yachtRidePlan';
 import {riding as rideActive,yachtRide} from './yachtRide';
@@ -51,6 +56,7 @@ import { residentsLabel } from "../../catalog/roles";
 import type { Status } from "../../catalog/types";
 import type { Health, Verified } from "../../lib/derive";
 import { fogRange } from "./fogRange";
+import { depthRange, shadowBox } from "./viewFit";
 import { MapRenderer, Sky, Traffic, Vehicles, type LightMode } from "./living";
 import { statusLabel } from "../../components/bits";
 import { OPERATIONS_DISTRICTS, placeLabels, type Layout } from "../mapLayout";
@@ -78,7 +84,10 @@ import { isSocLab } from "./socLabPlan";
 import { FLOOR_BASE, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D, type Tower } from "./scene";
 import type { AgentJob } from "../../catalog/agentJobs";
-import { planAgentCommutes, type CommutePlan } from "./agentCommutes";
+import { planAgentCommutes } from "./agentCommutes";
+import { planNamedAgents, type NamedAgentPlan } from "./namedAgentPlan";
+import { NamedAgents } from "./NamedAgents";
+import { catalog as fullCatalog } from "../../catalog";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
 import { ActivityGlow, WholeBuildingGlow } from "./activity";
@@ -91,11 +100,18 @@ import { FramePacer } from "./pacer";
 import { MapGuard } from "./MapGuard";
 import { buildingPlaque, PLANNED, PLAQUE, type LabelSpec, type PlaqueMark } from "./plaques";
 import { getNavigationPrefs, speedFactor } from "../../lib/navigation";
+import { HeldKeys, isStill, keyStep, navKeyOf } from "./keys";
 import { clampRig, groundAt, likelyMacTrackpad, orbitRig, panRig, twistStep, twistToAzimuth, WheelClassifier, wheelIntent, zoomRigAt } from "./trackpad";
 /** The gold jet cabin you ride in, loaded only when you enter the aircraft. */
 const GoldJetRide = lazy(() => import("../office/GoldJetRide"));
 /** The yacht's decks you ride on, loaded only when you enter the yacht. */
 const YachtRide = lazy(() => import("../office/YachtRide"));
+
+export interface PlazaProps {
+  view: PlazaView;
+  effects: PlazaEffects;
+  automationProjects: ReadonlySet<string>;
+}
 
 export interface Map3DApi {
   zoom: (factor: number) => void;
@@ -144,6 +160,8 @@ interface Props {
   landmarkMarks?: Readonly<Record<string, PlaqueMark>>;
   /** Day or night lighting. */
   light: LightMode;
+  /** Atlas Automation Plaza: live status, short-lived effects, and the projects that run automations (paths). */
+  plaza?: PlazaProps;
   /** Connections to draw, already filtered by the toolbar; empty when they are switched off. */
   links: MapLink[];
   linkSel: string | null;
@@ -166,6 +184,8 @@ const ELEVATION = (42 * Math.PI) / 180;
 const DIR = new THREE.Vector3(Math.cos(ELEVATION) * Math.SQRT1_2, Math.sin(ELEVATION), Math.cos(ELEVATION) * Math.SQRT1_2);
 const DIR_UPRIGHT = new THREE.Vector3(0, Math.sin(ELEVATION), Math.cos(ELEVATION));
 const FOV = 30;
+/** Share of the remaining camera glide OrbitControls removes per frame at 60 Hz; scaled to the real frame time each frame. */
+const DAMPING_60HZ = 0.14;
 /**
  * Portrait views keep this width-to-height ratio's horizontal angle, so a change in height (Safari's
  * toolbar, the keyboard, a strip below the map) shows a little more or less sky and sea instead of
@@ -201,6 +221,7 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
   if(scene.airport)m.set(GOLD_JET_KEY,{x:airportPoint(scene.airport,GOLD_JET_GATE.x+.3,GOLD_JET_GATE.z)[0],z:scene.airport.z+GOLD_JET_GATE.z,y0:TERRACE_H,y1:TERRACE_H+1.2,w:3.6,d:3.8});
   if(scene.agency)m.set(AGENCY_KEY,{x:scene.agency.cx,z:scene.agency.cz,y0:TERRACE_H,y1:TERRACE_H+AGENCY.eastHigh,w:scene.agency.w,d:scene.agency.d});
   if(scene.mall)m.set(MALL_KEY,{x:scene.mall.cx,z:scene.mall.cz,y0:TERRACE_H,y1:TERRACE_H+MALL.levels*MALL.floor+.4,w:scene.mall.rx*2,d:scene.mall.rz*2});
+  if(scene.plaza)m.set(PLAZA_KEY,{x:scene.plaza.cx,z:scene.plaza.cz,y0:TERRACE_H,y1:TERRACE_H+PLAZA.rise+PLAZA.enclosureHeight,w:PLAZA.stepsOuter*2,d:PLAZA.stepsOuter*2});
   if(scene.commons){const r=scene.commons.rect;m.set(COMMONS_KEY,{x:r.x+r.w/2,z:r.z+r.d/2,y0:TERRACE_H,y1:TERRACE_H+1.3,w:r.w,d:r.d});}
   if(scene.galleria){const f=scene.galleria.footprint;m.set(GALLERIA_KEY,{x:f.x+f.w/2,z:f.z+f.d/2,y0:TERRACE_H,y1:TERRACE_H+scene.galleria.column.top+.2,w:f.w,d:f.d});}
   {const b=yachtBounds(yachtBerth(marinaSite(scene,TERRACE_H)));m.set(YACHT_KEY,b);}
@@ -221,6 +242,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const { layout, jobs, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, showLocal } = props;
   const scene = useMemo(() => buildScene(layout), [layout]);
   const agentCommutes = useMemo(() => (jobs ? planAgentCommutes(scene, jobs) : undefined), [scene, jobs]);
+  // The named team, one character per identity at its real workplace (namedAgentPlan.ts).
+  const namedAgents = useMemo(() => (jobs ? planNamedAgents(scene, fullCatalog.agents, jobs, agentCommutes) : undefined), [scene, jobs, agentCommutes]);
   const anchors = useMemo(() => anchorsOf(scene, layout), [scene, layout]);
   const [hover, setHover] = useState<string | null>(null);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; sub: string } | null>(null);
@@ -403,6 +426,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.dealership)plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"Vantor Motors",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:2,mark:PLANNED,title:"Vantor Motors · Planned visual district"});
     if(scene.agency)plaque({id:AGENCY_KEY,select:AGENCY_KEY,name:AGENCY_NAME,x:scene.agency.cx,roof:TERRACE_H+AGENCY.eastHigh+.25,z:scene.agency.cz,priority:1.2,mark:PLANNED,title:`${AGENCY_NAME} · Planned`});
     if(scene.mall)plaque({id:MALL_KEY,select:MALL_KEY,name:"Atlas Marketplace",x:scene.mall.cx,roof:TERRACE_H+MALL.levels*MALL.floor+.4,z:scene.mall.cz,priority:1.2,mark:PLANNED,title:"Atlas Marketplace · Planned"});
+    if(scene.plaza){const v=props.plaza?.view;plaque({id:PLAZA_KEY,select:PLAZA_KEY,name:PLAZA_NAME,x:scene.plaza.cx,roof:TERRACE_H+PLAZA.rise+PLAZA.enclosureHeight+.15,z:scene.plaza.cz,priority:1.3,mark:plazaMark(v),title:`${PLAZA_NAME} · ${v?.sign.status??'Status unavailable'}`});}
     if(scene.commons){const r=scene.commons.rect;plaque({id:COMMONS_KEY,select:COMMONS_KEY,name:COMMONS_NAME,x:r.x+r.w/2,roof:TERRACE_H+1.4,z:r.z+r.d/2,priority:1.3,mark:PLANNED,title:"Atlas Commons · Planned public park"});}
     if(scene.galleria){const gl=scene.galleria;plaque({id:GALLERIA_KEY,select:GALLERIA_KEY,name:GALLERIA_NAME,x:gl.column.x,roof:TERRACE_H+gl.column.top+.1,z:gl.column.z,priority:1.3,mark:PLANNED,title:`${GALLERIA_NAME} · Planned`});}
     {const yb=yachtBerth(marinaSite(scene,TERRACE_H)),bb=yachtBounds(yb);plaque({id:YACHT_KEY,select:YACHT_KEY,name:YACHT_NAME,x:bb.x,roof:bb.y1+.1,z:bb.z,priority:2,mark:PLANNED,title:`${YACHT_NAME} · Planned yacht`});
@@ -499,18 +523,19 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   return (
     <div className="map3d" ref={wrapEl}>
       <MapGuard onRetry={() => setGlKey((k) => k + 1)}>
-      <Canvas key={glKey} onCreated={onGlCreated} shadows dpr={readyKey !== glKey ? 1 : phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
+      <Canvas key={glKey} onCreated={onGlCreated} shadows="percentage" dpr={readyKey !== glKey ? 1 : phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
         <FirstMapFrame key={glKey} ready={() => setReadyKey(glKey)}/>
         <FramePacer profile={power} running={drawing && !props.reduced} />
         <World
           drawing={drawing}
-          agentCommutes={agentCommutes}
+          namedAgents={namedAgents}
           power={power}
           light={props.light}
           health={health}
           net={net}
           hoverLink={hoverLink}
           linksMoving={props.linksMoving}
+          plaza={props.plaza}
           traffic={props.traffic}
           inside={!!props.inside}
           insideOffices={insideOffices}
@@ -584,6 +609,15 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   );
 });
 
+/** The plaza's nameplate dot, from its live status only: never green without data that came back. */
+function plazaMark(v: PlazaView | undefined): PlaqueMark {
+  if (!v || v.connection === "unavailable") return { kind: "unverified", label: "Status unavailable" };
+  if (v.preview) return { kind: "unverified", label: "Sample preview · not live data" };
+  if (v.attention) return { kind: "failing", label: `${v.attention} need${v.attention === 1 ? "s" : ""} attention` };
+  if (v.running) return { kind: "running", label: `${v.running} running` };
+  return { kind: "passing", label: "Live · idle" };
+}
+
 /** A real drawn frame, not module loading, ends the first-visit loading state. */
 function FirstMapFrame({ready}:{ready:()=>void}) {
   const scheduled=useRef(false);
@@ -598,13 +632,14 @@ function FirstMapFrame({ready}:{ready:()=>void}) {
 }
 
 function World({
-  drawing,agentCommutes,
+  drawing,namedAgents,
   power,
   light: lightMode,
   health,
   net,
   hoverLink,
   linksMoving,
+  plaza,
   traffic,
   inside,
   insideOffices,
@@ -634,13 +669,14 @@ function World({
   cover,
   surface,
 }: {
-  drawing:boolean;agentCommutes?: CommutePlan;
+  drawing:boolean;namedAgents?: NamedAgentPlan;
   power: PowerProfile;
   light: LightMode;
   health: Map<string, Health>;
   net: { shown: { l: MapLink; level: NetLink["level"] }[]; picked?: MapLink; focusSet: Set<string> | null };
   hoverLink: string | null;
   linksMoving: boolean;
+  plaza?: PlazaProps;
   traffic: boolean;
   inside: boolean;
   insideOffices: Map<string, InsideOffice>;
@@ -687,6 +723,9 @@ function World({
   const financialJunctionSpans=useMemo(()=>financialJunctions(scene,{north:FINANCIAL.northWalkZ,south:FINANCIAL.promenadeZ}),[scene]);
   // The harbour marina's stair, pier and dock stay clear of rail viaduct supports.
   const marina=useMemo(()=>marinaSite(scene,TERRACE_H),[scene]),berth=useMemo(()=>yachtBerth(marina),[marina]);
+  const harbourPlan=useMemo(()=>planHarbourPlatform(scene.communityRail?.loop,marina),[scene,marina]);
+  const harbourStop=useMemo(()=>{const loop=scene.communityRail?.loop,h=harbourPlan;return h&&loop?loop.stops.findIndex(s=>s.id===h.stopId):undefined;},[scene,harbourPlan]);
+  const railWalks=useMemo(()=>scene.walks.map(w=>[[w.x0,w.z0],[w.x1,w.z1]] as [[number,number],[number,number]]),[scene]);
   const railKeepClear=useMemo(()=>[marinaFootprint(marina),yachtFootprint(berth)],[marina,berth]);
   const galleriaLife=useMemo(()=>planGalleriaLife(scene),[scene]),galleriaDrives=useMemo(()=>(galleriaLife?.driveways??[]).map(d=>[d.a,d.b] as [number,number][]),[galleriaLife]);
   // Decorative travel loops (train, shuttle cars, yacht) for the perimeter-loop layout: one plan shared by all three.
@@ -701,7 +740,7 @@ function World({
     c.minPolarAngle = (12 * Math.PI) / 180;
     c.maxPolarAngle = (72 * Math.PI) / 180;
     c.enableDamping = true;
-    c.dampingFactor = 0.14;
+    c.dampingFactor = DAMPING_60HZ;
     c.zoomToCursor = true;
     c.screenSpacePanning = false;
     c.zoomSpeed = 1.2;
@@ -827,6 +866,50 @@ function World({
       el.removeEventListener("gesturestart", onGestureStart);
       el.removeEventListener("gesturechange", onGestureChange);
       el.removeEventListener("gestureend", onGestureEnd);
+    };
+  }, [surface, camera, controls, gl, start, wheels]);
+
+  // Keyboard moves for a mouse and keyboard, as on an iMac (see keys.ts): W A S D or Shift with
+  // the arrows move the map, R and F tilt, for as long as they are held. Only while the map has
+  // focus (the map view's own keys need the same), so typing elsewhere never moves it.
+  useEffect(() => {
+    const stage = surface.current?.closest<HTMLElement>(".map-stage");
+    if (!stage) return;
+    const cam = camera as THREE.PerspectiveCamera;
+    const rig = { target: controls.target, position: camera.position };
+    const held = new HeldKeys((keys, dt) => {
+      const s = keyStep(keys, dt, speedFactor(getNavigationPrefs().speed));
+      if (isStill(s)) return;
+      if (s.dx || s.dy) panRig(rig, cam.fov, gl.domElement.clientHeight, s.dx, s.dy);
+      if (s.azimuth || s.polar) orbitRig(rig, s.azimuth, s.polar, controls.minPolarAngle, controls.maxPolarAngle);
+      clampRig(rig, boundsRef.current);
+      start();
+      wake(250);
+    });
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.target !== stage) return;
+      const k = navKeyOf(e, "map");
+      if (!k) return;
+      e.preventDefault();
+      wheels.interrupt();
+      held.press(k, performance.now());
+    };
+    // Released whatever has focus now, and whatever modifiers are down.
+    const onKeyUp = (e: KeyboardEvent) => {
+      const k = navKeyOf({ key: e.key, code: e.code, shiftKey: true, altKey: false, metaKey: false, ctrlKey: false }, "map");
+      if (k) held.release(k);
+    };
+    const release = () => held.releaseAll();
+    stage.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", release);
+    stage.addEventListener("blur", release);
+    return () => {
+      held.releaseAll();
+      stage.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", release);
+      stage.removeEventListener("blur", release);
     };
   }, [surface, camera, controls, gl, start, wheels]);
 
@@ -1001,12 +1084,16 @@ function World({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [office.phase, office.projectId]);
 
-  // Light and shadows sized to the whole map.
+  // Light and shadows sized to the whole map; zoomed in, the shadow box follows the view (steady()).
   const light = useRef<THREE.DirectionalLight>(null);
+  // A camera, not a plain Object3D: lookAt turns cameras to face down -z, as the shadow camera does.
+  const sunView = useMemo(() => new THREE.OrthographicCamera(), []);
+  const shadowKey = useRef("");
   useEffect(() => {
     const l = light.current;
     if (!l) return;
-    l.position.copy(center).add(new THREE.Vector3(-ext * 0.7, ext * 1.2, ext * 0.25));
+    // A lower late-afternoon sun from the west-south-west: longer, softer shadows across the lawns.
+    l.position.copy(center).add(new THREE.Vector3(-ext * 0.85, ext * 0.85, ext * 0.4));
     l.target.position.copy(center);
     three.add(l.target);
     const c = l.shadow.camera;
@@ -1017,10 +1104,15 @@ function World({
     c.near = 1;
     c.far = ext * 5;
     c.updateProjectionMatrix();
+    // The sun's own view, to place the close-up shadow box in (see shadowBox).
+    sunView.position.copy(l.position);
+    sunView.lookAt(center);
+    sunView.updateMatrixWorld();
+    shadowKey.current = "";
     return () => {
       three.remove(l.target);
     };
-  }, [center, ext, three]);
+  }, [center, ext, three, sunView]);
 
   // Three keeps the old shadow texture when the size changes; drop it so the next frame makes one.
   const quality = LEVELS[useQualityLevel()];
@@ -1036,7 +1128,7 @@ function World({
     wake();
   }, [shadowSize, gl]);
 
-  const fog = useMemo(() => new THREE.Fog("#d3e4de", 40, 120), []);
+  const fog = useMemo(() => new THREE.Fog("#dde2d3", 40, 120), []);
   useEffect(() => {
     three.fog = fog;
     return () => {
@@ -1051,8 +1143,49 @@ function World({
   }, [labels]);
   const nearRef = useRef<"far" | "mid" | "near">("far");
   const v = useMemo(() => new THREE.Vector3(), []);
+  const ahead = useMemo(() => new THREE.Vector3(), []);
+  // Last frame's label placement, so labels hold their spots while the camera moves (placeLabels).
+  const lastShown = useRef<Map<string, number>>(new Map());
+  const sunInverse = useMemo(() => new THREE.Matrix4(), []);
 
-  useFrame((state) => {
+  /**
+   * Keeps depth and shadows precise at this camera distance (see viewFit.ts). Riding the jet or the
+   * yacht, the camera hugs a cabin far from the controls' target, so it keeps the wide defaults.
+   */
+  const steady = (dist: number, fogFar: number, riding: boolean) => {
+    const cam = camera as THREE.PerspectiveCamera;
+    const { near, far } = riding ? { near: 0.5, far: 800 } : depthRange(dist, fogFar);
+    if (Math.abs(near - cam.near) > cam.near * 0.02 || Math.abs(far - cam.far) > cam.far * 0.02) {
+      cam.near = near;
+      cam.far = far;
+      cam.updateProjectionMatrix();
+    }
+    const l = light.current;
+    if (!l) return;
+    // Cover more of the ground ahead of the target, where the view reaches, than behind it.
+    ahead.copy(controls.target).sub(camera.position).setY(0);
+    if (ahead.lengthSq() > 1e-6) ahead.setLength(dist * 0.6);
+    ahead.add(controls.target).applyMatrix4(sunInverse.copy(sunView.matrixWorld).invert());
+    const box = shadowBox(riding ? Infinity : dist, ahead, ext * 1.2, shadowSize);
+    const key = `${box.left},${box.top},${box.texel}`;
+    if (key === shadowKey.current) return;
+    const resized = !shadowKey.current.endsWith(`,${box.texel}`);
+    shadowKey.current = key;
+    const c = l.shadow.camera;
+    c.left = box.left;
+    c.right = box.right;
+    c.top = box.top;
+    c.bottom = box.bottom;
+    c.updateProjectionMatrix();
+    // About two texels of normal offset clears acne on faces turned away from the sun without
+    // lifting small shadows off the ground; it shrinks with the texels close up.
+    l.shadow.normalBias = Math.min(0.03, box.texel * 2);
+    // A new size redraws now, so a zoom never shows the old box stretched. A pan just moves the
+    // box, and the paced shadow updates catch up: the old map still lines up with its own box.
+    if (resized) gl.shadowMap.needsUpdate = true;
+  };
+
+  useFrame((state, delta) => {
     if (!reduced) time.value = state.clock.elapsedTime;
     const a = anim.current;
     if (a) {
@@ -1065,6 +1198,9 @@ function World({
       if (p >= 1) anim.current = null;
     }
     // Riding the gold jet or the yacht: the ride places the camera every frame, so the map's own controls stand aside.
+    // OrbitControls eases by a fixed share per frame, so the glide after a drag lasted half as long
+    // on a 120 Hz display as at 60 Hz, and dragged on when frames ran slow. Scale it to frame time.
+    controls.dampingFactor = 1 - Math.pow(1 - DAMPING_60HZ, Math.min(delta, 0.1) * 60);
     if (!rideActive()) controls.update();
     const dist = camera.position.distanceTo(controls.target);
     // Haze follows the camera but stops short of the neighbourhood you zoomed into (fogRange.ts).
@@ -1072,6 +1208,7 @@ function World({
     const haze = fogRange(rideActive() ? fitDist.current * 0.5 : dist, ext);
     fog.near = haze.near;
     fog.far = haze.far;
+    steady(dist, haze.far, rideActive());
     const isNear = dist < fitDist.current * 0.4 ? "near" : dist < fitDist.current * 0.62 ? "mid" : "far";
     if (isNear !== nearRef.current) {
       nearRef.current = isNear;
@@ -1095,7 +1232,8 @@ function World({
       screen.set(l.id, { x, y });
       boxes.push({ id: l.id, x, top: y - l.h, bottom: y, w: l.w, priority: l.priority, alts: [-(l.h * 0.55), -(l.h + 6)] });
     }
-    const shown = placeLabels(boxes, 10);
+    const shown = placeLabels(boxes, 10, lastShown.current);
+    lastShown.current = shown;
     for (const l of labels) {
       const el = labelEls.current.get(l.id);
       if (!el) continue;
@@ -1165,6 +1303,9 @@ function World({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [net.picked?.id]);
 
+  // The plaza's gold paths lead only to buildings whose projects run automations.
+  const plazaProjects = plaza?.automationProjects;
+  const plazaPaths = useMemo(() => (scene.plaza?.paths ?? []).filter((q) => plazaProjects?.has(q.projectId)), [scene.plaza, plazaProjects]);
   // Let the core city draw before mounting expanded districts and decorative simulations.
   const [detailsReady, setDetailsReady] = useState(false);
   const detailFrame = useRef(0);
@@ -1191,21 +1332,24 @@ function World({
       <MapRenderer />
       {detailsReady && <Traffic scene={scene} g={g} m={m} moving={!reduced} />}
       {detailsReady && traffic && <Vehicles scene={scene} g={g} m={m} moving={!reduced} />}
-      <directionalLight ref={light} castShadow intensity={2.5} color="#fff0d2" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} shadow-normalBias={0.03} />
+      <directionalLight ref={light} castShadow intensity={2.85} color="#ffdcaa" shadow-mapSize={[shadowSize, shadowSize]} shadow-bias={-0.0004} />
       <Terrain scene={scene} g={g} m={m} onTerrace={terracePick} />
       <Bridges scene={scene} g={g} m={m} />
       {detailsReady && <><StationFerrisWheel plaza={scene.stationPlaza} reduced={reduced} /><StationPlaza plan={scene.stationPlaza} g={g} m={m} night={lightMode==="night"}/></>}
       <VenueBridge scene={scene} g={g} m={m} clearRoads={galleriaDrives}/>
       {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
-      {detailsReady && <CommunityRail plan={scene.communityRail} travel={travel} agents={agentCommutes} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
+      {detailsReady && <CommunityRail plan={scene.communityRail} travel={travel} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} land={scene.land} walks={railWalks} bothSides={harbourStop} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
+      {detailsReady && namedAgents && <NamedAgents plan={namedAgents} moving={!reduced} drawing={drawing} />}
       {detailsReady && <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>}
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}
       {detailsReady && <MarketingAgency night={lightMode==="night"} plan={scene.agency} g={g} m={m} pick={kioskPick.of([AGENCY_KEY])}/>}
+      {detailsReady && harbourPlan && <TransitGateway plan={harbourPlan.gateway} g={g} m={m} pick={kioskPick} night={lightMode==="night"}/>}
       {detailsReady && <AtlasYacht berth={berth} marina={marina} travel={travel} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([YACHT_KEY])} moving={!reduced&&traffic&&(office.phase===null||ridingYacht)} exclusion={scene.pedestrianExclusion}/>}
       {detailsReady && ridingYacht && <Suspense fallback={null}><YachtRide night={lightMode==="night"} controls={controls} city={{ x: center.x, z: center.z }} /></Suspense>}
       {detailsReady && <Stadium night={lightMode==="night"} plan={scene.stadium} site={scene.stadiumSite} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>}
+      {detailsReady && plaza && <AutomationPlaza plan={scene.plaza} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([PLAZA_KEY])} view={plaza.view} effects={plaza.effects} paths={plazaPaths} reduced={reduced}/>}
       {detailsReady && <Commons plan={scene.commons} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([COMMONS_KEY])}/>}
       {detailsReady && <Mall night={lightMode==="night"} plan={scene.mall} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>}
       {detailsReady && <Galleria night={lightMode==="night"} plan={scene.galleria} g={g} m={m} pick={kioskPick.of([GALLERIA_KEY])}/>}

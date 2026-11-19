@@ -25,8 +25,10 @@ export interface NetLink {
 type Hue = keyof typeof LINK_COLORS;
 /** "glow" is the soft sleeve around the selected or hovered link. */
 type Shade = LinkLevel | "glow";
-const OPACITY: Record<Shade, number> = { selected: 1, strong: 0.7, weak: 0.22, dim: 0.04, glow: 0.16 };
-const RADIUS = 0.035;
+// Thin, pencil-like lines (Khaneil, Nov 18: the 0.17-wide tubes were too thick). They stay visible
+// with the whole city in frame because they are drawn near solid: at 0.22 opacity they vanished.
+export const OPACITY: Record<Shade, number> = { selected: 1, strong: 0.92, weak: 0.78, dim: 0.06, glow: 0.2 };
+export const RADIUS = 0.035;
 const MAX_PARTICLES = 160;
 const SPEED = 2.2; // world units per second
 
@@ -179,5 +181,5 @@ export function Network({ links, hover, moving, onHover, onPick }: { links: NetL
   );
 }
 
-const DOT = new THREE.SphereGeometry(0.075, 10, 8);
+const DOT = new THREE.SphereGeometry(0.26, 10, 8);
 const DOT_MAT = new THREE.MeshBasicMaterial({ toneMapped: false });

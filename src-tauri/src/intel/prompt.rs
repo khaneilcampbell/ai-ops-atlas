@@ -409,12 +409,21 @@ pub fn supports_fallback(model: &str) -> bool {
 
 pub const FALLBACK_BETA: &str = "server-side-fallback-2026-07-01";
 
+/// A text block marked for prompt caching (5-minute entry). Repeat calls that start with the
+/// same bytes up to this block read it back at a fraction of the input price; a prefix
+/// shorter than the model's minimum is simply not cached, with no error.
+pub fn cached_text(text: &str) -> Value {
+    json!({"type": "text", "text": text, "cache_control": {"type": "ephemeral"}})
+}
+
 /// The Messages API request. No tools are offered, so the model can only return text.
 pub fn request_body(p: &Prompt, model: &str, limits: &DepthLimits, fallback: bool) -> Value {
     let mut body = json!({
         "model": model,
         "max_tokens": limits.max_tokens,
-        "system": p.system,
+        // The fixed rules are the same bytes on every call, so they are cached; the
+        // repository data after them changes per repository and is sent as is.
+        "system": [cached_text(p.system)],
         "messages": [{"role": "user", "content": p.user}],
         "output_config": {
             "effort": limits.effort,
@@ -493,7 +502,11 @@ mod tests {
             "the model is never given tools"
         );
         assert!(body.get("tool_choice").is_none());
-        assert!(body["system"].as_str().unwrap().contains("untrusted"));
+        assert!(body["system"][0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("untrusted"));
+        assert_eq!(body["system"][0]["cache_control"]["type"], "ephemeral");
     }
 
     #[tokio::test]

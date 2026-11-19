@@ -1,4 +1,7 @@
 import {GALLERIA_FLOORS,GALLERIA_ID,GALLERIA_KEY,GALLERIA_NAME} from "../views/map3d/galleriaPlan";
+import { AutomationPlazaPanel } from "./AutomationPlazaPanel";
+import { usePlazaSnapshot } from "../plaza/usePlaza";
+import { signText } from "../plaza/plazaState";
 import {LOOP_STATIONS} from '../views/map3d/perimeterRailPlan';
 import {MALL_KEY,MALL_SHOPS} from "../views/map3d/mallPlan";
 import {financialBrand,financialInteriorKey} from "../views/map3d/financialBrands";
@@ -13,6 +16,8 @@ import {AGENCY_BUILDING,agencyRoom} from "../views/office/agencyWorkplaces";
 import {AIRPORT_BUILDINGS,airportBuilding} from "../views/map3d/airportBuildings";
 import {landmarkModuleStatus} from "../modules/lookup";
 import { AgentOutput } from "./AgentOutput";
+import { hasIntelligence, IntelligenceTab } from "../views/agents/IntelligenceTab";
+import { AgentPresence } from "../views/agents/PresenceEditor";
 import { BenjaireFinance } from "./BenjaireFinance";
 import { buildingFinance } from "../finance/benjaire";
 import { RepositoryNotice } from "./RepositoryNotice";
@@ -37,6 +42,8 @@ import { webglAvailable } from "../views/map3d/webgl";
 import { enterBuilding } from "../views/office/store";
 import { AgentOrganizationRows, GroupedAgents, ProjectOrganization } from "./Organization";
 import { ModuleSection } from "./ModuleSection";
+import { BusinessLink } from "./BusinessLink";
+import { BuildingTasks } from "./BuildingTasks";
 import { formatDateTime } from "../lib/timezone";
 
 /** Details for the current selection: an overlay on list views, or docked beside the map. */
@@ -135,8 +142,11 @@ function AirportBuildingDetail({id}:{id:string}) {
 }
 function AirportCampusDirectory(){const {select}=useAtlas();return <section><div className="section-title">Airport buildings</div><ul className="link-list">{AIRPORT_BUILDINGS.map(b=><li key={b.id}><button className="text-btn" onClick={()=>select({kind:"service",id:`airport-building:${b.id}`})}>{buildingDisplayName(serviceKey(`airport-building:${b.id}`),b.name)} →</button><span className="muted small">{b.agent} · {airportLiveModule(b.id)?"Live module":"Planned"}</span></li>)}</ul></section>}
 function FinancialDirectory(){const {select}=useAtlas();return <section><div className="section-title">Benjaire buildings</div><ul className="link-list">{FINANCIAL_BUILDINGS.map(b=><li key={b.id}><button className="text-btn" onClick={()=>select({kind:"service",id:`financial:${b.id}`})}>{buildingDisplayName(serviceKey(`financial:${b.id}`),b.name)} →</button><span className="muted small">{buildingFinance(serviceKey(`financial:${b.id}`))?.focus??b.role} · Not connected</span></li>)}</ul><button className="text-btn" onClick={()=>select({kind:"service",id:"financial-park"})}>Financial Park →</button><button className="text-btn" onClick={()=>select({kind:"service",id:"financial-station"})}>Financial District Station →</button></section>}
+/** The plaza's live status in the panel header, the same words as its sign. */
+function PlazaChip(){const s=usePlazaSnapshot();const t=signText(s);return <span className={`chip${t.tone==="attention"?" chip-warn":t.tone==="live"&&s.running.length?" chip-good":""}`}>{t.status}</span>;}
 function ServiceDetail({id}:{id:string}) {
  const {select}=useAtlas();
+ if(id==="automation-plaza")return <><Head eyebrow="Public space · Live automation status" title="Atlas Automation Plaza" organization="Atlas"><PlazaChip/></Head><div className="panel-body selectable"><AutomationPlazaPanel/></div></>;
  if(id==="atlas-commons")return <><Head eyebrow={`Public space · Beside ${marketplaceName()}`} title="Atlas Commons"><span className="chip">Planned · Static public park</span></Head><div className="panel-body selectable"><ModuleSection/><p>A landscaped neighborhood park between a vacant lot and {marketplaceName()}, with a planted pond, a continuous walking loop, two pedestrian bridges, an open-courtyard glass pavilion and amphitheater seating.</p><dl className="kv"><dt>Access</dt><dd>Existing approach from the vacant lot and Marketplace promenade</dd><dt>Amenities</dt><dd>Pond loop · Two footbridges · Garden pavilion · Amphitheater · Lawn and seating</dd><dt>Activity</dt><dd>Visual public space. No agents, bookings or services activated.</dd></dl><p>Sports courts are deferred to preserve open lawn and clear paths. The pavilion is an exterior landscape feature; no interior is connected.</p></div></>;
  if(id==="financial-park")return <><Head eyebrow="Financial District · Public space" title="Financial Park"><span className="chip">Planned · Static public park</span></Head><div className="panel-body selectable"><ModuleSection/><p>A landscaped center between the original skyline and its airport-side expansion, with a lawn, connected paths, shade trees, seating and a protected reflecting pool.</p><dl className="kv"><dt>Access</dt><dd>Connected to the tower sidewalk, marked crossings and waterfront promenade</dd><dt>Activity</dt><dd>Visual public space · No agents or services activated</dd></dl></div></>;
 
@@ -144,15 +154,15 @@ function ServiceDetail({id}:{id:string}) {
  const b=FINANCIAL_BUILDINGS.find(b=>b.id===id.slice(10));const brand=b&&financialBrand(b.id);
  return <><Head eyebrow="Financial District · Planned waterfront" title={b?.name??"Financial District"} building={b?serviceKey(`financial:${b.id}`):undefined}><span className="chip">{b?"Benjaire · Planned":"Planned"} · Not connected</span>{b&&<EnterBuildingButton id={`skyline-business:${financialInteriorKey(b.id)}`}/>}</Head><div className="panel-body selectable"><ModuleSection/><p>{b?.purpose??"Benjaire's finance and operations buildings: waterfront high-rises arranged around Financial Park, connected by a local street and waterfront promenade. Each one has a defined place for a part of Benjaire's business finances. None is connected to real accounts yet."}</p><dl className="kv"><dt>Prepared role</dt><dd>{b?`${b.role} · Not active`:"No agents activated"}</dd><dt>Repositories / workflows</dt><dd>None linked</dd>{!b&&<><dt>Financial data</dt><dd>No accounts connected or statements imported</dd></>}<dt>Activity</dt><dd>Visual visitors · Not live agent activity · No model calls</dd></dl>{b&&<BenjaireFinance building={serviceKey(`financial:${b.id}`)}/>}<section><div className="section-title">Privacy and scope</div><p>Planned local CSV or statement imports, or approved read-only aggregated data. No bank logins, card numbers or access tokens are stored. No trading, payments or messaging.</p></section>{brand?.website&&<section><div className="section-title">Brand references</div><ul className="link-list"><li><a href={brand.website} target="_blank" rel="noreferrer">Benjaire website ↗</a></li>{brand.designSource&&<li><a href={brand.designSource} target="_blank" rel="noreferrer">Website repository design source ↗</a></li>}</ul><p>Design references only. This planned workspace has no financial data connection.</p></section>}{!b&&<FinancialDirectory/>}{b&&<p>The furnished lobby and four-floor interior are schematic, not a floor-by-floor model of the high-rise.</p>}</div></>;
  }
- if(LOOP_STATIONS.some(s=>s.id===`service:${id}`)){const station=LOOP_STATIONS.find(s=>s.id===`service:${id}`)!;return <><Head eyebrow="Planned perimeter railway" title={station.name} building={station.id}><span className="chip">Planned · Visual simulation · Not connected</span></Head><div className="panel-body selectable"><ModuleSection/><p>One simulated train circles the landmass and stops for 15 seconds at each platform. Doors open only while stopped. Public paths connect this stop to {currentBuildingName(station.district)}.</p><section><div className="section-title">Connected stops</div><ul className="link-list">{LOOP_STATIONS.filter(s=>s.id!==station.id).map(s=><li key={s.id}><button className="text-btn" onClick={()=>select({kind:"service",id:s.id.slice(8)})}>{buildingDisplayName(s.id,s.name)} →</button></li>)}</ul></section><button className="text-btn" onClick={()=>select({kind:"service",id:"atlas-marketplace"})}>Back to {marketplaceName()}</button><p>Unnamed passengers are visual simulation, not live agent execution. Movement follows Traffic, reduced motion, Battery saver and map visibility controls. No external transit service is connected.</p></div></>;}
+ if(LOOP_STATIONS.some(s=>s.id===`service:${id}`)){const station=LOOP_STATIONS.find(s=>s.id===`service:${id}`)!;return <><Head eyebrow="Planned perimeter railway" title={station.name} building={station.id}><span className="chip">Planned · Visual simulation · Not connected</span></Head><div className="panel-body selectable"><ModuleSection/><p>One simulated train circles the landmass on a ground-level shore track and stops for 15 seconds at each platform. Doors open only while stopped. A short step-free ramp and public paths connect this stop to {currentBuildingName(station.district)}; walks that cross the track use a marked level crossing.{station.id==='service:stadium-station'&&' A second platform on the harbour side, where the train opens its doors on both sides, runs on as a boardwalk to a stair down to the yacht dock. From the station plaza, the Transit Gateway takes people over the track: a glass entrance lobby with a stair and a lift, an enclosed footbridge above the train, and a covered stair down to the boardwalk. No walk crosses the rails here.'}</p><section><div className="section-title">Connected stops</div><ul className="link-list">{LOOP_STATIONS.filter(s=>s.id!==station.id).map(s=><li key={s.id}><button className="text-btn" onClick={()=>select({kind:"service",id:s.id.slice(8)})}>{buildingDisplayName(s.id,s.name)} →</button></li>)}</ul></section><button className="text-btn" onClick={()=>select({kind:"service",id:"atlas-marketplace"})}>Back to {marketplaceName()}</button><p>Unnamed passengers are visual simulation, not live agent execution. Movement follows Traffic, reduced motion, Battery saver and map visibility controls. No external transit service is connected.</p></div></>;}
 
  if(id==="benjaire-marketing")return <><Head eyebrow="Marketing · On the bay below the Financial District" title={AGENCY_NAME} building={AGENCY_KEY}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={`skyline-business:${AGENCY_NAME}`}/></Head><div className="panel-body selectable"><ModuleSection/><p>A four-storey cream monolith cut by a diagonal glazed slot, wrapped in a diamond screen that fades from dense to open, with a copper-framed sweep of glass over the entrance and a reflecting-pool plaza on the water.</p><dl className="kv"><dt>Owning agent</dt><dd>Brand & Campaign Director · Planned, not running</dd><dt>Repository / workflows</dt><dd>khaneilcampbell/benjaire.com (site traffic and research briefs) · Benjaire Product Lab, an n8n agent</dd><dt>Campaigns</dt><dd>None. No ads, email or social accounts are connected.</dd><dt>Model usage</dt><dd>None in Atlas. Product Lab runs once a month in n8n on Claude Sonnet</dd></dl><AgencyAgents/><section><div className="section-title">Inside</div><ul><li>Lobby: reception in the round atrium, café and brand shop on the plaza</li><li>Floor 1: content studio, social desk, strategy and client review rooms</li><li>Floor 2: exhibition gallery, brand archive, insights lab, workshop</li><li>Floor 3: presentation hall for about 120 people, foyer and green room</li></ul><p>A curved stair climbs the atrium to every floor. Rooms with a Product Lab agent show it at a desk; every other room shows the role planned for it.</p></section></div></>;
  if(id.startsWith("airport-building:"))return <AirportBuildingDetail id={id.slice(17)}/>;
   if(id === "atlas-marketplace") return <>
     <Head eyebrow="Products · Benjaire and Atlas" title="Atlas Marketplace" building={MALL_KEY}><span className="chip">Planned · Preview</span><EnterBuildingButton id="atlas-marketplace"/></Head>
-    <div className="panel-body selectable"><ModuleSection/><p>Where Benjaire's products are sold and Atlas itself is shipped. The Commerce Operations Center pipeline on n8n turns each approved idea into a Canva template that Stripe sells on the shop page, and the Marketplace Steward checks every hour that the latest signed Atlas build is published. A four-floor wave-style building: curving floors wrapped in white fins, planted terraces, a canopy over the atrium and a fountain plaza.</p>
+    <div className="panel-body selectable"><ModuleSection/><p>Where Benjaire's products are sold and Atlas itself is shipped. The Commerce Operations Center pipeline on n8n turns each approved idea into a Canva template that Stripe sells on the shop page. A four-floor wave-style building: curving floors wrapped in white fins, planted terraces, a canopy over the atrium and a fountain plaza.</p>
       <section><div className="section-title">Shops</div><ul className="link-list">{MALL_SHOPS.map(shop=><li key={shop.id}><div>{shop.name}</div><span className="muted small">{shop.status==="planned"?"Planned · not selling yet":"Vacant"} · {shop.offer}</span></li>)}</ul></section>
-      <dl className="kv"><dt>Operating agent</dt><dd>Marketplace Steward · Hourly release check, no model calls</dd><dt>Commerce workers</dt><dd>Design Run · n8n Commerce workflow, desk on floor 1</dd><dt>Orders</dt><dd>Not read by Atlas yet. The catalog and orders stay planned.</dd><dt>Model usage</dt><dd>None in Atlas</dd></dl>
+      <dl className="kv"><dt>Commerce workers</dt><dd>Design Run · n8n Commerce workflow, desk on floor 1</dd><dt>Orders</dt><dd>Not read by Atlas yet. The catalog and orders stay planned.</dd><dt>Model usage</dt><dd>None in Atlas</dd></dl>
     </div>
   </>;
   const galleriaModule=id===GALLERIA_ID?liveLandmarkModule(GALLERIA_ID):undefined;
@@ -222,6 +232,8 @@ function ProjectDetail({ id }: { id: string }) {
     </Head>
     <div className="panel-body selectable"><ModuleSection/>
       <p style={{ margin: 0, fontSize: 14 }}>{project.summary}</p>
+      <BuildingTasks buildingId={project.id}/>
+      {project.module === "business-operations-hq" && <BusinessLink/>}
       <LinkedRepositories project={project}/>
       <ProjectOrganization project={project} agents={catalog.agents.filter(a => a.projectId === project.id)} />
       {project.links.length > 0 && <section><div className="section-title">Project links</div><div className="link-list">{project.links.map(link => <ExternalLink key={link.url} href={link.url}><Icon name="external" size={14} /> {link.label}</ExternalLink>)}</div></section>}
@@ -234,9 +246,10 @@ function githubFileUrl(agent: Agent, branch = "HEAD") {
 }
 
 export function AgentDetail({ id, onClose }: { id: string; onClose?:()=>void }) {
-  const [tab, setTab] = useState<"overview" | "output">("overview");
+  const [tab, setTab] = useState<"overview" | "output" | "intelligence" | "workday">("overview");
   const { catalog, repos, select } = useAtlas();
   const agent = catalog.agents.find((a) => a.id === id);
+  const tabs = (["overview", "output", ...(hasIntelligence(id) ? ["intelligence"] : []), ...(agent && isAiAgent(agent) ? ["workday"] : [])] as const) as readonly ("overview" | "output" | "intelligence" | "workday")[];
   const history = useMemo(() => activityFeed(catalog, repos, { agent: id }), [catalog, repos, id]);
   if (!agent) return <Head eyebrow="Agent" title="Not found" />;
   const itemLabel = isAiAgent(agent) ? "Agent" : "Automation";
@@ -255,18 +268,19 @@ export function AgentDetail({ id, onClose }: { id: string; onClose?:()=>void }) 
         </div>
       </Head>
       <div className="panel-tabs" role="tablist" aria-label={`${itemLabel} sections`}>
-        {(["overview", "output"] as const).map((name) => <button key={name} id={`agent-${id}-${name}-tab`} role="tab" aria-selected={tab === name} aria-controls={`agent-${id}-panel`} tabIndex={tab === name ? 0 : -1} className={tab === name ? "on" : ""} onClick={() => setTab(name)} onKeyDown={event => {
+        {tabs.map((name, i) => <button key={name} id={`agent-${id}-${name}-tab`} role="tab" aria-selected={tab === name} aria-controls={`agent-${id}-panel`} tabIndex={tab === name ? 0 : -1} className={tab === name ? "on" : ""} onClick={() => setTab(name)} onKeyDown={event => {
           if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
           event.preventDefault();
-          const next = event.key === "Home" ? "overview" : event.key === "End" ? "output" : name === "overview" ? "output" : "overview";
+          const next = event.key === "Home" ? tabs[0] : event.key === "End" ? tabs[tabs.length - 1] : tabs[(i + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
           setTab(next);
           document.getElementById(`agent-${id}-${next}-tab`)?.focus();
-        }}>{name === "overview" ? "Overview" : "Output"}</button>)}
+        }}>{name === "overview" ? "Overview" : name === "output" ? "Output" : name === "workday" ? "Workday" : "Intelligence"}</button>)}
       </div>
       <div className="panel-body selectable" id={`agent-${id}-panel`} role="tabpanel" aria-labelledby={`agent-${id}-${tab}-tab`}>
-        {tab === "output" ? <AgentOutput agent={agent}/> : <>
+        {tab === "workday" ? <AgentPresence agentId={agent.id}/> : tab === "intelligence" ? <IntelligenceTab agentId={agent.id}/> : tab === "output" ? <AgentOutput agent={agent}/> : <>
         <p style={{ margin: 0, fontSize: 14 }}>{agent.purpose}</p>
         <ClaudeReviewHandoff agent={agent}/>
+        <BuildingTasks agentId={agent.id}/>
         <dl className="kv">
           <dt>Project</dt>
           <dd>{project?.name}</dd>

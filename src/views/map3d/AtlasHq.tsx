@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from './models';
 import type {Tower} from './scene';
 import {focusable,signTexture} from './materials';
-import {HQ,hqRise,lobby,towerRoof} from './atlasHqPlan';
+import {HQ,entrance,hqRise,lobby,towerRoof} from './atlasHqPlan';
 import {hqGeometry} from './atlasHqGeometry';
 import {useQualityLevel} from '../../lib/governor';
 import {glassTexture} from './atlasHqTextures';
@@ -21,7 +21,7 @@ function wordmark(text:string,color:string){
 }
 
 /**
- * Atlas HQ, the map's centerpiece, after the curving-glass tower design (KC, 2026-10-31). All
+ * Atlas HQ, the map's centerpiece, after the curving-glass tower design (Khaneil, 2026-10-31). All
  * static merged meshes plus instanced ribs and trees: about a dozen draw calls, no lights of
  * its own. Night raises the glass glow the way the other towers light their windows.
  */
@@ -68,7 +68,9 @@ export function AtlasHq({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:nu
    // Olive trees: low, wide, silver-green crowns.
    crowns.push({p:[t.x+tr.x,base+tr.y+.19*k,t.z+tr.z],s:[.095*k,.065*k,.09*k],r:i,c:i%2?'#7f9471':'#8fa37f'});
   });
-  return {ribs,trunks,crowns};
+  // The Financial District style front door; g.box stands on its base, as the plan gives it.
+  const door=entrance(k),place=([x,y,z,w,h,d,c]:readonly [number,number,number,number,number,number,string]):Inst=>({p:[t.x+x,base+y,t.z+z],s:[w,h,d],c});
+  return {ribs,trunks,crowns,door:door.boxes.map(place),lamps:door.lamps.map(place)};
  },[geo,t.x,t.z,base,k]);
 
  const handlers=useMemo(()=>({
@@ -99,6 +101,8 @@ export function AtlasHq({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:nu
    {signs.worker&&<mesh geometry={g.plane} material={signs.worker} position={[.52*k,.42*k,.535*k]} scale={[.2*k,.2*k,1]} raycast={noRaycast}/>}
   </group>
   {finsOn&&<Instanced items={parts.ribs} geometry={g.box} material={mats.white}/>}
+  <Instanced items={parts.door} geometry={g.box} material={m.plain}/>
+  <Instanced items={parts.lamps} geometry={g.box} material={night?m.lamp:m.plain} shadow={false}/>
   <Instanced items={parts.trunks} geometry={g.cyl} material={m.plain}/>
   <Instanced items={parts.crowns} geometry={g.blob} material={m.foliage}/>
  </group>;

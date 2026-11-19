@@ -1,0 +1,1 @@
+- 2026-11-16 · Workflow Intelligence has a new Agent Output Studio under the canvas: every step's research, scores, briefs, test results, logs and failures as cards, with a workflow report. Simulated samples are clearly labelled and live outputs come only from real run records (#445)

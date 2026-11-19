@@ -8,7 +8,7 @@ import {planGalleriaLife} from './galleriaLifePlan';
 import {TRANSPORT} from './transportScale';
 import type {Pt} from './roads';
 
-// KC, 2026-11-08: a raised walk stood across the road and pavement like a wall.
+// Khaneil, 2026-11-08: a raised walk stood across the road and pavement like a wall.
 for(const g of ['district','status','tag','none'] as GroupBy[])it(`opens every station walk where a road or the Galleria's driveway crosses it: ${g}`,()=>{
  const s=buildScene(layoutMap(catalog,[],g)),life=planGalleriaLife(s);
  const roads:Pt[][]=[...s.transportConnections.map(c=>c.road),...(life?.driveways??[]).map(d=>[d.a,d.b])],radius=TRANSPORT.cityWidth/2+.06;

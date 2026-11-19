@@ -1,0 +1,43 @@
+/* Mission Control > Autonomous operations (Phase 9). Same card language as Executive goals. */
+.ops { margin-bottom: 20px; }
+.ops-head { flex-wrap: wrap; gap: 8px; }
+.ops-reason { min-width: 180px; max-width: 260px; border: 1px solid var(--sage-300); border-radius: 8px; padding: 3px 8px; font: inherit; font-size: 12px; background: var(--white); color: var(--ink); }
+.ops-pad { padding: 0 20px; margin: 0 0 8px; }
+.ops-stop { margin: 0 20px 12px; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--bad); background: rgba(178, 59, 47, 0.08); font-size: var(--text-sm); }
+.ops-tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; padding: 4px 20px 12px; }
+.ops-tile { border: 1px solid var(--sage-200); border-radius: var(--radius-sm); padding: 8px 10px; background: var(--white); min-width: 0; }
+.ops-tile.bad { border-color: var(--bad); }
+.ops-tile-label { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--forest-700); font-weight: 600; }
+.ops-tile-value { font-size: 22px; font-weight: 600; color: var(--ink); margin: 2px 0; }
+.ops-tile.bad .ops-tile-value { color: var(--bad); }
+.ops-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; padding: 4px 20px 16px; }
+.ops-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ops-inc { border: 1px solid var(--sage-200); border-left: 3px solid var(--sage-300); border-radius: var(--radius-sm); background: var(--white); }
+.ops-inc.sev-critical, .ops-inc.sev-high { border-left-color: var(--bad); }
+.ops-inc.sev-medium { border-left-color: var(--warn, #b98a2e); }
+.ops-inc.closed { opacity: 0.75; }
+.ops-inc-top { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 8px 12px; background: none; border: 0; text-align: left; color: var(--ink); font: inherit; cursor: pointer; }
+.ops-inc-title { font-weight: 600; overflow-wrap: anywhere; }
+.ops-inc-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ops-sev.sev-critical, .ops-sev.sev-high { color: #fff; background: var(--bad); border-color: var(--bad); }
+.ops-ok { color: var(--good); border-color: rgba(79, 122, 82, 0.4); }
+.ops-inc-body { display: flex; flex-direction: column; gap: 8px; padding: 0 12px 12px; }
+.ops-evidence, .ops-attempts, .ops-recs { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; overflow-wrap: anywhere; font-size: var(--text-sm); }
+.ops-policy { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+.ops-policy input { margin-top: 3px; }
+.ops-policy .title, .ops-policy .meta { display: block; }
+.ops-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 14px; margin: 8px 0; font-size: var(--text-sm); }
+.ops-metrics div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--sage-200); }
+.ops-metrics dt { color: var(--ink-2); }
+.ops-metrics dd { margin: 0; font-variant-numeric: tabular-nums; }
+@media (max-width: 1080px) { .ops-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px) {
+  .ops-grid { grid-template-columns: minmax(0, 1fr); padding: 4px 12px 12px; }
+  .ops-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px 12px 12px; }
+  .ops-pad { padding: 0 12px; }
+  .ops-stop { margin: 0 12px 12px; }
+  .ops-reason { max-width: none; flex: 1 1 100%; }
+  .ops-metrics { grid-template-columns: minmax(0, 1fr); }
+}
+.ops .list-row .title, .ops .list-row .meta { white-space: normal; overflow-wrap: anywhere; }
+.ops .list-row > .grow, .ops-policy { min-width: 0; }

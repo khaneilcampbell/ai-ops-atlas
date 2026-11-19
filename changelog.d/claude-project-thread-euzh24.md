@@ -1,0 +1,1 @@
+- 2026-11-15 · New Workflow Intelligence page in Mission Control: pick the Benjaire product launch goal, see which agents do each step and what depends on what, step through a simulation, or start a live run whose steps become Task Center tasks (PR pending)

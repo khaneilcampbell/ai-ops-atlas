@@ -1,0 +1,2 @@
+- 2026-11-17 · Map lines now show what flows into Atlas Command Center, not only linked repos: each building's run reports, its n8n workflows into the Workflow Automation Hub, and its agents' live state (#454)
+- 2026-11-17 · Each map view's line colour key now lists only the colours that view draws, plus red for failures (#454)

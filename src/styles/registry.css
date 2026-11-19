@@ -165,3 +165,11 @@
 .orphan-chip { font-size: 11px; color: #7a5714; background: rgba(196, 140, 40, 0.14); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
 .orphan-note { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #7a5714; margin: 6px 0 0; }
 .reg-row-owner { display: block; margin-top: 5px; }
+.role-views { margin: 0 0 12px; flex-wrap: wrap; align-items: center; gap: 4px; }
+.role-card { border-bottom: 1px solid var(--sage-200); padding: 6px 4px; }
+.role-card > summary { cursor: pointer; display: flex; flex-direction: column; gap: 2px; padding: 6px 4px; }
+.role-card > summary .title { font-weight: 600; }
+.role-card > ul { list-style: none; margin: 4px 0 0; padding: 0; }
+.role-card .reg-step .grow, .role-plain .reg-step .grow { white-space: normal; }
+.role-plain { list-style: none; margin: 0; padding: 4px; }
+.role-meta { display: block; }
