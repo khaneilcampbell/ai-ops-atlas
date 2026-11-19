@@ -1,4 +1,5 @@
 import {projectOfficeAgents} from "../../catalog/workplaces";
+import { isAiAgent } from "../../catalog/roles";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useActions } from "../../actions/state";
 import { Icon } from "../../components/Icon";
@@ -57,8 +58,10 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
         const r = rows.get(ws.agentId)!;
         const a = agents.find((x) => x.id === ws.agentId)!;
         const b = r.runtime.basis;
+        const automation = !isAiAgent(a);
         return {
           ws,
+          automation,
           floor: a.officeFloor ?? 4,
           name: r.entry.profile.title,
           accent: accentFor(ws.slot, ws.id.split("/")[0]),
@@ -67,7 +70,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           // While waiting on Khaneil, the monitor shows what the agent proposes, not its last run.
           task: firstFor(pending, ws.agentId)?.title ?? (b ? b.label : null),
           when: firstFor(pending, ws.agentId) ? `${pending.filter((p) => p.agentId === ws.agentId).length} awaiting approval` : b ? `${relative(b.at)} · ${r.runtime.source}` : r.runtime.source,
-          holo: hologramData({ name: r.entry.profile.displayName ?? r.entry.profile.title, role: r.entry.profile.displayName ? r.entry.profile.title : null, ws, runtime: r.runtime, history: r.history, profile: r.entry.profile, places: places.get(ws.agentId) }),
+          holo: hologramData({ name: r.entry.profile.displayName ?? r.entry.profile.title, role: r.entry.profile.displayName ? r.entry.profile.title : null, automation, ws, runtime: r.runtime, history: r.history, profile: r.entry.profile, places: places.get(ws.agentId) }),
         };
       }),
     [plan, rows, agents, pending, places],

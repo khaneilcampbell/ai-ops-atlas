@@ -1296,7 +1296,7 @@ agents:
       identity:
         display_name: Sofia Mendes
         accent: "#EAB308"
-        intro: "I run the commerce pipeline end to end: Design Run drafts the next listing and design brief, Approve and Publish lists it after you approve, Order Delivery sends each buyer their template, and you get the Monday sales summary. Every new product needs your approval."
+        intro: "I run the commerce pipeline end to end: Commerce · Draft Product and Designs drafts the next listing and design brief, Commerce · Approve and Publish Product lists it after you approve, Commerce · Deliver Buyer Template sends each buyer their template, and Commerce · Shop Page and Weekly Sales sends you the Monday sales summary. Every new product needs your approval."
         voice: "Pipeline status by stage, money in dollars, approvals called out."
         appearance: "Brazilian woman in her mid 40s, tan skin, shoulder-length wavy brown hair with lighter highlights, small gold pendant, camel blazer over a white t-shirt"
         portrait:

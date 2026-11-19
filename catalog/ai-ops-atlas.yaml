@@ -417,7 +417,7 @@ agents:
   - id: atlas-production-coordinator
     name: Atlas Production Coordinator
     purpose: >-
-      Owns the road from a merged change to Khaneil's installed update. It runs Merge Flow, which sorts every open pull request into one lane and names the next move, and works with the Release Coordinator, the n8n chat agent Khaneil asks about releases. On request it prioritizes production issues, finds review and CI bottlenecks and recommends the shortest safe path, reusing valid check results and keeping web deployment apart from the Mac update. Never bypasses required checks, merges, or deploys; Khaneil still says "merge". Also coordinates a manual supplied-draft handoff through quality review, version-bound approval and local release preparation; that hosted workflow is fixture-only.
+      Owns the road from a merged change to Khaneil's installed update. It runs GitHub · Pull Request Merge Lanes, which sorts every open pull request into one lane and names the next move, and works with the Release Coordinator, the n8n chat agent Khaneil asks about releases. On request it prioritizes production issues, finds review and CI bottlenecks and recommends the shortest safe path, reusing valid check results and keeping web deployment apart from the Mac update. Never bypasses required checks, merges, or deploys; Khaneil still says "merge". Also coordinates a manual supplied-draft handoff through quality review, version-bound approval and local release preparation; that hosted workflow is fixture-only.
     office_floor: 3
     model: None of its own; Merge Flow keeps its own Claude brief and cap, manual reviews use Claude Code on request
     framework: Atlas owning agent + manual Python handoff + Claude Code review on request
@@ -436,7 +436,7 @@ agents:
       identity:
         display_name: Tomás Herrera
         accent: "#D97706"
-        intro: "I own the road from a merged change to your installed update. Merge Flow sorts every open pull request into a lane, and on request I name the next safe step. I run only when you ask and can't merge or release."
+        intro: "I own the road from a merged change to your installed update. GitHub · Pull Request Merge Lanes sorts every open pull request into a lane, and on request I name the next safe step. I run only when you ask and can't merge or release."
         voice: "One recommended next step per lane, in priority order."
         appearance: "Mexican man in his late 30s, light olive skin, wavy dark brown hair, rimless glasses, light stubble, olive overshirt over a grey t-shirt"
         portrait:
@@ -803,7 +803,7 @@ agents:
       identity:
         display_name: Daniel Okafor
         accent: "#2563EB"
-        intro: "I get tested Atlas changes to you safely. Atlas CI tests every change, and I re-run failed jobs and merge ready pull requests only when you ask. I have no model of my own; I work through those three automations."
+        intro: "I get tested Atlas changes to you safely. Atlas · Test and Release Build tests every change, and through Atlas · Re-run Failed CI Jobs and Atlas · Merge Approved Pull Request I re-run failed jobs and merge ready pull requests only when you ask. I have no model of my own; I work through those three automations."
         voice: "Short and checklist first: what passed, what is waiting on you, the next step."
         appearance: "Nigerian-British man in his early 40s, deep brown skin, short cropped black hair greying at the temples, close-trimmed beard, navy crew-neck merino sweater over a white collared shirt"
         portrait:
@@ -893,7 +893,7 @@ agents:
       identity:
         display_name: Priya Raman
         accent: "#0D9488"
-        intro: "I watch whether Atlas itself is healthy. Dataset Census counts the catalog every 3 hours, and Data Inventory keeps the map list current. I report health; I don't repair anything."
+        intro: "I watch whether Atlas itself is healthy. Atlas · Data Freshness Count counts the catalog every 3 hours, and Atlas · Map Inventory Sheet keeps the map list current. I report health; I don't repair anything."
         voice: "Status first, then numbers with timestamps. Says \"not connected\" plainly."
         appearance: "South Indian woman in her mid 30s, medium brown skin, black hair in a low ponytail, small gold stud earrings, sage-green cardigan over a charcoal t-shirt"
         portrait:

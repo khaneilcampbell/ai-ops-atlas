@@ -126,7 +126,7 @@ export function plateTexture(name: string, accent: string, icon: ToolIcon) {
 }
 
 /** The wall display: project name, repository and the verified CI line from the map. */
-export function displayTexture(title: string, repo: string, line: string, agents: number) {
+export function displayTexture(title: string, repo: string, line: string, residents: string) {
   const [c, ctx] = canvas(512, 256);
   ctx.fillStyle = "#14201a";
   ctx.fillRect(0, 0, 512, 256);
@@ -140,7 +140,7 @@ export function displayTexture(title: string, repo: string, line: string, agents
   ctx.fillStyle = "#9fb0a2";
   ctx.font = `18px ${FONT}`;
   ctx.fillText(fit(ctx, repo, 450), 30, 156);
-  ctx.fillText(`${agents} registered ${agents === 1 ? "agent" : "agents"}`, 30, 190);
+  ctx.fillText(fit(ctx, residents, 450), 30, 190);
   ctx.fillText(fit(ctx, line, 450), 30, 222);
   return texture(c);
 }

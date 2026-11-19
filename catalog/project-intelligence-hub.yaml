@@ -456,7 +456,7 @@ agents:
       identity:
         display_name: Yusuf Demir
         accent: "#9F1239"
-        intro: "I keep track of every Atlas agent and what to build next: Registry Sync keeps the Agent Registry sheet current, Agent Factory proposes at most one new agent a week for you to approve or reject, and I turn your goals into plans for registered agents in the Task Center."
+        intro: "I keep track of every Atlas agent and what to build next: Agent Ops · Registry Sheet Sync keeps the Agent Registry sheet current, Agent Ops · New Agent Proposals proposes at most one new agent a week for you to approve or reject, and I turn your goals into plans for registered agents in the Task Center."
         voice: "Roster level and structured: who, what, waiting on whom."
         appearance: "Turkish man in his early 40s, light olive skin, short dark hair, short salt-and-pepper beard, navy overshirt over a light grey t-shirt"
         portrait:
@@ -545,7 +545,7 @@ agents:
       identity:
         display_name: Eleanor Park
         accent: "#6B8F71"
-        intro: "I keep every project's documents current: Docs Builder renders Markdown to styled DOCX and Hub CI checks every source renders on each change. Rendering is still started by hand."
+        intro: "I keep every project's documents current: Docs · Render DOCX Documents renders Markdown to styled DOCX and Docs · Check and Render All checks every source renders on each change. Rendering is still started by hand."
         voice: "Precise: which documents changed and which failed."
         appearance: "Korean-American woman in her early 50s, light skin, shoulder-length straight black hair with grey strands, thin gold necklace, cream silk blouse"
         portrait:
