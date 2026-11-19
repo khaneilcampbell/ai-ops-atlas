@@ -2,6 +2,7 @@ import type { ExecutionRecord } from "../../registry/types";
 import type { AgentProfile } from "../../registry/profile";
 import type { AgentPlaces, Place } from "../../catalog/agentPlaces";
 import { RUNTIME_LABEL, type Runtime, type RuntimeState, type Workstation } from "./model";
+import { residentsLabel } from "../../catalog/roles";
 
 /**
  * How an office reads as an organization, and what the hologram over a desk says. Pure, so the
@@ -29,6 +30,9 @@ export interface OrgBand {
   tier: Workstation["tier"];
   label: string;
   count: number;
+  /** How the count reads on the sign: AI agents and automations named apart, since an automation
+   *  is a workflow, not an agent. */
+  residents: string;
   /** Desk-centre extent of the band in the room, for its floor outline and sign. */
   minX: number;
   maxX: number;
@@ -39,7 +43,7 @@ export interface OrgBand {
 }
 
 /** One band per role tier, in the plan's own order (central, coordinators, specialists). */
-export function orgBands(desks: { ws: Workstation; runtime: Pick<Runtime, "state"> }[]): OrgBand[] {
+export function orgBands(desks: { ws: Workstation; runtime: Pick<Runtime, "state">; automation?: boolean }[]): OrgBand[] {
   const out: OrgBand[] = [];
   for (const tier of Object.keys(TIER_LABEL) as Workstation["tier"][]) {
     const mine = desks.filter((d) => d.ws.tier === tier);
@@ -51,6 +55,7 @@ export function orgBands(desks: { ws: Workstation; runtime: Pick<Runtime, "state
       tier,
       label: TIER_LABEL[tier],
       count: mine.length,
+      residents: residentsLabel(mine.filter((d) => !d.automation).length, mine.filter((d) => d.automation).length),
       minX: Math.min(...xs),
       maxX: Math.max(...xs),
       minZ: Math.min(...zs),
@@ -103,6 +108,8 @@ export function hologramData(o: {
   name: string;
   /** With an identity, `name` is the persona and this is its functional role (shown with "AI agent"). */
   role?: string | null;
+  /** An automation: the hologram says so instead of reading like a team member. */
+  automation?: boolean;
   ws: Pick<Workstation, "tier" | "zone">;
   runtime: Runtime;
   history: ExecutionRecord[];
@@ -125,7 +132,7 @@ export function hologramData(o: {
   const goal = o.profile.goals.objective?.trim() || o.profile.mission.purpose?.trim() || null;
   return {
     name: o.name,
-    team: o.role ? `${o.role} · AI agent` : `${TEAM_LABEL[o.ws.zone]} team · ${TIER_LABEL[o.ws.tier]}`,
+    team: o.role ? `${o.role} · AI agent` : o.automation ? `Automation · ${TEAM_LABEL[o.ws.zone]}` : `${TEAM_LABEL[o.ws.zone]} team · ${TIER_LABEL[o.ws.tier]}`,
     state: o.runtime.state,
     stateLabel: RUNTIME_LABEL[o.runtime.state],
     reason: o.runtime.reason,
