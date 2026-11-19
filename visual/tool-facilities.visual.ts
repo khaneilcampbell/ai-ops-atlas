@@ -5,9 +5,11 @@ import { openAtlas, selectBuilding, settle, waitForScene } from "./atlas";
 /**
  * Tool facilities (Khaneil, 2026-11-16): smaller buildings for the tools each building's agents use,
  * shown with the map's Tool facilities toggle. Screenshots only, no baselines: the toggle is off by
- * default, so every existing baseline stays as it is. Shots land in SHOT_DIR.
+ * default, so every existing baseline stays as it is. Runs only when SHOT_DIR is set (shots land
+ * there), so it adds nothing to the CI visual shards.
  */
-const out = process.env.SHOT_DIR ?? "artifacts/tool-facilities";
+const out = process.env.SHOT_DIR ?? "";
+test.skip(!out, "Set SHOT_DIR to a folder to take Tool facilities screenshots.");
 
 async function open(page: Page, on: boolean) {
   const errors: string[] = [];
