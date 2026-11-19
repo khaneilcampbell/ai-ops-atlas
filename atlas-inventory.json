@@ -1256,7 +1256,7 @@
    "owned_by": "site-builder",
    "project": "portfolio-site",
    "runtime": "n8n Cloud",
-   "trigger": "Job form, plus a Monday 9am summary and a daily 10am review nudge",
+   "trigger": "Draft. Job form or a signed start from the Atlas Task Center, plus a Monday 9am summary and a daily 10am review nudge",
    "source": ""
   },
   {
@@ -2103,6 +2103,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-19T09:02:36.779Z",
- "commit": "0536d5a621d5ed9e9b18f110daeacdaed35e3739"
+ "generated_at": "2026-11-19T09:28:15.808Z",
+ "commit": "9e8b4ddfd01bd48b23b541b42923763b56bd09ff"
 }
