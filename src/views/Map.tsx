@@ -1,11 +1,14 @@
 import { catalog as fullCatalog } from "../catalog";
+import { LEAVE_INSIDE_EVENT, VIEW_OFFICE_EVENT, agentPositions, setFollowedAgent, type ViewOfficeDetail } from "./map3d/agentFollow";
+import { mapBuildings, pickFloor, setInsideShown } from "../buildings/insideFloors";
+import { busiestOffice } from "../buildings/buildingDefinition";
 import {districtHeadings} from "./mapPresentation";
 import { toolWorkflowRoads } from "./toolWorkflowLayout";
 import { toolBrand } from "./map3d/toolBrand";
 import { SYMBOLS } from "./map3d/symbols";
 import { projectRepositories } from "../catalog/projects";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { isAiAgent, residentsLabel } from "../catalog/roles";
+import { directoryItems, isAiAgent, residentsLabel } from "../catalog/roles";
 import { agentJobs } from "../catalog/agentJobs";
 import { usePresenceAssignments } from "../catalog/agentPresence";
 import { CONNECTION_TYPES, type Agent, type ConnectionType, type Status } from "../catalog/types";
@@ -53,6 +56,10 @@ import { measure, SANS, SERIF, wrap } from "./mapText";
 import type { Map3DApi, MapLink } from "./map3d/Map3D";
 import { ControlsHelp } from "./map3d/ControlsHelp";
 import { webglAvailable } from "./map3d/webgl";
+import { selectCityAgent, setCityAgentsPanel, useCityAgents } from "./map3d/cityAgentsStore";
+import { rosterAgents } from "./map3d/cityRoster";
+import { identityFor } from "../registry/identity";
+const CityAgentsPanel = lazy(() => import("./map3d/CityAgentsPanel").then((m) => ({ default: m.CityAgentsPanel })));
 import { leaveBuilding, useOffice } from "./office/store";
 
 // three.js only loads when the 3D map is shown.
@@ -435,14 +442,14 @@ function anchors(districts: District[], parks: Park[]) {
 export function MapView({active=true}:{active?:boolean}) {
   const { catalog, repos, uncataloged, select, selection: appSelection, setView } = useAtlas();
   const selection = active ? appSelection : null;
-  const infrastructureMetrics = useMemo(() => {
-    const aiAgents = catalog.agents.filter(isAiAgent).length;
-    return [
-      { label: "Projects", count: catalog.projects.length },
-      { label: "AI Agents", count: aiAgents },
-      { label: "Automations", count: catalog.agents.length - aiAgents },
-    ];
-  }, [catalog]);
+  // The same counts as the Agents button and the Automations directory: active agents (one per
+  // identity, so Product Lab's skills count once, as Leila Haddad) and active automations. Retired
+  // entries stay in the manifests as history only.
+  const infrastructureMetrics = useMemo(() => [
+    { label: "Projects", count: catalog.projects.length },
+    { label: "AI Agents", count: rosterAgents(catalog.agents).length },
+    { label: "Automations", count: directoryItems(catalog.agents, "automations").length },
+  ], [catalog]);
   // Districts are the default layout; a new key so earlier saved groupings don't hide them.
   const [showNamesOnZoom, setShowNamesOnZoom] = useState(() => load<boolean>("mapNamesOnZoom", false));
   // District names are on unless "none" was saved (the old "No grouping"; visual tests still use it for
@@ -464,10 +471,56 @@ export function MapView({active=true}:{active?:boolean}) {
   const [traffic, setTrafficState] = useState(() => load<boolean>("mapTraffic", true));
   // Inside: nearby headquarters open as cutaways showing their offices, without entering.
   const [inside, setInsideState] = useState(loadInside);
+  // Panels outside the map (the building summary) show the floor picker and "Back to city" while it's on.
+  useEffect(() => {
+    setInsideShown(inside && active);
+    return () => setInsideShown(false);
+  }, [inside, active]);
   const setInside = (on: boolean) => {
     setInsideState(on);
     saveInside(on);
   };
+  // The Inside button (house icon) with nothing selected goes to where agents are working now: the
+  // building and floor with the most agents at their desks (buildingDefinition.busiestOffice).
+  const toggleInside = () => {
+    if (inside) {
+      setInside(false);
+      return;
+    }
+    const busy = selection?.kind === "project" ? undefined : busiestOffice(mapBuildings(), agentPositions);
+    if (busy) {
+      pickFloor(busy.building.id, busy.floor);
+      select({ kind: "project", id: busy.building.projectId });
+    }
+    setInside(true);
+  };
+  // "View office" on an agent's card: switch on Inside and frame its headquarters, so its desk shows.
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<ViewOfficeDetail>).detail;
+      setInsideState(true);
+      saveInside(true);
+      if (d?.towerKey && d.floor !== undefined) pickFloor(d.towerKey, d.floor);
+      if (d?.projectId) select({ kind: "project", id: d.projectId });
+      // "Locate agent": once the building is framed, move in close and keep the agent in view.
+      if (d?.personaId)
+        window.setTimeout(() => {
+          map3d.current?.zoom(1.25 ** 3);
+          setFollowedAgent(d.personaId!);
+        }, 700);
+    };
+    const off = () => {
+      setInsideState(false);
+      saveInside(false);
+      setFollowedAgent(null);
+    };
+    window.addEventListener(VIEW_OFFICE_EVENT, on);
+    window.addEventListener(LEAVE_INSIDE_EVENT, off);
+    return () => {
+      window.removeEventListener(VIEW_OFFICE_EVENT, on);
+      window.removeEventListener(LEAVE_INSIDE_EVENT, off);
+    };
+  }, [select]);
   const setTraffic = (on: boolean) => {
     setTrafficState(on);
     save("mapTraffic", on);
@@ -485,6 +538,33 @@ export function MapView({active=true}:{active?:boolean}) {
   useEffect(() => {
     if (!active && libraryOpen) closeLibrary();
   }, [active, libraryOpen]);
+
+  // City agents: the roster panel beside the map (map3d/CityAgentsPanel.tsx). The count is the active
+  // registry's named agents only: no automations, workflows, pedestrians or retired agents.
+  const cityAgents = useCityAgents();
+  const roster = useMemo(() => rosterAgents(catalog.agents), [catalog.agents]);
+  const agentCount = roster.length;
+  const agentsBtn = useRef<HTMLButtonElement>(null);
+  const closeCityAgents = useCallback(() => {
+    setCityAgentsPanel(false);
+    // Nothing keeps tracking an agent behind a closed panel.
+    setFollowedAgent(null);
+    agentsBtn.current?.focus();
+  }, []);
+  const toggleCityAgents = () => (cityAgents.panelOpen ? closeCityAgents() : setCityAgentsPanel(true));
+  useEffect(() => {
+    if (!active && cityAgents.panelOpen) setCityAgentsPanel(false);
+  }, [active, cityAgents.panelOpen]);
+  // An agent picked anywhere on the map (labels, the flat map, search) becomes the roster's selection
+  // while the panel is open, so the panel stays its only profile on the map.
+  useEffect(() => {
+    if (!cityAgents.panelOpen || selection?.kind !== "agent") return;
+    const persona = identityFor(selection.id, catalog.agents).personaId;
+    if (roster.some((r) => r.identity.personaId === persona)) {
+      selectCityAgent(persona);
+      select(null);
+    }
+  }, [cityAgents.panelOpen, selection, select, catalog.agents, roster]);
 
   // Connections between buildings, from catalog manifests and cached GitHub data only.
   const [linkPrefs, setLinkPrefsState] = useState<LinkPrefs>(() => {
@@ -984,7 +1064,7 @@ export function MapView({active=true}:{active?:boolean}) {
     else if (e.key === "-" || e.key === "_") zoomBy(0.8);
     else if (e.key === "0") fitAny();
     else if (is3d && (e.key === "q" || e.key === "e")) map3d.current?.rotate(e.key === "q" ? 45 : -45);
-    else if (is3d && e.key === "i") setInside(!inside);
+    else if (is3d && e.key === "i") toggleInside();
     else if (is3d && e.key === "?") setControlsHelp((o) => !o);
   };
 
@@ -1246,6 +1326,20 @@ export function MapView({active=true}:{active?:boolean}) {
           )}
 
           <div className="map-controls">
+            <button
+              ref={agentsBtn}
+              type="button"
+              className={`icon-btn text map-agents-btn ${cityAgents.panelOpen ? "on" : ""}`}
+              onClick={toggleCityAgents}
+              aria-pressed={cityAgents.panelOpen}
+              aria-label={`Agents, ${agentCount} active`}
+              title={cityAgents.panelOpen ? "Close City agents" : "City agents: find and manage your team"}
+            >
+              <Icon name="people" size={16} />
+              <span className="lbl">Agents</span>
+              <span className="count">{agentCount}</span>
+            </button>
+            <span className="sep" />
             {/* One menu for the city's view. "By district" brings back the district names as well as the
                 quiet infrastructure lines, so picking it always changes something you can see. */}
             <MapSelect label="Map view" value={shownLens} options={MAP_LENSES} text={(l) => LENS_INFO[l].label} short={(l) => LENS_INFO[l].short}
@@ -1261,11 +1355,11 @@ export function MapView({active=true}:{active?:boolean}) {
             {is3d && (
               <button
                 className={`icon-btn ${inside ? "on" : ""}`}
-                onClick={() => setInside(!inside)}
+                onClick={toggleInside}
                 aria-pressed={inside}
                 aria-label="Inside"
                 aria-keyshortcuts="I"
-                title={inside ? "Close the buildings (I)" : "See inside the buildings near you (I). Select one and Enter it for the full office."}
+                title={inside ? "Back to the city (I)" : "See agents working inside the buildings (I). Opens the office where most agents are at their desks, or the building you selected."}
               >
                 <Icon name="cutaway" size={17} />
               </button>
@@ -1361,6 +1455,11 @@ export function MapView({active=true}:{active?:boolean}) {
           <div className="sr-only" aria-live="polite">
             {announce}
           </div>
+          {cityAgents.panelOpen && (
+            <Suspense fallback={<aside className={`city-agents ${phone ? "sheet" : ""}`} aria-busy="true"><p className="ca-fresh loading">Loading agents…</p></aside>}>
+              <CityAgentsPanel mapOn={is3d} phone={phone} onClose={closeCityAgents} onLocate={(at) => map3d.current?.locate(at[0], at[1], at[2])} />
+            </Suspense>
+          )}
         </div>
 
         {libraryOpen && (

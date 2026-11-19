@@ -96,8 +96,12 @@ export function swaying(m: THREE.MeshStandardMaterial) {
 }
 
 /** Lets any material take part in focus mode. Keeps whatever patch the material already has. */
+// Patched materials. Not userData: Material.clone() copies userData but not onBeforeCompile, so a
+// clone (activity.tsx's glow copies) would look patched while drawing without the Inside cut.
+const patched = new WeakSet<THREE.Material>();
 export function focusable<T extends THREE.Material>(m: T): T {
-  if (m.userData.focusable) return m;
+  if (patched.has(m)) return m;
+  patched.add(m);
   m.userData.focusable = true;
   const prev = m.onBeforeCompile.bind(m);
   const key = m.customProgramCacheKey.bind(m);

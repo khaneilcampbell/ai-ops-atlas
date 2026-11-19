@@ -41,7 +41,7 @@ export interface TravelPlan {lap:number;travellers:Traveller[];shuttles:Shuttle[
 export type TravellerState={visible:false;riding?:Riding}|{visible:true;x:number;y:number;z:number;yaw:number;absolute:boolean};
 
 /** Shared clock (seconds since the map's train started), set each frame by the train so cars and yacht keep its time. */
-export const TRAVEL_CLOCK={t:0,live:false};
+export const TRAVEL_CLOCK:{t:number;live:boolean;/** Wall clock (ms) when t was last set, so the agents' rides can map wall time to train time. */wall?:number}={t:0,live:false};
 
 const mod=(a:number,n:number)=>((a%n)+n)%n;
 const gcd=(a:number,b:number):number=>b?gcd(b,a%b):a,lcm=(a:number,b:number)=>a/gcd(a,b)*b;

@@ -1,4 +1,6 @@
 import {GALLERIA_FLOORS,GALLERIA_ID,GALLERIA_KEY,GALLERIA_NAME} from "../views/map3d/galleriaPlan";
+import { RoutinePanel } from "../views/agents/RoutinePanel";
+import { BuildingInside } from "./BuildingInside";
 import { AutomationPlazaPanel } from "./AutomationPlazaPanel";
 import { usePlazaSnapshot } from "../plaza/usePlaza";
 import { signText } from "../plaza/plazaState";
@@ -232,6 +234,7 @@ function ProjectDetail({ id }: { id: string }) {
     </Head>
     <div className="panel-body selectable"><ModuleSection/>
       <p style={{ margin: 0, fontSize: 14 }}>{project.summary}</p>
+      <BuildingInside projectId={project.id}/>
       <BuildingTasks buildingId={project.id}/>
       {project.module === "business-operations-hq" && <BusinessLink/>}
       <LinkedRepositories project={project}/>
@@ -277,7 +280,7 @@ export function AgentDetail({ id, onClose }: { id: string; onClose?:()=>void }) 
         }}>{name === "overview" ? "Overview" : name === "output" ? "Output" : name === "workday" ? "Workday" : "Intelligence"}</button>)}
       </div>
       <div className="panel-body selectable" id={`agent-${id}-panel`} role="tabpanel" aria-labelledby={`agent-${id}-${tab}-tab`}>
-        {tab === "workday" ? <AgentPresence agentId={agent.id}/> : tab === "intelligence" ? <IntelligenceTab agentId={agent.id}/> : tab === "output" ? <AgentOutput agent={agent}/> : <>
+        {tab === "workday" ? <><RoutinePanel agentId={agent.id}/><AgentPresence agentId={agent.id}/></> : tab === "intelligence" ? <IntelligenceTab agentId={agent.id}/> : tab === "output" ? <AgentOutput agent={agent}/> : <>
         <p style={{ margin: 0, fontSize: 14 }}>{agent.purpose}</p>
         <ClaudeReviewHandoff agent={agent}/>
         <BuildingTasks agentId={agent.id}/>
