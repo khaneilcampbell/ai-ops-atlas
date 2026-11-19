@@ -30,7 +30,7 @@ for (const width of [1512, 390]) {
     await page.screenshot({ path: join(out, `${width}-1-roster.png`) });
 
     // A free agent: the Free time filter's first row.
-    await panel.getByRole("button", { name: /^Free time/ }).click();
+    await panel.getByRole("button", { name: /^Free time \d+$/ }).click();
     await settle(page, 1);
     const row = panel.locator("button.ca-row").first();
     const name = (await row.locator(".ca-row-name").textContent())!;
