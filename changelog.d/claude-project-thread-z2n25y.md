@@ -1,1 +1,1 @@
-- 2026-11-19 · Fixed two screenshot checks that failed on every pull request: the old walking-agent card test is gone (the named agent characters replaced that card), and the district names check waits long enough on the slower CI machine (#PR)
+- 2026-11-19 · Fixed two screenshot checks that failed on every pull request: the old walking-agent card test is gone (the named agent characters replaced that card), and the district names check waits long enough on the slower CI machine (#480)
