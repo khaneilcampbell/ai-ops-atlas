@@ -4,10 +4,12 @@ import { openAtlas, settle, waitForScene, selectBuilding } from "./atlas";
 
 /**
  * Agents' faces over a building's nameplate (BuildingFaces.tsx): on hover at desktop width, on a tap
- * (selection) on a phone. FACES_SHOT_DIR saves review shots; the checks always run.
+ * (selection) on a phone. Review shots, like residence-agents.visual.ts: they run only when FACES_SHOT_DIR
+ * is set, so the CI shards stay inside their time limit (buildingOccupants.test.ts covers the data).
  * FACES_BEFORE=1 runs the same steps on a build without the feature (no checks).
  */
 const dir = process.env.FACES_SHOT_DIR;
+test.skip(!dir, "Set FACES_SHOT_DIR to a folder to take these review shots");
 const before = !!process.env.FACES_BEFORE;
 const shot = async (page: Page, name: string) => {
   if (dir) {
