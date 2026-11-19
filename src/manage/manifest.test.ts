@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
 import { capProblem, HARD_MAX_CAP_USD, MANIFEST, manifestProblems, scheduleProblem, type Manifest } from "./manifest";

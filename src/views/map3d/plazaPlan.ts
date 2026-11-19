@@ -32,12 +32,20 @@ export const PLAZA = {
    * about 5 above the ground; Khaneil, 2026-11-18), so the sculpture reads over it from the map's camera.
    */
   enclosureRadius: 1.25,
-  enclosureHeight: 5.7,
+  enclosureHeight: 5.55,
+  /**
+   * Concept B's top (Khaneil, 2026-11-19: "use B top part instead of A"): the glass ends in an open gold rim,
+   * with a shallow gold saucer set just inside it and the mast running up to meet it. The saucer's low dome
+   * rises this much above the rim; glass plus saucer keep the old 5.7 total, below the nearest tower.
+   */
+  crownRise: 0.15,
+  /** Fine gold mullions round the glass. */
+  mullions: 16,
   pedestalRadius: 0.6,
   /** The pedestal and gyroscope are drawn this much larger than their base model (kept in proportion). */
   sculptureScale: 1.65,
-  /** Ring centre height above the disc: the gyroscope floats in the lantern's lower half. */
-  ringHeight: 2.4,
+  /** Ring centre height above the disc: the gyroscope is gathered in the middle of the lantern. */
+  ringHeight: 2.65,
   ringRadii: [0.99, 0.89, 0.79] as const,
   ringTube: 0.06,
   /** Gold paths are laid this wide, a hair above the ground they cross. */

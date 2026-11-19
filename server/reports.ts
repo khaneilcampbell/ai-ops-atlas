@@ -8,6 +8,7 @@
 import { isReportAgent, MAX_REPORT_BYTES, reportLine, validReport, type StoredReport } from "../src/reports/model";
 import { bearerOk, ensureSchema as ensureFeed, type D1, type LiveEnv } from "./live";
 import { reply } from "./http";
+import { captureLatestReport, type OutputsEnv } from "./outputs";
 
 export const REPORTS_PATH = "/api/hooks/reports";
 export const KEEP_REPORTS = 20;
@@ -51,7 +52,15 @@ export async function receiveReport(req: Request, env: LiveEnv, now = Date.now()
     db.prepare("DELETE FROM agent_reports WHERE agent = ? AND id NOT IN (SELECT id FROM agent_reports WHERE agent = ? ORDER BY id DESC LIMIT ?)").bind(body.agent, body.agent, KEEP_REPORTS),
     db.prepare("INSERT INTO events (at, source, kind, repo, delivery, body) VALUES (?, ?, ?, ?, ?, ?)").bind(at, "agent", "agent_report", null, null, JSON.stringify({ agent: body.agent, detail: line.slice(0, 300) })),
   ]);
-  return reply(202, { stored: 1 });
+  // Archive it in the Output Library too. The report above is the true result; a failed archive
+  // shows in the Library as a missing file and never fails this call.
+  let library: { storage?: string; duplicate?: boolean; message?: string } | null;
+  try {
+    library = (await captureLatestReport(env as OutputsEnv, body.agent))[0] ?? null;
+  } catch (e) {
+    library = { message: e instanceof Error ? e.message : String(e) };
+  }
+  return reply(202, { stored: 1, library });
 }
 
 /** The newest reports of one agent, newest first. */
