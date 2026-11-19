@@ -29,6 +29,17 @@ describe("office organization", () => {
     expect(bands[1].activity).toBeNull();
   });
 
+  it("names AI agents and automations apart on the sign, never counting an automation as an agent", () => {
+    const [band] = orgBands([
+      { ws: ws("specialized", 0, 0), runtime: rt("idle") },
+      { ws: ws("specialized", 1, 0), runtime: rt("idle"), automation: true },
+      { ws: ws("specialized", 2, 0), runtime: rt("idle"), automation: true },
+    ]);
+    expect(band.residents).toBe("1 AI agent · 2 automations");
+    const [autos] = orgBands([{ ws: ws("central", 0, 0), runtime: rt("idle"), automation: true }]);
+    expect(autos.residents).toBe("1 automation");
+  });
+
   it("groups the roster by tier and drops empty tiers", () => {
     expect(byTier(["a", "b", "c"], (x) => (x === "b" ? "coordinator" : "specialized")).map((g) => [g.tier, g.items])).toEqual([["coordinator", ["b"]], ["specialized", ["a", "c"]]]);
   });
@@ -54,6 +65,11 @@ describe("hologram data", () => {
     expect(none.goal).toBe("Keeps CI green.");
     const quiet = hologramData({ name: "X", ws: ws("specialized", 0, 0), runtime: rt("idle"), history: [], profile: profile() });
     expect(quiet.runsCaption).toBe("No runs observed yet");
+  });
+
+  it("labels an automation's hologram as an automation, not a team member", () => {
+    const h = hologramData({ name: "Atlas · Test and Release Build", automation: true, ws: ws("central", 0, 0, "quality"), runtime: rt("idle"), history: [], profile: profile() });
+    expect(h.team).toBe("Automation · Quality review");
   });
 
   it("keeps at most the slot count of runs", () => {

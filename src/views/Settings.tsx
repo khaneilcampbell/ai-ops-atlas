@@ -6,6 +6,7 @@ import { relative } from "../lib/time";
 import { tokenStore } from "../lib/token";
 import { isHostedWeb, isTauri } from "../lib/env";
 import { useAtlas } from "../state";
+import { directoryItems, residentsLabel } from "../catalog/roles";
 import { POWER_MODES, setPowerMode, useOnBattery, usePowerMode, usePowerProfile } from "../lib/power";
 import { PHONE_QUERY, useMedia } from "../lib/media";
 import { SCROLL_MODES, setNavigationPrefs, TRACKPAD_SPEEDS, useNavigationPrefs } from "../lib/navigation";
@@ -104,7 +105,7 @@ export function SettingsView() {
         <div className="card-head">
           <h2 className="grow">Catalog</h2>
           <span className="muted small">
-            {catalog.projects.length} projects · {catalog.agents.length} agents
+            {catalog.projects.length} projects · {residentsLabel(directoryItems(catalog.agents, "agents").length, directoryItems(catalog.agents, "automations").length)}
           </span>
         </div>
         <div className="setting" style={{ display: "block" }}>
