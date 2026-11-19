@@ -273,6 +273,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const [hover, setHover] = useState<string | null>(null);
   /** The nameplate under the pointer (not the building mesh), for the faces over it. */
   const [plaqueHover, setPlaqueHover] = useState<string | null>(null);
+  // A screen without hover (a phone): a tap selects the building, so its faces show with the selection.
+  const touchOnly = useMemo(() => typeof window !== "undefined" && !!window.matchMedia?.("(hover: none)").matches, []);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; sub: string } | null>(null);
   const [near, setNear] = useState<"far" | "mid" | "near">("far");
   // Headquarters open in the Inside view: their nameplates sit on the open floor, not the old roof.
@@ -469,8 +471,9 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.airport)for(const b of AIRPORT_BUILDINGS.filter(b=>mapLabelVisible("detail",near,selKey===airportBuildingKey(b.id),hover===airportBuildingKey(b.id),selKey===AIRPORT_KEY)))plaque({id:airportBuildingKey(b.id),select:airportBuildingKey(b.id),name:b.name,x:airportPoint(scene.airport,b.x,b.z)[0],roof:TERRACE_H+b.h,z:scene.airport.z+b.z,priority:7,mark:PLANNED,title:`${b.name} · Planned workspace`});
     if(scene.airport)plaque({id:AIRPORT_KEY,select:AIRPORT_KEY,name:"Atlas Airport",x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],roof:TERRACE_H+3.4,z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,priority:2,mark:PLANNED,title:"Atlas Airport · Planned visual district"});
     // The agents who work or live in a building, as faces over its nameplate: while the pointer is on the
-    // nameplate (desktop), or while the building is selected (a tap on a phone). One building at a time.
-    const faceKey = plaqueHover ?? selKey;
+    // nameplate (desktop), or while the building is selected on a touch screen (a tap: there is no hover).
+    // One building at a time.
+    const faceKey = plaqueHover ?? (touchOnly ? selKey : null);
     const faces = faceKey ? occupants.get(faceKey) : undefined;
     if (faces && occupantCount(faces)) {
       const i = out.findIndex((l) => l.key === faceKey && l.className.startsWith("m3-plaque"));
@@ -481,7 +484,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
-  }, [scene, layout, props.displayNeighborhoods, props.landmarkMarks, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf, plaqueHover, occupants, onMapAgents]);
+  }, [scene, layout, props.displayNeighborhoods, props.landmarkMarks, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf, plaqueHover, touchOnly, occupants, onMapAgents]);
 
   const pick: PickHandlerSet = {
     of: (keys) => ({

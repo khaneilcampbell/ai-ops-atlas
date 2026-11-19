@@ -17,7 +17,8 @@ const shot = async (page: Page, name: string) => {
     await page.screenshot({ path: `${dir}/${name}.png` });
   }
 };
-const plaque = (page: Page, name: string) => page.locator(`.m3-plaque[title^=${JSON.stringify(name + " ·")} i]`).first();
+const plaque = (page: Page, name: string) =>
+  page.locator(`.m3-plaque[title^=${JSON.stringify(name + " ·")} i]`).first();
 
 test("faces over a building name on hover, desktop", async ({ page }) => {
   test.setTimeout(600_000);
@@ -45,17 +46,25 @@ test("faces over a building name on hover, desktop", async ({ page }) => {
   await settle(page, 2);
   await plaque(page, "Team Residence Towers").hover();
   await settle(page, 2);
-  if (!before) await expect(page.locator(".m3-faces")).toContainText("Lives here");
+  if (!before)
+    await expect(page.locator(".m3-faces")).toContainText("Lives here");
   await shot(page, "1512-residence-hover");
 });
 
-test("faces over a tapped building name, phone", async ({ page }) => {
-  test.setTimeout(600_000);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await openAtlas(page, { light: "day" });
-  await waitForScene(page);
-  await selectBuilding(page, "Atlas Command Center");
-  await settle(page, 2);
-  if (!before) await expect(page.locator(".m3-faces")).toBeVisible();
-  await shot(page, "390-command-center-tap");
+test.describe("phone", () => {
+  // A touch screen has no hover, so a tap (selection) shows the faces.
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  test("faces over a tapped building name, phone", async ({ page }) => {
+    test.setTimeout(600_000);
+    await openAtlas(page, { light: "day" });
+    await waitForScene(page);
+    await selectBuilding(page, "Atlas Command Center");
+    await settle(page, 2);
+    if (!before) await expect(page.locator(".m3-faces")).toBeVisible();
+    await shot(page, "390-command-center-tap");
+  });
 });
