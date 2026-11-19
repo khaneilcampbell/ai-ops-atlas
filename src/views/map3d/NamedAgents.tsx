@@ -11,6 +11,7 @@ import { useAtlas } from "../../state";
 import { focusTasks } from "../../tasks/focus";
 import { useTasks } from "../../tasks/store";
 import type { StoredTask } from "../../tasks/types";
+import { useFreeTimeRequests } from "../../routine/freeTime";
 import { activityText, planRoutine, segmentAt, type Routine, type RoutineEnv, type Segment } from "../../routine/routine";
 import type { OpRun } from "../../routine/operations";
 import { publishRoutines, publishWhere, useRoutineHeld, useRoutineOps } from "../../routine/useRoutineOps";
@@ -187,6 +188,7 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
   const work = useAgentWork(ids);
   const ops = useRoutineOps(ids);
   const held = useRoutineHeld();
+  const freeTime = useFreeTimeRequests();
   const followed = useFollowedAgent();
   const boxes = useRef<THREE.InstancedMesh>(null), balls = useRef<THREE.InstancedMesh>(null), badges = useRef<THREE.InstancedMesh>(null), rings = useRef<THREE.InstancedMesh>(null);
   const card = useRef<THREE.Group>(null), chip = useRef<THREE.Group>(null);
@@ -207,10 +209,10 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
     const out = new Map<string, Routine>();
     for (const id of ids) {
       const env = envs.get(id), o = ops.ops.get(id);
-      if (env && o) out.set(id, planRoutine({ personaId: id, ops: o, env, now: ops.now, held: held.has(id) }));
+      if (env && o) out.set(id, planRoutine({ personaId: id, ops: o, env, now: ops.now, held: held.has(id), outing: freeTime.get(id) ?? null }));
     }
     return out;
-  }, [ids, envs, ops.ops, ops.now, held]);
+  }, [ids, envs, ops.ops, ops.now, held, freeTime]);
   const routinesRef = useRef(routines);
   routinesRef.current = routines;
   useEffect(() => publishRoutines(routines), [routines]);
