@@ -18,6 +18,7 @@ import { hqClearSpan, isAtlasHq, shellAxes } from "./atlasHqInteriorPlan";
 import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
 import { displayTexture, plateTexture, screenTexture, STATE_COLOR } from "./textures";
+import { residentsLabel } from "../../catalog/roles";
 import { OFFICE_COLORS as C } from "./palette";
 import { AgentHologram, OrgBands } from "./AgentHologram";
 import { orgBands, type HologramData } from "./officeOrg";
@@ -50,6 +51,8 @@ interface Props {
   floor?:number;
   plan: OfficePlan;
   desks: DeskData[];
+  /** Automations this headquarters runs: counted on the wall display, never given a desk. */
+  automations?: number;
   wall: { title: string; repo: string; line: string };
   light: LightMode;
   reduced: boolean;
@@ -74,7 +77,7 @@ export default function OfficeScene(props: Props) {
         <FloorLabel level={level} width={props.plan.w} depth={props.plan.d+2}/>
         {props.floor!==undefined&&<Box p={[0,-0.06,props.plan.d/2+1]} s={[props.plan.w+0.4,0.12,2.2]} m={MAT.floor}/>}
         {isAtlasHq(props.plan.projectId)&&<AtlasHqShell w={props.plan.w} d={props.plan.d} level={level} night={props.light==="night"}/>}
-        <OfficeEnvironment shell={isAtlasHq(props.plan.projectId)} furnished={isFurnishedFloor(props.plan.projectId,level)} plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} count={desks.length} lighting={props.floor!==-1||level===4}/>
+        <OfficeEnvironment shell={isAtlasHq(props.plan.projectId)} furnished={isFurnishedFloor(props.plan.projectId,level)} plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} residents={residentsLabel(desks.length,props.automations??0)} lighting={props.floor!==-1||level===4}/>
         {(level===0||props.floor===undefined)&&<LobbyEntrance z={isAtlasHq(props.plan.projectId)?shellAxes(props.plan.w,props.plan.d).b:props.plan.d/2+0.08} width={1.4} height={2.2}/>}
         {level<4&&!desks.some(d=>(d.floor??4)===level)&&<SharedFloor plan={props.plan} floor={level}/>}
         {props.floor!==undefined&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,1,1]}><ElevatorLanding door={isAtlasHq(props.plan.projectId)?0:undefined} lobbyWalk={false} level={level} reduced={reduced} labels={props.floor!==-1}/></group>}
@@ -254,12 +257,12 @@ function Box({ p, s, m, r }: { p: [number, number, number]; s: [number, number, 
 // ---------------------------------------------------------------- environment
 
 /** OfficeEnvironment: floor, cutaway walls with windows, wall display, server rack and plants. */
-function OfficeEnvironment({ plan, wall, light, count, lighting=true, shell=false, furnished=false }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; count: number; lighting?:boolean; shell?: boolean; furnished?: boolean }) {
+function OfficeEnvironment({ plan, wall, light, residents, lighting=true, shell=false, furnished=false }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; residents: string; lighting?:boolean; shell?: boolean; furnished?: boolean }) {
   const { w, d } = plan;
   const night = light === "night";
   const H = 2.7;
   const T = 0.16;
-  const display = useMemo(() => displayTexture(wall.title, wall.repo, wall.line, count), [wall.title, wall.repo, wall.line, count]);
+  const display = useMemo(() => displayTexture(wall.title, wall.repo, wall.line, residents), [wall.title, wall.repo, wall.line, residents]);
   useEffect(() => () => display.dispose(), [display]);
   useEffect(() => {
     MAT.pane.color.set(night ? "#22314f" : "#cfe6f2");

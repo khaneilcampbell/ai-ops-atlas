@@ -87,15 +87,15 @@ export function Manage({ open }: { open: (id: string) => void }) {
     <section className="manage" aria-labelledby="manage-title">
       <div className="manage-head">
         <div className="grow">
-          <h2 id="manage-title">Manage agents</h2>
+          <h2 id="manage-title">Manage automations</h2>
           <p className="muted small">
-            {MANIFEST.agents.length} agents that run on GitHub Actions in {MANIFEST.repository}. Times are UTC.
+            {MANIFEST.agents.length} automations that run on GitHub Actions in {MANIFEST.repository}. Times are UTC.
           </p>
         </div>
         <span className="muted small" aria-live="polite">
           {loading ? "Checking GitHub…" : data ? `Checked ${relative(data.fetchedAt)}` : ""}
         </span>
-        <button className="btn" onClick={() => void refresh()} disabled={loading} aria-label="Refresh agent status from GitHub">
+        <button className="btn" onClick={() => void refresh()} disabled={loading} aria-label="Refresh automation status from GitHub">
           <Icon name="refresh" size={14} /> Refresh
         </button>
       </div>
@@ -134,7 +134,7 @@ export function Manage({ open }: { open: (id: string) => void }) {
         <table className="table manage-table">
           <thead>
             <tr>
-              <th scope="col">Agent</th>
+              <th scope="col">Automation</th>
               <th scope="col">Status</th>
               <th scope="col">Schedule</th>
               <th scope="col">Last run</th>
@@ -152,7 +152,7 @@ export function Manage({ open }: { open: (id: string) => void }) {
               return (
                 <Fragment key={r.agent.id}>
                   <tr className={on ? "selected" : ""} onClick={toggle}>
-                    <td data-label="Agent">
+                    <td data-label="Automation">
                       <div className="name">{name}</div>
                       {projectId ? (
                         <button

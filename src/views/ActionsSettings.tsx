@@ -52,7 +52,7 @@ export function ActionsSettings() {
       </div>
       <div className="setting">
         <div className="grow muted small">
-          Atlas can do three kinds of things on GitHub: re-run the failed jobs of a failed workflow run, merge a pull request GitHub reports as ready, and enable, disable or run the agents in Manage agents. Each is off until you turn it on here, works only on
+          Atlas can do three kinds of things on GitHub: re-run the failed jobs of a failed workflow run, merge a pull request GitHub reports as ready, and enable, disable or run the automations in Automations, Manage automations. Each is off until you turn it on here, works only on
           the repositories or agents you allow, and every press asks for confirmation in a macOS dialog and is written to an audit log on this Mac. Your read-only token above is never used for any of them.
         </div>
       </div>
