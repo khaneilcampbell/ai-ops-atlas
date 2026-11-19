@@ -27,7 +27,7 @@ export const PLAZA_MOTION = { orbit: 0.12, tumble: [0.22, 0.34, 0.48] } as const
 
 const GROUND = TERRACE_H;
 /** Concept B's saucer, as a share of the lantern's radius: set just inside the rim so the rim shows round it. */
-const CROWN_DISC = 0.82;
+const CROWN_DISC = 0.68;
 const TOP = GROUND + PLAZA.rise;
 const C = {
   stone: "#efe6d2",
@@ -167,7 +167,7 @@ export default function AutomationPlaza({
     // Concept A's lantern (Khaneil, 2026-11-19): a gold collar at the foot of the glass, a warm glowing
     // floor inside and a gold ring inlaid in the paving. The top is concept B's open crown (see parts).
     // Concept B's top: a shallow saucer with a low domed centre.
-    const saucerDome = new THREE.SphereGeometry(PLAZA.enclosureRadius * CROWN_DISC, 36, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, (PLAZA.crownRise + 0.06) / (PLAZA.enclosureRadius * CROWN_DISC), 1);
+    const saucerDome = new THREE.SphereGeometry(PLAZA.enclosureRadius * CROWN_DISC, 36, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.1 / (PLAZA.enclosureRadius * CROWN_DISC), 1);
     const band = new THREE.CylinderGeometry(PLAZA.enclosureRadius + 0.06, PLAZA.enclosureRadius + 0.06, 1, 40).translate(0, 0.5, 0);
     const floorGlow = new THREE.CircleGeometry(PLAZA.enclosureRadius - 0.04, 40).rotateX(-Math.PI / 2);
     const floorLight = new THREE.MeshBasicMaterial({ color: "#ffe9b0", transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -459,7 +459,7 @@ export default function AutomationPlaza({
         <mesh geometry={kit.rim} material={kit.gold} position={[0, 0.02 + PLAZA.enclosureHeight / 2, 0]} rotation={[Math.PI / 2, 0, 0]} raycast={() => null} />
         <mesh geometry={kit.rim} material={kit.gold} position={[0, 0.02 + PLAZA.enclosureHeight, 0]} rotation={[Math.PI / 2, 0, 0]} raycast={() => null} />
         {/* Concept B's top: a shallow gold saucer just inside the open rim, its low dome meeting the mast. */}
-        <mesh geometry={kit.disc} material={kit.gold} position={[0, 0.02 + PLAZA.enclosureHeight - 0.1, 0]} scale={[PLAZA.enclosureRadius * CROWN_DISC, 0.06, PLAZA.enclosureRadius * CROWN_DISC]} castShadow {...handlers} />
+        <mesh geometry={kit.disc} material={kit.gold} position={[0, 0.02 + PLAZA.enclosureHeight - 0.1, 0]} scale={[PLAZA.enclosureRadius * CROWN_DISC, 0.04, PLAZA.enclosureRadius * CROWN_DISC]} castShadow {...handlers} />
         <mesh geometry={kit.saucerDome} material={kit.gold} position={[0, 0.02 + PLAZA.enclosureHeight - 0.04, 0]} castShadow {...handlers} />
       </group>
 
