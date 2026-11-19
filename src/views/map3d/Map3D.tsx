@@ -87,6 +87,8 @@ import type { AgentJob } from "../../catalog/agentJobs";
 import { planAgentCommutes } from "./agentCommutes";
 import { planNamedAgents, type NamedAgentPlan } from "./namedAgentPlan";
 import { NamedAgents } from "./NamedAgents";
+import { buildingOccupants, occupantCount } from "./buildingOccupants";
+import { BuildingFaces } from "./BuildingFaces";
 import { CityRoutes, planCityPlaces, type CityPlaces } from "./routinePlaces";
 import { agentPositions, followedAgent, setFollowedAgent } from "./agentFollow";
 import { catalog as fullCatalog } from "../../catalog";
@@ -253,6 +255,9 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const agentCommutes = useMemo(() => (jobs ? planAgentCommutes(scene, jobs) : undefined), [scene, jobs]);
   // The named team, one character per identity at its real workplace (namedAgentPlan.ts).
   const namedAgents = useMemo(() => (jobs ? planNamedAgents(scene, fullCatalog.agents, jobs, agentCommutes) : undefined), [scene, jobs, agentCommutes]);
+  // Who works and lives in each building, for the faces over its nameplate (BuildingFaces.tsx).
+  const occupants = useMemo(() => buildingOccupants(fullCatalog.agents, jobs ?? []), [jobs]);
+  const onMapAgents = useMemo(() => new Set(namedAgents?.agents.map((a) => a.personaId) ?? []), [namedAgents]);
   // Where the named agents live their day: homes, offices, desks, outings and the streets between (routinePlaces.ts).
   const city = useMemo(() => {
     if (!jobs || !namedAgents) return undefined;
@@ -266,6 +271,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   }, [scene, jobs, namedAgents]);
   const anchors = useMemo(() => anchorsOf(scene, layout), [scene, layout]);
   const [hover, setHover] = useState<string | null>(null);
+  /** The nameplate under the pointer (not the building mesh), for the faces over it. */
+  const [plaqueHover, setPlaqueHover] = useState<string | null>(null);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; sub: string } | null>(null);
   const [near, setNear] = useState<"far" | "mid" | "near">("far");
   // Headquarters open in the Inside view: their nameplates sit on the open floor, not the old roof.
@@ -461,9 +468,20 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.stadium)plaque({id:STADIUM_KEY,select:STADIUM_KEY,name:STADIUM_NAME,x:scene.stadium.x+scene.stadium.w/2,roof:TERRACE_H+stadiumCrown(),z:scene.stadium.z+scene.stadium.d/2,priority:2,mark:PLANNED,title:`${STADIUM_NAME} · Planned venue`});
     if(scene.airport)for(const b of AIRPORT_BUILDINGS.filter(b=>mapLabelVisible("detail",near,selKey===airportBuildingKey(b.id),hover===airportBuildingKey(b.id),selKey===AIRPORT_KEY)))plaque({id:airportBuildingKey(b.id),select:airportBuildingKey(b.id),name:b.name,x:airportPoint(scene.airport,b.x,b.z)[0],roof:TERRACE_H+b.h,z:scene.airport.z+b.z,priority:7,mark:PLANNED,title:`${b.name} · Planned workspace`});
     if(scene.airport)plaque({id:AIRPORT_KEY,select:AIRPORT_KEY,name:"Atlas Airport",x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],roof:TERRACE_H+3.4,z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,priority:2,mark:PLANNED,title:"Atlas Airport · Planned visual district"});
+    // The agents who work or live in a building, as faces over its nameplate: while the pointer is on the
+    // nameplate (desktop), or while the building is selected (a tap on a phone). One building at a time.
+    const faceKey = plaqueHover ?? selKey;
+    const faces = faceKey ? occupants.get(faceKey) : undefined;
+    if (faces && occupantCount(faces)) {
+      const i = out.findIndex((l) => l.key === faceKey && l.className.startsWith("m3-plaque"));
+      if (i >= 0) {
+        const l = out[i];
+        out[i] = { ...l, className: `${l.className} has-faces`, node: (<>{l.node}<BuildingFaces occupants={faces} onMap={onMapAgents} /></>) };
+      }
+    }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
-  }, [scene, layout, props.displayNeighborhoods, props.landmarkMarks, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf]);
+  }, [scene, layout, props.displayNeighborhoods, props.landmarkMarks, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf, plaqueHover, occupants, onMapAgents]);
 
   const pick: PickHandlerSet = {
     of: (keys) => ({
@@ -619,8 +637,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
             tabIndex={l.onClick?0:undefined}
             onKeyDown={e=>{if(l.onClick&&(e.key==="Enter"||e.key===" ")){e.preventDefault();e.stopPropagation();l.onClick();}}}
             onClick={l.onClick}
-            onMouseEnter={l.onClick ? () => setHover(l.key) : undefined}
-            onMouseLeave={l.onClick ? () => setHover(null) : undefined}
+            onMouseEnter={l.onClick ? () => { setHover(l.key); setPlaqueHover(l.key); } : undefined}
+            onMouseLeave={l.onClick ? () => { setHover(null); setPlaqueHover(null); } : undefined}
           >
             {l.node}
           </div>
@@ -1296,6 +1314,16 @@ function World({
       el.style.visibility = "visible";
       el.style.transform = `translate(${Math.round(s.x - l.w / 2)}px, ${Math.round(s.y + dy - l.h)}px)`;
       el.style.setProperty("--stem", `${Math.max(0, -dy)}px`);
+      // Agents' faces over a nameplate (BuildingFaces.tsx): below it when there's no room above, and
+      // nudged sideways to stay inside the map near its edges.
+      if (l.className.includes("has-faces")) {
+        const f = el.querySelector<HTMLElement>(".m3-faces");
+        if (f) {
+          f.classList.toggle("below", s.y + dy - l.h < f.offsetHeight + 8);
+          const half = f.offsetWidth / 2;
+          f.style.setProperty("--shift", `${Math.round(Math.max(8 - (s.x - half), Math.min(0, size.width - 8 - (s.x + half))))}px`);
+        }
+      }
     }
   });
 
