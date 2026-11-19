@@ -1,1 +1,1 @@
-- 2026-11-19 · The Agents tab now shows the Career Execution Agent as live: it is published in n8n and can be started from the Task Center (#493)
+- 2026-11-19 · The Agents tab now shows the Career Execution Agent as live, and both it and Add product idea can be started from the Task Center now that they are published in n8n (#493)
