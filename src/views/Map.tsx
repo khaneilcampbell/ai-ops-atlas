@@ -17,6 +17,8 @@ import { DetailPanel } from "../components/DetailPanel";
 import { Icon, type IconName } from "../components/Icon";
 import { StatusPill, statusLabel } from "../components/bits";
 import { MapSelect } from "../components/MapSelect";
+import { CitySoundControl } from "../components/CitySoundControl";
+import { useCitySound } from "../sound/useCitySound";
 import { usePlazaEffects, usePlazaSnapshot } from "../plaza/usePlaza";
 import { plazaSummary, signText } from "../plaza/plazaState";
 import { n8nWorkflowIds } from "../n8n/runs";
@@ -578,6 +580,9 @@ export function MapView({active=true}:{active?:boolean}) {
   const runtimeMap = useRuntimes();
   const runtimeKey = [...runtimeMap].map(([id, r]) => `${id}:${r.state}:${r.basis?.at ?? ""}`).join("|");
   const runtimes = useMemo(() => runtimeMap, [runtimeKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // City sound: ambience plus a soft tone for each real change in an agent's runtime state.
+  const agentProject = useMemo(() => new Map(catalog.agents.map((a) => [a.id, a.projectId])), [catalog]);
+  const sound = useCitySound({ active, night: light === "night", traffic, runtimes, projectOf: (id) => agentProject.get(id) });
   // Atlas Automation Plaza: the same runtimes, plus Task Center tasks and n8n runs (plaza/plazaState.ts).
   const plazaSnap = usePlazaSnapshot(runtimes);
   const plazaPathProjects = useMemo(() => new Set(catalog.agents.filter((a) => a.observe?.githubWorkflow || a.observe?.agentFeed || n8nWorkflowIds(a).length).map((a) => a.projectId)), [catalog]);
@@ -1339,6 +1344,7 @@ export function MapView({active=true}:{active?:boolean}) {
               optionDisabled={(l) => !is3d && lensNeeds3d(l)}
               title={is3d ? LENS_INFO[shownLens].hint : "The flat map shows the city by district. Agent network and Automation flow need the 3D map."} />
             <span className="sep" />
+            <CitySoundControl sound={sound} reduced={reduced} />
             {webglAvailable() && (
               <button className={`icon-btn text ${is3d ? "on" : ""}`} onClick={() => setMode(is3d ? "2d" : "3d")} aria-pressed={is3d} aria-label="3D map" title={is3d ? "Switch to the flat map" : "Switch to the 3D map"}>
                 3D

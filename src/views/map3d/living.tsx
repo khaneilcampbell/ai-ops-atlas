@@ -1,6 +1,7 @@
 import {MODELS,SCALE} from "./vehicleModels";
 import {SkyBalloons} from "./SkyBalloons";
 import { MAP_FLEET } from "./mapFleet";
+import { CAR_FEED, feedCar, SOUND_ZONE } from "../../sound/listener";
 import { beginPedestrianFrame, reportPedestrian, pedestrianAllowed } from "./doorTraffic";
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -252,7 +253,7 @@ export function Traffic({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; m
     <group>
       <SkyBalloons scene={scene} g={g} m={m} moving={moving} />
       <DockVisitors x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} g={g} m={m} moving={moving} exclusion={scene.pedestrianExclusion} harbour={loop.harbour} marina={loop.marina} />
-      <Marina x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} shoreZ={loop.shoreZ} g={g} m={m} harbour={loop.harbour} />
+      <group userData={SOUND_ZONE.marina}><Marina x={loop.dockX} z={loop.pierZ} cityZ={loop.cityWalkZ} shoreZ={loop.shoreZ} g={g} m={m} harbour={loop.harbour} /></group>
       <FigureMeshes f={sailors} g={g} m={m} shadow={false} />
       <instancedMesh ref={hull} args={[boatGeometry.hull, m.plain, BOATS]} castShadow frustumCulled={false} raycast={() => null} />
       <instancedMesh ref={yachtDeck} args={[boatGeometry.hull,m.plain,BOATS]} frustumCulled={false} raycast={()=>null} />
@@ -293,6 +294,8 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
     [],
   );
   useEffect(() => () => Object.values(mats).forEach((x) => x.dispose()), [mats]);
+  // Traffic hidden or the map closed: no cars for the city sound to hear.
+  useEffect(() => () => { CAR_FEED.n = 0; }, []);
   const body = useRef<THREE.InstancedMesh>(null);
   const heads = useRef<THREE.InstancedMesh>(null);
   const tails = useRef<THREE.InstancedMesh>(null);
@@ -319,8 +322,12 @@ export function Vehicles({ scene, g, m, moving }: { scene: Scene3D; g: G; m: M; 
       yaw.current[i] = ease(yaw.current[i], Math.atan2(-at.dz, at.dx), 7);
       pitch.current[i] = ease(pitch.current[i], Math.atan(at.slope), 10);
       tmp.e.set(0, yaw.current[i], pitch.current[i]);
-      return new THREE.Matrix4().compose(tmp.p.set(at.x, y0 + at.y, at.z), tmp.q.setFromEuler(tmp.e), tmp.s.setScalar(pedestrianAllowed(scene.pedestrianExclusion,at.x,at.z)&&vehicleVisible(v,flow.times[i])?1:0));
+      const shown=pedestrianAllowed(scene.pedestrianExclusion,at.x,at.z)&&vehicleVisible(v,flow.times[i]);
+      // City sound hears the nearest cars from here (src/sound/listener.ts).
+      feedCar(i,at.x,at.z,shown&&moving);
+      return new THREE.Matrix4().compose(tmp.p.set(at.x, y0 + at.y, at.z), tmp.q.setFromEuler(tmp.e), tmp.s.setScalar(shown?1:0));
     });
+    CAR_FEED.n=Math.min(plans.length,CAR_FEED.x.length);
     // Each part in its vehicle's own frame: forward x, up y, across z.
     const put = (mesh: THREE.InstancedMesh, k: number, i: number, fx: number, y: number, sz: number, sx: number, sy: number, szz: number) => {
       tmp.part.compose(tmp.p.set(fx * SCALE, y * SCALE, sz * SCALE), tmp.one, tmp.s.set(sx * SCALE, sy * SCALE, szz * SCALE));

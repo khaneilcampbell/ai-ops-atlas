@@ -12,6 +12,8 @@ import {AgentTag} from './AgentTag';
 import type {AgentTagInfo} from './agentTagInfo';
 import type {ThreeEvent} from '@react-three/fiber';
 import {useFrame} from '@react-three/fiber';
+/** The middle carriage carries the train's city sound (src/sound/engine.ts: rail rhythm and motor hum as it moves). */
+const TRAIN_SOUND={citySound:'train'};
 import * as THREE from 'three';
 import {Instanced,type Inst,type PickHandlerSet,type useGeometries,type useMaterials} from './models';
 import {TERRACE_H} from './scene';
@@ -210,7 +212,7 @@ export function CommunityRail({plan:p,travel,agents,community,financial,roads,cl
  if(!p||!deck)return null;
  return <><group name="atlas-perimeter-railway"><Instanced items={parts.solid} geometry={g.box} material={m.plain}/><Instanced items={parts.paths} geometry={g.box} material={m.plain}/><Instanced items={parts.platforms} geometry={g.box} material={m.plain} pick={pick.of(parts.stationKeys)}/><Instanced items={parts.lights} geometry={g.box} material={night?m.lamp:m.plain}/>
  </group>{station&&<><Instanced items={station.metal} geometry={g.box} material={m.metal}/><Instanced items={station.accents} geometry={g.box} material={m.plain}/><Instanced items={station.glass} geometry={g.box} material={stationGlass} shadow={false}/></>}
- <group name="atlas-passenger-train" ref={service}>{[0,1,2].map(i=>{const start=p.loop?loopPoint(p.loop,(i-1)*C.carriageSpacing):railPoint(deck,(p.airportLeg?.length??0)+2.5+(i-1)*C.carriageSpacing);return <group key={i} ref={node=>{carriages.current[i]=node;}} position={[start.x,TERRACE_H+C.railRise+.1,start.z]} rotation={[0,start.yaw,0]}>
+ <group name="atlas-passenger-train" ref={service}>{[0,1,2].map(i=>{const start=p.loop?loopPoint(p.loop,(i-1)*C.carriageSpacing):railPoint(deck,(p.airportLeg?.length??0)+2.5+(i-1)*C.carriageSpacing);return <group key={i} ref={node=>{carriages.current[i]=node;}} userData={i===1?TRAIN_SOUND:undefined} position={[start.x,TERRACE_H+C.railRise+.1,start.z]} rotation={[0,start.yaw,0]}>
   {/* Bullet train: low white body, a continuous window band, gold line, and gangways between cars. */}
   <Instanced geometry={g.box} material={m.plain} items={BULLET_BODY(palette.gold)}/>
   <Instanced geometry={g.ball} material={m.plain} items={[TRAIN_ROOF]}/>

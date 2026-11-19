@@ -7,6 +7,7 @@ import { ActionsProvider } from "./actions/state";
 import "./styles/tokens.css";
 import "./styles/app.css";
 import "./styles/mobile.css";
+import "./styles/citySound.css";
 import "./styles/automationPlaza.css";
 import "./styles/polished.css";
 import "./styles/cityAgents.css";
