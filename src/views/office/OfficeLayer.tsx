@@ -67,7 +67,7 @@ export default function OfficeLayer({ light }: { light: LightMode }) {
           // While waiting on Khaneil, the monitor shows what the agent proposes, not its last run.
           task: firstFor(pending, ws.agentId)?.title ?? (b ? b.label : null),
           when: firstFor(pending, ws.agentId) ? `${pending.filter((p) => p.agentId === ws.agentId).length} awaiting approval` : b ? `${relative(b.at)} · ${r.runtime.source}` : r.runtime.source,
-          holo: hologramData({ name: r.entry.profile.title, ws, runtime: r.runtime, history: r.history, profile: r.entry.profile, places: places.get(ws.agentId) }),
+          holo: hologramData({ name: r.entry.profile.displayName ?? r.entry.profile.title, role: r.entry.profile.displayName ? r.entry.profile.title : null, ws, runtime: r.runtime, history: r.history, profile: r.entry.profile, places: places.get(ws.agentId) }),
         };
       }),
     [plan, rows, agents, pending, places],

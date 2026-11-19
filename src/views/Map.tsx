@@ -16,11 +16,16 @@ import { StatusPill, statusLabel } from "../components/bits";
 import { MapSelect } from "../components/MapSelect";
 import { CitySoundControl } from "../components/CitySoundControl";
 import { useCitySound } from "../sound/useCitySound";
+import { usePlazaEffects, usePlazaSnapshot } from "../plaza/usePlaza";
+import { plazaSummary, signText } from "../plaza/plazaState";
+import { n8nWorkflowIds } from "../n8n/runs";
+import { PLAZA_KEY } from "./map3d/plazaPlan";
+import type { PlazaProps } from "./map3d/Map3D";
 import type { LightMode } from "./map3d/living";
 import { buildConnections, liveLandmarkConnections, flowConnections, CONNECTION_LABEL, CONNECTION_STATUS_LABEL, endpointKey, LINK_COLORS, projectOfEndpoint } from "../lib/connections";
 import { useRuntimes } from "./office/activity";
 import { effectiveLastRun, overallHealth, repoData, repoHealth, verifiedState } from "../lib/derive";
-import { LENS_INFO, LENS_TYPES, lensLinks, MAP_LENSES, type MapLens } from "../lib/lenses";
+import { LENS_INFO, LENS_TYPES, lensLinks, lensNeeds3d, MAP_LENSES, type MapLens } from "../lib/lenses";
 import { load, save } from "../lib/storage";
 import { loadInside, saveInside } from "./map3d/inside";
 import { relative } from "../lib/time";
@@ -402,7 +407,6 @@ function DistrictLabel({ x, y, p, status, state, onClick, onEnter, onLeave, scal
 const STATUS_ICON: Record<Status, IconName> = { active: "play", idle: "circle", paused: "pause", attention: "alert", retired: "close" };
 const short = (s: string, n = 24) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 const repoShort = (name: string) => name.split("/")[1] ?? name;
-const GROUP_LABEL: Record<GroupBy, string> = { district: "By district", none: "No grouping", status: "By status", tag: "By tag" };
 
 /** Where things sit in world space, for camera moves, hit lookups and keyboard navigation. */
 function anchors(districts: District[], parks: Park[]) {
@@ -440,7 +444,9 @@ export function MapView({active=true}:{active?:boolean}) {
   }, [catalog]);
   // Districts are the default layout; a new key so earlier saved groupings don't hide them.
   const [showNamesOnZoom, setShowNamesOnZoom] = useState(() => load<boolean>("mapNamesOnZoom", false));
-  const [groupBy, setGroupByState] = useState<GroupBy>(() => (() => {const value=load<GroupBy>("mapProjectGrouping", "district");return Object.prototype.hasOwnProperty.call(GROUP_LABEL,value)?value:"district";})());
+  // District names are on unless "none" was saved (the old "No grouping"; visual tests still use it for
+  // clean screenshots). By status and By tag drew the same names as By district, so they read as district.
+  const [groupBy, setGroupByState] = useState<GroupBy>(() => (load<GroupBy>("mapProjectGrouping", "district") === "none" ? "none" : "district"));
   const layout = useMemo(() => layoutMap(keepRemovedLots(catalog, fullCatalog), uncataloged, "district"), [catalog, uncataloged]);
   const assignments = usePresenceAssignments();
   const jobs = useMemo(() => agentJobs(catalog, assignments), [catalog, assignments]);
@@ -497,6 +503,19 @@ export function MapView({active=true}:{active?:boolean}) {
   // City sound: ambience plus a soft tone for each real change in an agent's runtime state.
   const agentProject = useMemo(() => new Map(catalog.agents.map((a) => [a.id, a.projectId])), [catalog]);
   const sound = useCitySound({ active, night: light === "night", traffic, runtimes, projectOf: (id) => agentProject.get(id) });
+  // Atlas Automation Plaza: the same runtimes, plus Task Center tasks and n8n runs (plaza/plazaState.ts).
+  const plazaSnap = usePlazaSnapshot(runtimes);
+  const plazaPathProjects = useMemo(() => new Set(catalog.agents.filter((a) => a.observe?.githubWorkflow || a.observe?.agentFeed || n8nWorkflowIds(a).length).map((a) => a.projectId)), [catalog]);
+  const plazaEffects = usePlazaEffects(plazaSnap, (key) => plazaPathProjects.has(key.replace(/^project:/, "")));
+  const plazaSign = useMemo(() => signText(plazaSnap), [plazaSnap]);
+  const plaza = useMemo<PlazaProps>(
+    () => ({
+      view: { connection: plazaSnap.connection, preview: plazaSnap.preview, running: plazaSnap.running.length, queued: plazaSnap.queued.length, attention: plazaSnap.attention.length, sign: plazaSign },
+      effects: plazaEffects,
+      automationProjects: plazaPathProjects,
+    }),
+    [plazaSnap, plazaSign, plazaEffects, plazaPathProjects],
+  );
   const connections = useMemo(() => [...buildConnections(catalog, repos), ...flowConnections(catalog, runtimes), ...liveLandmarkConnections(catalog, live)], [catalog, repos, live, runtimes]);
 
   // Every connection placed on the map; the view (lens) below decides which are drawn.
@@ -514,6 +533,8 @@ export function MapView({active=true}:{active?:boolean}) {
     const saved = load<MapLens>("mapLens", "infrastructure");
     return MAP_LENSES.includes(saved) ? saved : "infrastructure";
   });
+  // The flat map draws no connection lines, so it always reads as "By district"; the saved 3D view returns with 3D.
+  const shownLens: MapLens = is3d ? lens : "infrastructure";
   const setLens = (l: MapLens) => {
     setLensState(l);
     save("mapLens", l);
@@ -1051,6 +1072,7 @@ export function MapView({active=true}:{active?:boolean}) {
               healthFor={healthFor}
               landmarkMarks={landmarkMarks}
               light={light}
+              plaza={plaza}
               onSelect={(sel, project) => {
                 if (project) setFocus(project);
                 select(sel);
@@ -1206,6 +1228,13 @@ export function MapView({active=true}:{active?:boolean}) {
             </dl>
           </section>
 
+          {/* The plaza's text equivalent: one keyboard stop that announces its live status and opens its panel. */}
+          {is3d && (
+            <button type="button" className="plaza-a11y" onClick={() => select({ kind: "service", id: PLAZA_KEY.slice("service:".length) })} aria-describedby="plaza-a11y-status">
+              Atlas Automation Plaza: {plazaSign.status}
+              <span id="plaza-a11y-status" className="sr-only" aria-live="polite">{plazaSummary(plazaSnap)}</span>
+            </button>
+          )}
           {tip && (
             <div className="map-tip" style={{ left: tip.x, top: tip.y }}>
               <div className="t">{tip.title}</div>
@@ -1214,10 +1243,12 @@ export function MapView({active=true}:{active?:boolean}) {
           )}
 
           <div className="map-controls">
-            <MapSelect label="Map view" value={lens} options={MAP_LENSES} text={(l) => LENS_INFO[l].label} short={(l) => LENS_INFO[l].label.replace(/ view$/, "")} onChange={setLens} disabled={!is3d}
-              title={is3d ? LENS_INFO[lens].hint : "Connection views are available in 3D. Your selection is saved."} />
-            <MapSelect label="Group projects" value={groupBy} options={Object.keys(GROUP_LABEL) as GroupBy[]} text={(g) => GROUP_LABEL[g]} onChange={setGroupBy}
-              title="Keep district locations and clean district names; no grouping hides district headings" />
+            {/* One menu for the city's view. "By district" brings back the district names as well as the
+                quiet infrastructure lines, so picking it always changes something you can see. */}
+            <MapSelect label="Map view" value={shownLens} options={MAP_LENSES} text={(l) => LENS_INFO[l].label} short={(l) => LENS_INFO[l].short}
+              onChange={(l) => { setLens(l); if (l === "infrastructure") setGroupBy("district"); }}
+              optionDisabled={(l) => !is3d && lensNeeds3d(l)}
+              title={is3d ? LENS_INFO[shownLens].hint : "The flat map shows the city by district. Agent network and Automation flow need the 3D map."} />
             <span className="sep" />
             <CitySoundControl sound={sound} reduced={reduced} />
             {webglAvailable() && (

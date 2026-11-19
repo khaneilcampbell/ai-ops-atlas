@@ -34,7 +34,7 @@
 .os-card-head { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; color: inherit; min-width: 0; }
 .os-card-title { font-weight: 600; color: var(--ink); font-size: var(--text-md); overflow-wrap: anywhere; }
 .os-card-head:hover .os-card-title { text-decoration: underline; text-decoration-color: var(--gold); }
-.os-card-sub { font-size: var(--text-xs); color: var(--ink-3); }
+.os-card-sub { font-size: var(--text-xs); color: var(--ink-3); display: inline-flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .os-badges { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .os-badge { display: inline-block; padding: 0 7px; border-radius: var(--radius-pill); border: 1px solid var(--sage-200); background: var(--sage-50); color: var(--ink-3); font-size: var(--text-2xs); line-height: 18px; white-space: nowrap; }
 .os-badge.v-good { border-color: var(--good); color: var(--good); }
