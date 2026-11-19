@@ -15,7 +15,7 @@ it("shows the module behind a building, keeping the building's own name out of t
   const html = render({ kind: "project", id: "benjaire-site" });
   expect(html).toContain("Business Operations HQ");
   expect(html).toContain("Partly available");
-  expect(html).toContain("planned capabilities, not built yet");
+  expect(html).toContain("1 planned capability, not built yet");
 });
 
 it("reports health as not verified when CI has not loaded, and names the source", () => {
