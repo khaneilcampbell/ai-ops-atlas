@@ -1,1 +1,1 @@
-- 2026-11-18 · The Automation Plaza now shows the Product Lab hand-off workflow as Benjaire Product Lab's work in the Benjaire Marketing Agency, instead of "No agent named" (#477)
+- 2026-11-18 · The Automation Plaza now shows the Product Lab hand-off workflow as Benjaire Product Lab's work in the Benjaire Marketing Agency, instead of "No agent named", and no longer lists n8n test runs you started by hand that have been sitting for more than a day, like the one that said "Running for 124 h" (#477)

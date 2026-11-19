@@ -21,6 +21,20 @@ import type { WorkflowRun } from "../workflows/types";
 /** An n8n summary older than this is stale: its "running" runs may long have finished. */
 export const N8N_FRESH_MS = 10 * 60_000;
 
+/**
+ * A test run started by hand in the n8n editor that has sat at a wait step this long was left behind,
+ * not real work (Khaneil, 2026-11-18: a Nov 13 test showed "Running for 124 h"). Runs from triggers,
+ * webhooks, forms and agents keep showing however long they wait.
+ */
+export const MANUAL_WAIT_ABANDONED_MS = 24 * 60 * 60_000;
+
+/** True for a hand-started editor test still waiting after a day. */
+export function abandonedTest(r: Pick<N8nRun, "mode" | "status" | "startedAt">, now: number): boolean {
+  if (r.mode !== "manual" || r.status !== "waiting" || !r.startedAt) return false;
+  const age = now - Date.parse(r.startedAt);
+  return Number.isFinite(age) && age > MANUAL_WAIT_ABANDONED_MS;
+}
+
 export type ItemStatus = "running" | "waiting" | "queued" | "blocked" | "awaiting_approval" | "failed";
 
 export const ITEM_STATUS_LABEL: Record<ItemStatus, string> = {
@@ -257,6 +271,7 @@ export function plazaSnapshot(i: PlazaInputs): PlazaSnapshot {
         else if (r.status === "error" || r.status === "crashed") finished.set(id, "failed");
         else if (r.status === "canceled") finished.set(id, "cancelled");
         if (r.status !== "running" && r.status !== "waiting" && r.status !== "new") continue;
+        if (abandonedTest(r, i.now)) continue;
         const link: PlazaLink = { label: "n8n execution", url: execUrl(r) };
         if (r.status === "new") {
           queued.push({ id, source: "n8n", title: w.name, status: "queued", detail: "n8n has the run queued.", ...base, links: [link] });
