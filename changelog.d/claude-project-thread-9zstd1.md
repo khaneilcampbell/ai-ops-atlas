@@ -1,0 +1,1 @@
+- 2026-11-17 · The map now looks like the city artwork: warm late-afternoon light, leafy shade trees and flower beds, cream stone and green glass towers, and hazy forested hills across the water

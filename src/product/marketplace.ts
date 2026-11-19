@@ -3,9 +3,10 @@ import { AGENT_GRANTS, grantsFor, SIDE_EFFECT_LABEL } from "../intelligence/capa
 import { CATEGORY_LABEL } from "../registry/types";
 import type { AgentSettings, Workspace } from "./workspace";
 
-// Agent catalog (internal marketplace): every agent already in the Agent Registry, described the
-// same way, so a workspace can see what it could add. "Installing" only adds the registered agent
-// to the workspace's allowed list; nothing is downloaded and no outside code runs. Approved
+// Agent library: every agent already in the owner's Agent Registry, described the same way, so a
+// workspace can see what it could use. This is a private list, not a public marketplace: "adding"
+// only puts the registered agent on the workspace's allowed list; nothing is downloaded, nothing is
+// sold, and no outside code runs. Approved
 // configuration templates are fixed presets of the few settings an owner may change.
 
 export interface CatalogEntry {
@@ -26,7 +27,8 @@ export interface CatalogEntry {
   automation: boolean;
 }
 
-function integrationsFor(a: Agent): string[] {
+/** Integration Center ids an agent relies on, from its runtime, observers and granted tools. */
+export function integrationsFor(a: Agent): string[] {
   const out = new Set<string>();
   const text = `${a.framework} ${a.runtime ?? ""}`;
   if (/n8n/i.test(text)) out.add("n8n");

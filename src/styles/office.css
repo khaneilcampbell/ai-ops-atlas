@@ -81,3 +81,7 @@
 
 .office-head{right:18px}.office-head>div{min-width:0}.office-head h2{max-width:min(60vw,580px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.office-stage{isolation:isolate}.m3-plaque:focus-visible,.m3-pill:focus-visible{outline:2px solid #e0bd75;outline-offset:3px}
 @media(max-width:650px){.office-head{left:10px;right:10px;top:10px;gap:8px;flex-wrap:wrap}.office-head h2{font-size:18px;max-width:calc(100vw - 155px)}.office-head>div{padding:7px 10px}.office-head .eyebrow{font-size:8px;letter-spacing:.08em}.office-head .small{display:none}.office-floor-nav{right:8px;top:115px;padding:8px;max-height:calc(100% - 205px);overflow-y:auto}.office-floor-nav button{padding:8px 10px;min-height:36px}.office-roster{max-width:calc(100% - 180px)}}
+/* Roster grouped by role tier, the same rows the office signs (officeOrg.ts). */
+.office-roster-group { display: grid; gap: 2px; }
+.office-roster-tier { background: var(--cream, #f3f1e5); padding: 7px 8px 3px; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #6b5a33; }
+.office-roster-tier span { float: right; font-weight: 600; opacity: .65; }

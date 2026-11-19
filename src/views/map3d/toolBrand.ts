@@ -5,16 +5,19 @@ export interface ToolBrand {
   /** Optional facade override: floor bands (alternating), corner columns and roof trim, and window glass; `garden` adds planted ledges, flowers and blue light strips like the Security Operations Center. Brand colours stay on the sign and accent fins. */
   facade?: { bands: [string, string]; trim: string; glass: [string, string]; garden?: boolean };
 }
+/** Cream limestone walls and a deep forest-green roof on every tool office, like Khaneil's city artwork
+ * (2026-11-17). The brand colours stay on the floor bands, sign and accent fins, so each office is still recognisable. */
+export const CREAM_STONE = "#ece3cf", FOREST_ROOF = "#2f4a3a";
 const BRANDS: Record<string, ToolBrand> = {
-  "Design Studio": { primary: "#00c4cc", secondary: "#7d2ae7", wall: "#e0edee", roof: "#47346b", rounded: true },
-  "Payments Office": { primary: "#635bff", secondary: "#9a8cff", wall: "#e1e4f2", roof: "#353958", stepped: true },
-  "Edge Office": { primary: "#f48120", secondary: "#faae40", wall: "#eee8dc", roof: "#4e4941", rounded: true },
+  "Design Studio": { primary: "#00c4cc", secondary: "#7d2ae7", wall: CREAM_STONE, roof: FOREST_ROOF, rounded: true },
+  "Payments Office": { primary: "#635bff", secondary: "#9a8cff", wall: CREAM_STONE, roof: FOREST_ROOF, stepped: true },
+  "Edge Office": { primary: "#f48120", secondary: "#faae40", wall: CREAM_STONE, roof: FOREST_ROOF, rounded: true },
   // Sandstone and sky glass, matching the Security Operations Center beside it (Khaneil, 2026-11-13).
   "Log Analytics Lab": { primary: "#65a637", secondary: "#283b2a", wall: "#ebe1cc", roof: "#cbb994", stepped: true,
     facade: { bands: ["#f6efe1", "#c9b48a"], trim: "#d9ccb0", glass: ["#5f8aa6", "#7fa3ba"], garden: true } },
-  "Automation Works": { primary: "#ea4b71", secondary: "#ff9a9d", wall: "#e5dfe4", roof: "#38313c" },
-  "Search Desk": { primary: "#6366f1", secondary: "#38bdf8", wall: "#e0e6ee", roof: "#344257" },
-  "Storefront Office": { primary: "#95bf47", secondary: "#5e8e3e", wall: "#e5eadb", roof: "#354c36", stepped: true },
+  "Automation Works": { primary: "#ea4b71", secondary: "#ff9a9d", wall: CREAM_STONE, roof: FOREST_ROOF },
+  "Search Desk": { primary: "#6366f1", secondary: "#38bdf8", wall: CREAM_STONE, roof: FOREST_ROOF },
+  "Storefront Office": { primary: "#95bf47", secondary: "#5e8e3e", wall: CREAM_STONE, roof: FOREST_ROOF, stepped: true },
   // Tool facilities (toolFacilities.ts): a compact engineering office and a small research lab.
   "Repository Office": { primary: "#3c4650", secondary: "#8c959f", wall: "#e4e7e6", roof: "#2b3238", stepped: true },
   "AI Model Lab": { primary: "#c96f4f", secondary: "#e9c9a8", wall: "#efe7dc", roof: "#4a3c35", rounded: true },
@@ -22,7 +25,7 @@ const BRANDS: Record<string, ToolBrand> = {
 export const TOOL_OFFICE_HEIGHT = 2.8;
 export const TOOL_OFFICE_TOP = TOOL_OFFICE_HEIGHT + 0.4;
 export function toolBrand(name: string): ToolBrand {
-  return BRANDS[name] ?? { primary: "#839b91", secondary: "#51685f", wall: "#dfe5de", roof: "#3b5147" };
+  return BRANDS[name] ?? { primary: "#839b91", secondary: "#51685f", wall: CREAM_STONE, roof: FOREST_ROOF };
 }
 
 

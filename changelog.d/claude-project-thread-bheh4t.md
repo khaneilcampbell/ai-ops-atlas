@@ -1,0 +1,1 @@
+- 2026-11-19 · Agents like Agent Operations Lead now show live activity from the n8n workflows and automations they own, instead of "Not connected"; the plaza and n8n list name them as the agent doing the work

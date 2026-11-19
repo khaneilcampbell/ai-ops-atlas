@@ -8,3 +8,7 @@ Mission Control → **Workflow Intelligence** (view id `workflows`). It shows a 
 - **Live**: "Start a live run" creates one Task Center task per step (dependencies, owner, building, approval categories). Statuses and the timeline are read from those tasks on this device. Nothing is marked done by this page. Approvals are decided in the Task Center, where agents and workflows cannot approve.
 - **Map**: selecting a step selects its building in a shared store (`selection.ts`) with a "Focus on the map" action. The 3D renderer is untouched; a building's inspector links back here.
 - Runs are stored in `localStorage` key `atlas:workflow-runs`, device-only like tasks. n8n execution stays read-only (see `docs/task-center.md`).
+
+## Agent Output Studio
+
+Under the canvas, every step's outputs as cards, sharing the canvas selection. See [agent-output-studio.md](agent-output-studio.md).

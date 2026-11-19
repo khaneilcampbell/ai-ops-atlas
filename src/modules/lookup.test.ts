@@ -8,10 +8,10 @@ it("finds the module building behind a map selection by stable id", () => {
   expect(buildingForSelection({ kind: "service", id: "benjaire-marketing" }, catalog)?.moduleType).toBe("growth-marketing-studio");
   expect(buildingForSelection({ kind: "service", id: "financial:investments" }, catalog)?.moduleType).toBe("integration-exchange");
   expect(buildingForSelection({ kind: "service", id: "atlas-station" }, catalog)?.moduleType).toBe("workflow-automation-plant");
+  expect(buildingForSelection({ kind: "project", id: "portfolio-site" }, catalog)?.moduleType).toBe("development-repository-hub");
 });
 
 it("returns nothing for selections that are not module buildings", () => {
-  expect(buildingForSelection({ kind: "project", id: "portfolio-site" }, catalog)).toBeUndefined();
   expect(buildingForSelection({ kind: "service", id: "financial-park" }, catalog)).toBeUndefined();
   // Buildings whose function no module covers yet house none (product decision pending).
   expect(buildingForSelection({ kind: "service", id: "skyline-stadium" }, catalog)).toBeUndefined();

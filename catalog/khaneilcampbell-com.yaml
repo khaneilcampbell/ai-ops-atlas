@@ -13,6 +13,7 @@ project:
   repository: khaneilcampbell/khaneilcampbell.com
   tags: [portfolio, static-site, github-pages, claude]
   district: career-portfolio
+  module: development-repository-hub   # Khaneil chose 2026-11-17
   links:
     - label: Live site
       url: https://khaneilcampbell.com
@@ -37,6 +38,18 @@ agents:
     permissions:
       - 'GitHub: push branches and open pull requests through Claude Code; only Khaneil merges'
     registry:
+      identity:
+        display_name: Nina Petrova
+        accent: "#EC4899"
+        intro: "When you ask, I draft page copy and design changes for khaneilcampbell.com, run the site checks and open a pull request for you to review. You merge."
+        voice: "Shows the draft, explains each design choice in a line, then asks for review."
+        appearance: "Bulgarian woman in her early 30s, fair skin, straight light-blonde shoulder-length hair with a fringe, black rectangular glasses, navy-and-white striped boat-neck top"
+        portrait:
+          path: agents/site-builder.webp
+          model: gpt_image_2_6
+          job_id: 0a224f04-13a6-4e15-9d29-107d4456ec16
+          prompt_version: 2
+          generated_at: 2026-11-18
       title: Portfolio Web Developer
       category: engineering
       subcategory: Repository maintenance
@@ -49,10 +62,29 @@ agents:
         outcomes: ["Reviewed pull requests for copy, design and link changes"]
         beneficiaries: [Khaneil, Site visitors]
       responsibilities:
-        tasks: [Draft page copy and design changes, Open pull requests for review]
+        tasks: [Draft page copy and design changes, Open pull requests for review, Run the site checks before asking for review]
         tools: [Claude Code, Git, GitHub]
         inputs: [Khaneil's request]
         outputs: [Pull requests]
+        dependencies:
+          - site-ci
+          - security-check
+          - site-audit
+        limitations:
+          - Works only when Khaneil asks
+          - Opens pull requests; Khaneil reviews and merges them
+      goals:
+        review_frequency: Quarterly
+        kpis:
+          - name: Pull requests reviewed before merge
+            kind: quality
+            target: 100%
+            basis: Only Khaneil merges
+          - name: Site checks pass
+            kind: reliability
+            target: Site CI and Security Check green on every pull request it opens
+            basis: Both are required checks
+        objective: Ship site improvements Khaneil approves, through reviewed pull requests.
       execution:
         trigger_type: manual
         environment: Claude Code sessions
@@ -105,6 +137,24 @@ agents:
         tools: [Python standard library]
         inputs: [Site root folder]
         outputs: [Audit findings and an exit code]
+        dependencies:
+          - Python 3 on the machine running it
+        limitations:
+          - Runs only by hand
+          - Checks the _headers file, which GitHub Pages ignores
+          - No AI model, so it cannot judge content; it only follows its fixed rules
+      goals:
+        review_frequency: Quarterly
+        kpis:
+          - name: Findings on main
+            kind: quality
+            target: Zero failing header, accessibility or link checks
+            basis: The audit's own checks
+          - name: Credential-shaped values
+            kind: quality
+            target: Zero
+            basis: The audit flags them
+        objective: Keep the static site's headers, accessibility and links clean.
       execution:
         trigger_type: manual
         environment: Local
@@ -153,17 +203,24 @@ agents:
         outcomes:
           - A failed check whenever a page misses its policy
       responsibilities:
-        tasks: [Check every page for a Content Security Policy, Enforce HTML security rules]
+        tasks: [Check every page for a Content Security Policy, Enforce HTML security rules, Fail the run when a page is missing its policy]
         tools: [GitHub Actions, shell]
         inputs: [Pushes and pull requests to main]
         outputs: [Check results]
+        dependencies:
+          - GitHub Actions runners
+        limitations:
+          - Checks only pages at the repository root
+          - No permissions block, so the token gets the repository default
       goals:
         objective: No page ships without its security policy.
         kpis:
           - name: Run success rate
             kind: reliability
             measure: run_success_rate
-            basis: Observed from GitHub Actions; no target agreed yet
+            basis: Observed from GitHub Actions; target proposed 2026-11-17 from production history, Khaneil can change it
+            target: At least 90% of runs succeed
+        review_frequency: Monthly
       execution:
         trigger_type: event
         environment: GitHub-hosted runner
@@ -218,13 +275,20 @@ agents:
         tools: [GitHub Actions, Python, ruff]
         inputs: [Pushes and pull requests]
         outputs: [Check results on the pull request, Site zip and inventory when requested]
+        dependencies:
+          - GitHub Actions runners
+        limitations:
+          - Actions are pinned by version tag, not commit
+          - Checks code and links, not how pages look
       goals:
         objective: Block merges that break the published site.
         kpis:
           - name: Run success rate
             kind: reliability
             measure: run_success_rate
-            basis: Observed from GitHub Actions; no target agreed yet
+            basis: Observed from GitHub Actions; target proposed 2026-11-17 from production history, Khaneil can change it
+            target: At least 90% of runs succeed
+        review_frequency: Monthly
       execution:
         trigger_type: event
         environment: GitHub-hosted runner

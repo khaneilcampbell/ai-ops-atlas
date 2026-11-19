@@ -60,7 +60,7 @@ describe("agent tiers", () => {
 
   it("makes orchestrators coordinators", () => {
     expect(tiers("coordinator")).toEqual([
-      "agent-operations-lead", "atlas-health-monitor", "atlas-release-manager", "benjaire-inquiry-manager", "benjaire-ops-monitor", "benjaire-product-lab", "benjaire-shop-manager", "commerce-loop", "commerce-operations-manager", "development-hub-lead", "documentation-lead", "soc-detection-lead",
+      "agent-operations-lead", "atlas-health-monitor", "atlas-release-manager", "benjaire-inquiry-manager", "benjaire-ops-monitor", "benjaire-product-lab", "benjaire-shop-manager", "commerce-loop", "commerce-operations-manager", "development-hub-lead", "documentation-lead", "site-builder", "soc-detection-lead",
     ]);
   });
 
@@ -75,7 +75,7 @@ describe("automation categories", () => {
     for (const r of org.records.values()) (by[r.category.value] ??= []).push(r.id);
     for (const ids of Object.values(by)) ids.sort();
     expect(by).toEqual({
-      ci: ["atlas-ci", "atlas-data-inventory", "atlas-merge-pr", "atlas-release-manager", "atlas-rerun-failed", "benjaire-site-ci", "commerce-tests", "dataset-census", "github-merge-flow", "hub-ci", "marketplace-steward", "signal-watch", "site-ci", "soc-lab-ci"],
+      ci: ["atlas-ci", "atlas-data-inventory", "atlas-merge-pr", "atlas-release-manager", "atlas-rerun-failed", "benjaire-site-ci", "commerce-tests", "dataset-census", "github-merge-flow", "hub-ci", "site-ci", "soc-lab-ci"],
       security: ["bruteforce-detection", "security-check", "soc-case-notes", "soc-detection-lead"],
       business: [
         "atlas-sales-feed",

@@ -31,7 +31,7 @@ describe("agent commutes", () => {
   it("gives every working agent a walk, and says why the rest have none", () => {
     expect(plan.commutes.length + plan.skipped.length).toBe(jobs.length);
     // Fixed workflows no longer receive simulated agent commutes.
-    expect(plan.commutes.map(c => c.agentId)).toEqual(["repo-intelligence", "atlas-engineering-review", "atlas-production-coordinator", "atlas-release-coordinator", "site-builder"]);
+    expect(plan.commutes.map(c => c.agentId)).toEqual(["repo-intelligence", "atlas-engineering-review", "atlas-production-coordinator", "atlas-release-coordinator", "site-builder", "github-profile-manager"]); // GitHub Profile Manager published 2026-11-17
     // Owning agents that work only through their automations keep their desk and are not drawn walking.
     expect(plan.skipped.filter((s) => s.reason.startsWith("works through its automations")).map((s) => s.agentId).sort()).toEqual(
       jobs.filter((j) => j.deskOnly && !j.offDuty).map((j) => j.agentId).sort(),
@@ -80,5 +80,29 @@ describe("agent commutes", () => {
     expect(at((job.shift.value.start + job.shift.value.end) / 2).where).toBe("work");
     expect(at(2).where).toBe("home");
     expect(simHour(0)).toBe(AGENT_COMMUTE.openHour);
+  });
+});
+
+describe("presence schedules on the map", () => {
+  const desk = jobs.find((j) => j.deskOnly && !j.offDuty)!;
+  const schedule = { home: "residence", work: scene.towers[0].projectId, days: [1, 2, 3, 4, 5], start: "09:00", end: "17:00", timeZone: "America/New_York" };
+  const scheduled = agentJobs(catalog, { [desk.agentId]: schedule });
+  const c = planAgentCommutes(scene, scheduled, graph).commutes.find((x) => x.agentId === desk.agentId)!;
+  const at = (iso: string) => agentAt(c, 0, new Date(iso));
+
+  it("walks a scheduled agent from its chosen home on the real clock, whatever the map's own clock says", () => {
+    const home = scene.financial!.buildings.find((b) => b.id === "residence")!.approach[0];
+    expect(c.route.points[0]).toEqual([home[0], 0, home[1]]);
+    expect(at("2026-11-16T13:30:00Z").visible).toBe(false); // 08:30 at home
+    const walking = at("2026-11-16T13:50:00Z"); // 08:50 halfway to work
+    expect(walking).toMatchObject({ where: "to-work", visible: true });
+    expect(agentAt(c, 999, new Date("2026-11-16T13:50:00Z"))).toEqual(walking);
+    expect(at("2026-11-16T18:00:00Z")).toEqual({ where: "work", visible: false });
+    expect(at("2026-11-16T22:30:00Z")).toMatchObject({ where: "outdoors", visible: true });
+  });
+
+  it("skips, with a reason, a schedule whose home is not on the map", () => {
+    const lost = planAgentCommutes(scene, agentJobs(catalog, { [desk.agentId]: { ...schedule, home: "demolished" } }), graph);
+    expect(lost.skipped.find((s) => s.agentId === desk.agentId)?.reason).toBe("demolished is not on this map layout");
   });
 });

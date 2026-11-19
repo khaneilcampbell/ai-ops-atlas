@@ -1,4 +1,5 @@
 import { SIM_DAY_SECONDS, SIM_HOUR_SECONDS, type AgentJob } from "../../catalog/agentJobs";
+import { presenceAt, type PresenceAssignment } from "../../catalog/agentPresence";
 import { along, commuterRoute, type CommuterRoute } from "./railCommuters";
 import { ENTRANCE, type Pt3 } from "./roads";
 import type { Scene3D } from "./scene";
@@ -33,6 +34,8 @@ export interface AgentCommute {
   atWork: number;
   leaveWork: number;
   atHome: number;
+  /** Saved presence schedule: placed from the real clock in its time zone, not the simulated day. */
+  presence?: PresenceAssignment;
 }
 
 export interface CommutePlan {
@@ -41,8 +44,8 @@ export interface CommutePlan {
   skipped: { agentId: string; reason: string }[];
 }
 
-export type AgentWhere = "home" | "to-work" | "work" | "to-home";
-export type AgentState = { where: "home" | "work"; visible: false } | { where: "to-work" | "to-home"; visible: true; x: number; y: number; z: number; yaw: number };
+export type AgentWhere = "home" | "outdoors" | "to-work" | "work" | "to-home";
+export type AgentState = { where: "home" | "work"; visible: false } | { where: "outdoors" | "to-work" | "to-home"; visible: true; x: number; y: number; z: number; yaw: number };
 
 /** Doorways: the residence's own approach to its sidewalk, a headquarters' front steps. */
 function homeDoor(scene: Scene3D, building: string): Pt3[] | undefined {
@@ -85,6 +88,7 @@ export function planAgentCommutes(scene: Scene3D, jobs: AgentJob[], graph: Stree
       atWork: start * SIM_HOUR_SECONDS - early,
       leaveWork: end * SIM_HOUR_SECONDS + early,
       atHome: end * SIM_HOUR_SECONDS + early + walk,
+      ...(job.presence ? { presence: job.presence } : {}),
     });
   });
   return { commutes, skipped };
@@ -94,11 +98,22 @@ export function planAgentCommutes(scene: Scene3D, jobs: AgentJob[], graph: Stree
 export const simHour = (mapSeconds: number) => ((((mapSeconds / SIM_HOUR_SECONDS + AGENT_COMMUTE.openHour) % 24) + 24) % 24);
 
 /** Where an agent is, at a number of seconds since the map opened: home, walking to work, at work, or walking home. */
-export function agentAt(c: AgentCommute, mapSeconds: number): AgentState {
+export function agentAt(c: AgentCommute, mapSeconds: number, now = new Date()): AgentState {
+  if (c.presence) return scheduledAt(c, now);
   const day = SIM_DAY_SECONDS, u = (((simHour(mapSeconds) * SIM_HOUR_SECONDS - c.leaveHome) % day) + day) % day;
   const walk = c.atWork - c.leaveHome, worked = c.leaveWork - c.leaveHome;
   if (u < walk) return { where: "to-work", visible: true, ...along(c.route, u * c.pace, c.lane) };
   if (u < worked) return { where: "work", visible: false };
   if (u < worked + walk) { const at = along(c.route, c.route.length - (u - worked) * c.pace, -c.lane); return { where: "to-home", visible: true, ...at, yaw: at.yaw + Math.PI }; }
   return { where: "home", visible: false };
+}
+
+/** A scheduled agent, from the real clock: the walk's progress sets its place on the same route, so frame rate never matters. */
+function scheduledAt(c: AgentCommute, now: Date): AgentState {
+  const { place, progress } = presenceAt(c.presence!, now), len = c.route.length;
+  if (place === "to-work") return { where: place, visible: true, ...along(c.route, progress * len, c.lane) };
+  if (place === "to-home") { const at = along(c.route, len - progress * len, -c.lane); return { where: place, visible: true, ...at, yaw: at.yaw + Math.PI }; }
+  // Outdoors: a few steps out of the home door, on its own approach path (never inside a building).
+  if (place === "outdoors") return { where: place, visible: true, ...along(c.route, Math.min(1.2, len / 2), c.lane) };
+  return { where: place, visible: false };
 }

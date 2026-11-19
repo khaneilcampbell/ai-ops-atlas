@@ -14,11 +14,12 @@ import { KHANEIL } from "../../tasks/types";
 import { useRuns } from "../../workflows/runs";
 import { NOT_SUPPORTED, statusBadge, type IntegrationState } from "../../product/integrations";
 import { catalogEntries, CONFIG_PRESETS, filterEntries } from "../../product/marketplace";
+import { toolUse } from "../../product/commandCenter";
 import { platform, useIntegrationProbe } from "../../product/probe";
 import { checkImport, exportWorkspace, readiness } from "../../product/readiness";
 import { approvalsOf, compatibility, definitionOf, goalText, requiredAgents, simulateTemplate, TEMPLATES, versionOf, type WorkflowTemplate } from "../../product/templates";
-import { DEFAULT_AGENT_SETTINGS, ENVIRONMENT_LABEL, ENVIRONMENTS, productStore, PURPOSE_LABEL, PURPOSES, settingsFor, useProduct, useWorkspace, type AgentSettings, type Workspace, type WorkspaceInput } from "../../product/workspace";
-import { openOnboarding } from "./onboardingState";
+import { DEFAULT_AGENT_SETTINGS, ENVIRONMENT_LABEL, ENVIRONMENTS, OFFERED_PURPOSES, productStore, PURPOSE_LABEL, settingsFor, useProduct, useWorkspace, type AgentSettings, type Workspace, type WorkspaceInput } from "../../product/workspace";
+import { PortfolioCard } from "./Portfolio";
 import "../../styles/product.css";
 
 // Workspace: setup, integrations, agents, templates and administration in one place. Everything
@@ -27,7 +28,7 @@ import "../../styles/product.css";
 
 export const WORKSPACE_TABS = ["setup", "integrations", "agents", "templates", "admin"] as const;
 export type WorkspaceTab = (typeof WORKSPACE_TABS)[number];
-const TAB_LABEL: Record<WorkspaceTab, string> = { setup: "Setup", integrations: "Integrations", agents: "Agents", templates: "Templates", admin: "Administration" };
+const TAB_LABEL: Record<WorkspaceTab, string> = { setup: "Setup", integrations: "Tools", agents: "Agents", templates: "Workflows", admin: "Owner controls" };
 
 export function WorkspaceView() {
   const product = useProduct();
@@ -48,7 +49,7 @@ export function WorkspaceView() {
         <div className="grow">
           <div className="eyebrow">Workspace{w ? ` · ${ENVIRONMENT_LABEL[w.environment]}` : ""}</div>
           <h1>{w?.name ?? "Set up Atlas"}</h1>
-          <p className="lede">Configure what this Atlas runs: its integrations, agents and workflow templates. Keys never pass through this page.</p>
+          <p className="lede">Your private Atlas setup: how your businesses and projects are organized, and which tools, agents and workflows they use. Keys never pass through this page.</p>
         </div>
         {product.workspaces.length > 1 && (
           <label className="pf-field">
@@ -65,7 +66,7 @@ export function WorkspaceView() {
       </div>
       {product.workspaces.length > 1 && (
         <p className="muted small pf-tenancy-note">
-          Workspaces on this device share one set of tasks, workflow runs, agent memory and business records. They are setups for one owner, not separate customer accounts, so don't use one to run work for another business.
+          Workspaces on this device share one set of tasks, workflow runs, agent memory and business records. They are your own setups (for example a business and a personal area), not separate customer accounts, so don't use one to run work for someone else.
         </p>
       )}
       <div className="tabs product-tabs" role="tablist" aria-label="Workspace sections">
@@ -145,20 +146,7 @@ function SetupTab({ w, probe, go }: { w: Workspace | null; probe: Probe; go: (t:
         </div>
       </section>
       {w ? <WorkspaceDetails w={w} /> : <p className="muted">No workspace yet.</p>}
-      <section className="card">
-        <div className="card-head">
-          <h2 className="grow">Guided setup</h2>
-        </div>
-        <div className="setting">
-          <div className="grow">
-            <div className="label">Run the six-step setup again</div>
-            <div className="muted small">Create another workspace, or walk through integrations, agents and templates. Your current workspace stays as it is.</div>
-          </div>
-          <button className="btn" onClick={openOnboarding}>
-            Open guided setup
-          </button>
-        </div>
-      </section>
+      <PortfolioCard w={w} />
     </>
   );
 }
@@ -186,7 +174,7 @@ export function WorkspaceForm({ initial, onSubmit, submitLabel }: { initial: Wor
       <label className="pf-field">
         <span>Purpose</span>
         <select value={v.purpose} onChange={(e) => set({ purpose: e.target.value as WorkspaceInput["purpose"] })}>
-          {PURPOSES.map((p) => (
+          {(OFFERED_PURPOSES.includes(v.purpose) ? OFFERED_PURPOSES : [...OFFERED_PURPOSES, v.purpose]).map((p) => (
             <option key={p} value={p}>
               {PURPOSE_LABEL[p]}
             </option>
@@ -256,6 +244,26 @@ function WorkspaceDetails({ w }: { w: Workspace }) {
 
 // ---------------------------------------------------------------------------------------------
 
+/** Which of the owner's buildings, agents and workflows rely on a tool, from the catalog. */
+function ToolUseList({ id }: { id: string }) {
+  const { catalog } = useAtlas();
+  const use = useMemo(() => toolUse(catalog)[id], [catalog, id]);
+  if (!use) return null;
+  const names = (xs: { name: string }[]) => (xs.length ? (xs.length > 4 ? `${xs.slice(0, 4).map((x) => x.name).join(", ")} and ${xs.length - 4} more` : xs.map((x) => x.name).join(", ")) : "None recorded");
+  return (
+    <div>
+      <dl className="tool-use">
+        <dt>Projects</dt>
+        <dd>{names(use.projects)}</dd>
+        <dt>Agents</dt>
+        <dd>{names(use.agents)}</dd>
+        <dt>Workflows</dt>
+        <dd>{names(use.workflows)}</dd>
+      </dl>
+    </div>
+  );
+}
+
 export function IntegrationCard({ s, w, onChanged, compact }: { s: IntegrationState; w: Workspace | null; onChanged: () => void; compact?: boolean }) {
   const setup = s.def.setup[platform()];
   const on = !!w?.enabledIntegrations.includes(s.def.id);
@@ -279,6 +287,7 @@ export function IntegrationCard({ s, w, onChanged, compact }: { s: IntegrationSt
         <b>{s.detail}</b>
       </div>
       <div className="muted small">{s.verifiedAt ? `Last successful check ${relative(s.verifiedAt)}` : "Not verified by a check yet"}</div>
+      {!compact && <ToolUseList id={s.def.id} />}
       {!compact && (
         <details className="small">
           <summary>Permissions, setup and diagnostics</summary>
@@ -458,14 +467,14 @@ function AgentsTab({ w }: { w: Workspace | null }) {
         <div className="seg-ctl" role="tablist" aria-label="Which agents">
           {(["installed", "available", "all"] as const).map((s) => (
             <button key={s} className={show === s ? "on" : ""} onClick={() => setShow(s)}>
-              {s === "installed" ? `In ${w?.name ?? "workspace"}` : s === "available" ? "Agent catalog" : "All"}
+              {s === "installed" ? `In ${w?.name ?? "workspace"}` : s === "available" ? "Agent library" : "All"}
             </button>
           ))}
         </div>
       </div>
       {msg && <div className="bad small">{msg}</div>}
       <p className="muted small">
-        The catalog lists agents already in the Agent Registry. Adding one only lets this workspace use it; nothing is downloaded and no outside code runs. Tools, permissions, memory scope and building are protected and change only through a reviewed registry pull request.
+        The agent library lists your agents already in the Agent Registry. It is private, not a marketplace: adding one only lets this workspace use it; nothing is downloaded and no outside code runs. Tools, permissions, memory scope and building are protected and change only through a reviewed registry pull request.
       </p>
       <ul className="agent-catalog">
         {list.slice(0, 80).map((e) => (

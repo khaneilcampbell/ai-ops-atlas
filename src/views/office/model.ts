@@ -2,8 +2,9 @@ import type { Agent, Project } from "../../catalog/types";
 import type { AuditRecord, ActionsStatus } from "../../actions/types";
 import { describeRecord, latestPerAttempt, STAGE_LABEL } from "../../actions/rerun";
 import type { ExecutionRecord, Telemetry } from "../../registry/types";
-import { mainline } from "../../registry/telemetry";
+import { AUTOMATIONS_SOURCE, mainline, N8N_SOURCE } from "../../registry/telemetry";
 import { formatDateTime } from "../../lib/timezone";
+import { span } from "../../alerts/alerts";
 
 /**
  * The data behind a virtual office: which project and building it belongs to, one workstation
@@ -12,16 +13,20 @@ import { formatDateTime } from "../../lib/timezone";
  */
 
 /** What a workstation shows. "unknown" when no live source can say what the agent is doing. */
-export type RuntimeState = "working" | "awaiting" | "failed" | "idle" | "offline" | "unknown";
+export type RuntimeState = "working" | "awaiting" | "failed" | "idle" | "stale" | "offline" | "unknown";
 
 export const RUNTIME_LABEL: Record<RuntimeState, string> = {
-  working: "Working",
+  working: "Running",
   awaiting: "Awaiting approval",
-  failed: "Latest run failed",
+  failed: "Failed",
   idle: "Idle",
+  stale: "Stale",
   offline: "Offline",
-  unknown: "Status unavailable",
+  unknown: "Not connected",
 };
+
+/** One clear next step for an agent Atlas can't hear from. */
+export const CONNECT_STEP = "Next step: link the n8n workflow it runs, give it automations that report (owned_by), or set `observe.agent_feed: true` and have it post each run result to /api/hooks/agents (docs/live-telemetry.md).";
 
 export interface Runtime {
   state: RuntimeState;
@@ -137,21 +142,21 @@ const when = (at: string) => formatDateTime(at, { month: "short", day: "numeric"
  * working: only an execution observed in progress does. With no live source, or one that has
  * not loaded, the state is "unknown" rather than a guess.
  */
-export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, actions?: ActionData, pending = 0, now = Date.now()): Runtime {
+export function runtimeFor(agent: Pick<Agent, "id" | "status"> & Partial<Pick<Agent, "alerts">>, t: Telemetry, actions?: ActionData, pending = 0, now = Date.now()): Runtime {
   if (agent.status === "retired" || agent.status === "paused") {
     return { state: "offline", reason: `Marked ${agent.status} in its manifest.`, basis: null, source: "Manifest" };
   }
   if (t.source === "production") {
     const basis = t.executions[0] ?? null;
-    if (!t.productionFresh) return { state: "unknown", reason: "Production reporting is stale (no report in 15 minutes).", basis, source: "Production reporting" };
-    if (basis?.result === "running" && now - Date.parse(basis.at) >= 15 * 60_000) return { state: "unknown", reason: "Run progress report is stale; heartbeat alone does not establish progress.", basis, source: "Production reporting" };
+    if (!t.productionFresh) return { state: "stale", reason: "No production report in 15 minutes, so older results no longer count.", basis, source: "Production reporting" };
+    if (basis?.result === "running" && now - Date.parse(basis.at) >= 15 * 60_000) return { state: "stale", reason: "Run progress report is stale; a heartbeat alone does not show progress.", basis, source: "Production reporting" };
     const state = basis?.result === "running" ? "working" : basis?.result === "failure" ? "failed" : "idle";
-    return { state, reason: "Recent authenticated production report.", basis, source: "Production reporting" };
+    return { state, reason: basis ? "Recent authenticated production report." : "Heartbeat received, so it is alive. No run result reported yet.", basis, source: "Production reporting" };
   }
   // Pull request and Dependabot runs stay in the history but don't decide the desk's state.
   let executions = mainline(t.executions);
   let loaded = t.loaded;
-  let source: string | null = t.source === "github" ? "GitHub Actions" : t.source === "atlas-intel" ? "Atlas run log" : t.source === "agent-feed" ? "Pipeline run feed" : null;
+  let source: string | null = t.source === "github" ? "GitHub Actions" : t.source === "atlas-intel" ? "Atlas run log" : t.source === "agent-feed" ? "Pipeline run feed" : t.source === "n8n" ? N8N_SOURCE : t.source === "automations" ? `${AUTOMATIONS_SOURCE} (${(t.via ?? []).join(", ")})` : null;
   const action = ACTION_AGENTS[agent.id];
   if (action && actions) {
     source = "Atlas action audit log";
@@ -161,8 +166,11 @@ export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, ac
     executions = actionExecutions(action, actions.audit);
     loaded = true;
   }
-  if (!source) return { state: "unknown", reason: "No live telemetry source is declared for this agent.", basis: null, source: null };
-  if (!loaded) return { state: "unknown", reason: `${source} data has not loaded${t.source === "atlas-intel" ? "; it is only available in the desktop app" : ""}.`, basis: null, source };
+  if (!source) return { state: "unknown", reason: `No live telemetry source is declared for this agent. ${CONNECT_STEP}`, basis: null, source: null };
+  if (!loaded) {
+    const step = t.source === "agent-feed" || t.source === "n8n" || t.source === "automations" ? " Next step: open the Atlas website, or turn on Settings → Website sync in the Mac app." : t.source === "atlas-intel" ? "; it is only available in the desktop app." : ".";
+    return { state: "unknown", reason: `${source} data has not loaded${step}`, basis: null, source };
+  }
   const latest = executions[0];
   // GitHub stops any job after 6 hours, so a run "in progress" older than that is a stale record.
   if (latest?.result === "running" && now - Date.parse(latest.at) < MAX_RUN_MS) return { state: "working", reason: `A run was in progress at the last sync (${when(latest.at)}).`, basis: latest, source };
@@ -171,6 +179,9 @@ export function runtimeFor(agent: Pick<Agent, "id" | "status">, t: Telemetry, ac
   if (!latest) return { state: "idle", reason: `No runs observed in ${source}.`, basis: null, source };
   const done = executions.find((e) => e.result === "success" || e.result === "failure");
   if (done?.result === "failure") return { state: "failed", reason: `The latest completed run failed (${when(done.at)}).`, basis: done, source };
+  // Old evidence expires: past the manifest's report window, a past success no longer counts.
+  const window = agent.alerts?.reportWithinMs;
+  if (window && latest && now - Date.parse(latest.at) > window) return { state: "stale", reason: `No report since ${when(latest.at)}; it should report at least every ${span(window)}.`, basis: latest, source };
   return { state: "idle", reason: done ? `Not running. Last run succeeded ${when(done.at)}.` : `Not running. Last activity ${when(latest.at)}.`, basis: done ?? latest, source };
 }
 

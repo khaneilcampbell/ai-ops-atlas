@@ -4,7 +4,7 @@ import {openAtlas,goTo,settle} from './atlas';
 test.use({deviceScaleFactor:1});
 for(const width of [1512,390]) test(`Separated agents and automations ${width}`,async({page})=>{
  await page.setViewportSize({width,height:900});
- await openAtlas(page,{storage:{'registry-prefs-agents':{classification:'B'}}});
+ await openAtlas(page,{storage:{'registry-prefs-agents':{classification:'B',view:'all'}}});
  await goTo(page,'Agents');
  await expect(page.getByRole('heading',{name:'Agents',exact:true})).toBeVisible();
  await expect(page.locator('.reg-row')).toHaveCount(22);
@@ -18,7 +18,7 @@ for(const width of [1512,390]) test(`Separated agents and automations ${width}`,
  await page.screenshot({path:`docs/agent-organization/agents-${width}.png`});
  await goTo(page,'Automations');
  await expect(page.getByRole('heading',{name:'Automations',exact:true})).toBeVisible();
- await expect(page.locator('.reg-row')).toHaveCount(38); // 38 since the Stripe sales feed was published (2026-11-16)
+ await expect(page.locator('.reg-row')).toHaveCount(36); // 36 since Marketplace Steward and Signal Watch were deleted (2026-11-18)
  for(const id of ['github-merge-flow','atlas-ci','benjaire-flow-intake'])await expect(page.locator(`.reg-row[data-id="${id}"]`)).toHaveCount(1);
  await expect(page.locator('.reg-row[data-id="repo-intelligence"]')).toHaveCount(0);
  await page.locator('.reg-row[data-id="github-merge-flow"]').click();await settle(page,1);
