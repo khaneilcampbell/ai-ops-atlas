@@ -16,6 +16,7 @@ import CityOutside from './CityOutside';
 import {lookHint,useInteriorTrackpad} from './useInteriorTrackpad';
 import {useAtlas} from '../../state';
 import {OfficeWander} from './OfficeWander';
+import {isAiAgent} from '../../catalog/roles';
 import {marketplaceWalk} from './officeWalk';
 import {useReducedMotion} from '../../lib/motion';
 import {WorkplaceInspector} from './WorkplaceInspector';
@@ -120,7 +121,7 @@ function Fitout({u,y,agents,animate}:{u:MallUnit;y:number;agents:Agent[];animate
   return <group><group position={[dx,y,dz]} rotation={[0,-ang+Math.PI/2,0]}>
    <Lift p={[0,0,0]} s={[1.1,.76,.6]} color="#b28c56"/><Box p={[0,.94,-.12]} s={[.58,.36,.045]} color="#18372b"/>
    <Box p={[0,.8,.12]} s={[.5,.025,.16]} color="#ece5d6"/><Box p={[0,.27,.7]} s={[.45,.54,.45]} color="#294237"/>
-  </group><group position={[0,y,0]}><OfficeWander route={walk} active={animate}/></group></group>;
+  </group>{isAiAgent(assignment)&&<group position={[0,y,0]}><OfficeWander route={walk} active={animate}/></group>}</group>;
  }
  if(u.kind==='food')return <group>{layout.tableOffsets.flatMap(s=>[layout.tableDepth].map(d=>{const [px,pz]=along(d,s);return <group key={`${s}${d}`}>
   <mesh position={[px,y+.72,pz]} castShadow><cylinderGeometry args={[.42,.42,.06,16]}/><meshStandardMaterial color="#f3eadb"/></mesh>
