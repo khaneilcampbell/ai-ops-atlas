@@ -1,0 +1,2 @@
+- 2026-11-12 · Benjaire HQ shows four operational KPIs at a glance: whether the website is up, 24-hour uptime, build checks and how Benjaire's automations last ran, with anything Atlas can't read shown as no data rather than good (#381)
+- 2026-11-11 · Benjaire HQ now lists every agent and automation working for Benjaire, what starts each one, where it runs and how its last run went (from live n8n or GitHub), with anything Atlas can't see marked as not reported rather than healthy (#364)
