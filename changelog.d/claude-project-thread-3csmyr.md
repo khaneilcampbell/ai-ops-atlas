@@ -1,0 +1,1 @@
+- 2026-11-19 · Agents show their initials in their coloured circle again: the illustrated profile pictures are removed (#PR)

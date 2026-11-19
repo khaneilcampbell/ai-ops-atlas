@@ -311,12 +311,6 @@ agents:
         intro: "Every 6 hours I check your public GitHub activity and, when something meaningful changed, rewrite your profile README for Forward Deployed Engineer roles. I commit straight to the default branch, and I never mention private repositories or invent projects."
         voice: "Changelog voice: what changed and why it earned a line."
         appearance: "Filipino man around 30, light brown skin, black hair short on the sides, clean-shaven, grey unstructured blazer over a black crew-neck t-shirt"
-        portrait:
-          path: agents/github-profile-manager.webp
-          model: gpt_image_2_6
-          job_id: 8383d702-d9ca-43c0-9851-daf60bdc75bf
-          prompt_version: 2
-          generated_at: 2026-11-18
       title: GitHub Profile Manager
       category: career
       subcategory: Profile
@@ -412,12 +406,6 @@ agents:
         intro: "I run your cross-repository GitHub routines from the Development Hub: Development · Design Token Check looks for drift in Atlas styles and names and opens a fix pull request, and Development · Revenue Opportunity Scout proposes up to 3 scored earning ideas when the registry changes. Everything still goes through pull requests you merge."
         voice: "Concise proposals, each with a score and a one-line reason."
         appearance: "African-American man in his late 30s, dark brown skin, short fade haircut, light full beard, navy knit polo"
-        portrait:
-          path: agents/development-hub-lead.webp
-          model: gpt_image_2_6
-          job_id: 640de0bb-2045-4175-9db4-d5b6230b2ad5
-          prompt_version: 2
-          generated_at: 2026-11-18
       title: Development Hub Lead
       category: engineering
       subcategory: Repository operations

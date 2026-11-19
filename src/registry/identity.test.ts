@@ -1,5 +1,3 @@
-import { existsSync, statSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
 import { buildCatalog } from "../catalog/parse";
@@ -8,7 +6,6 @@ import { identities, identityFor, initialsOf, portraitPrompt, PORTRAIT_HOUSE_STY
 import { agentStatuses, rollupRuntime, statusFromRuntime, statusFromTask } from "./agentStatus";
 import type { Telemetry } from "./types";
 
-const PUBLIC = join(__dirname, "../../public");
 const own = catalog.agents.filter((a) => a.registry?.identity);
 
 describe("agent identities in the catalog", () => {
@@ -52,16 +49,10 @@ describe("agent identities in the catalog", () => {
       }
   });
 
-  it("stores each portrait once, as a small file named after the stable id, with its generation record", () => {
+  it("shows initials, not a picture: no agent carries a portrait (illustrated avatars removed on Khaneil's ask)", () => {
     for (const a of own) {
-      const p = a.registry!.identity!.portrait!;
-      expect(p.path).toBe(`agents/${a.id}.webp`);
-      const file = join(PUBLIC, p.path);
-      expect(existsSync(file), file).toBe(true);
-      expect(statSync(file).size).toBeLessThan(40_000);
-      expect(p.model).toBe("gpt_image_2_6");
-      expect(p.jobId).toMatch(/^[0-9a-f-]{36}$/);
-      expect(p.promptVersion).toBe(2);
+      expect(a.registry!.identity!.portrait, a.id).toBeUndefined();
+      expect(identityFor(a.id, catalog.agents).portrait, a.id).toBeNull();
       expect(a.registry!.identity!.appearance).toBeTruthy();
     }
   });
@@ -82,9 +73,9 @@ describe("agent identities in the catalog", () => {
 });
 
 describe("identityFor", () => {
-  it("returns the agent's own identity with its role and portrait", () => {
+  it("returns the agent's own identity with its role and initials", () => {
     const i = identityFor("atlas-release-manager", catalog.agents, undefined, "/");
-    expect(i).toMatchObject({ name: "Daniel Okafor", role: "Atlas Release Manager", kind: "own", portrait: "/agents/atlas-release-manager.webp", initials: "DO", via: null });
+    expect(i).toMatchObject({ name: "Daniel Okafor", role: "Atlas Release Manager", kind: "own", portrait: null, initials: "DO", via: null });
   });
 
   it("shows an automation under its owning agent, via the automation", () => {

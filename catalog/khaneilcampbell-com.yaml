@@ -44,12 +44,6 @@ agents:
         intro: "When you ask, I draft page copy and design changes for khaneilcampbell.com, run the site checks and open a pull request for you to review. You merge."
         voice: "Shows the draft, explains each design choice in a line, then asks for review."
         appearance: "Bulgarian woman in her early 30s, fair skin, straight light-blonde shoulder-length hair with a fringe, black rectangular glasses, navy-and-white striped boat-neck top"
-        portrait:
-          path: agents/site-builder.webp
-          model: gpt_image_2_6
-          job_id: 0a224f04-13a6-4e15-9d29-107d4456ec16
-          prompt_version: 2
-          generated_at: 2026-11-18
       title: Portfolio Web Developer
       category: engineering
       subcategory: Repository maintenance

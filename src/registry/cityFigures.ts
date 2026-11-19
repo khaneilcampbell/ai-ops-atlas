@@ -1,6 +1,6 @@
 /**
  * How each named agent looks as a figure in the 3D city, translated from its illustrated avatar
- * (public/agents/<id>.webp). Keyed by the same stable agent id as `registry.identity`, so the city
+ * (illustrations removed 2026-11-19; their descriptions live in `registry.identity.appearance`). Keyed by the same stable agent id as `registry.identity`, so the city
  * character, the agent card, the task picker, Activity and results all show one identity.
  *
  * Only what the avatar shows is copied: skin, hair, facial hair, glasses, earrings and the visible

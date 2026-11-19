@@ -3,8 +3,9 @@ import type { AgentIdentityManifest } from "./types";
 
 // Agent identities: the persona (name, portrait, accent) Atlas shows with an agent. Display only.
 // The agent's id, tasks, permissions, workflows and history never change, and every place that
-// shows an identity also says it is an AI agent. Avatars are illustrated files in public/agents/,
-// generated once and reused; nothing here ever generates one.
+// shows an identity also says it is an AI agent. Agents show their initials in their accent circle:
+// the illustrated avatars were removed on Khaneil's ask (2026-11-19). A portrait record, if one is
+// ever added back, points at public/agents/<id>.webp; nothing here ever generates one.
 
 /** The fixed style every avatar prompt carries, so the team reads as one illustrated set. */
 export const PORTRAIT_HOUSE_STYLE =

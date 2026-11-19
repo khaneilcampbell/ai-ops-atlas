@@ -239,12 +239,6 @@ agents:
         intro: "I own the brute-force detection lab: the Splunk search for repeated failed logons, the case notes written from its results, and the tests that keep both working. Detection and case notes are still run by hand."
         voice: "Incident-report style: source, count, window, evidence; no speculation."
         appearance: "Irish man in his early 30s, fair skin with freckles, short ginger hair, light ginger stubble, dark grey merino zip sweater over a white t-shirt"
-        portrait:
-          path: agents/soc-detection-lead.webp
-          model: gpt_image_2_6
-          job_id: a704bcd2-b729-420e-96f3-46e3a4698fd3
-          prompt_version: 2
-          generated_at: 2026-11-18
       title: Security Detection Lead
       category: security
       subcategory: Threat detection

@@ -17,12 +17,7 @@ registry:
     intro: "..."         # only what the agent can actually do today
     voice: "..."         # communication style
     appearance: "..."    # fixed appearance details, the input to the portrait prompt
-    portrait:
-      path: agents/benjaire-inquiry-manager.webp   # under public/, named after the id
-      model: gpt_image_2_6
-      job_id: <Higgsfield job id>
-      prompt_version: 2
-      generated_at: 2026-11-18
+    # portrait: (optional, none today) { path: agents/<id>.webp, model, job_id, prompt_version, generated_at }
 ```
 
 The parser is `src/registry/manifest.ts`, the JSON Schema `catalog/schema/atlas-v2.schema.json`.
@@ -48,7 +43,13 @@ its automations and names the one it came from.
 
 ## Avatars
 
-Avatars are illustrations, not photos: Khaneil chose drawn avatars over real-looking faces on
+**Removed 2026-11-19 on Khaneil's ask.** Agents now show their initials in their accent circle
+everywhere (lists, cards, task picker, map badges). The `portrait` blocks and the files in
+`public/agents/` were taken out; the parser still accepts a `portrait` block if one is added back.
+The record below is kept as history: the original images are in the project files under
+`ai-ops-atlas/agent-identities/illustrated/`, and reverting the removal pull request restores them.
+
+Avatars were illustrations, not photos: Khaneil chose drawn avatars over real-looking faces on
 2026-11-18. They were generated once on Higgsfield (`gpt_image_2_6`, 1:1), one per agent, 17
 images for about 4.25 credits, each drawn on its accent color circle. They are saved as 384 px
 WebP (about 10 KB). Nothing in Atlas generates avatars; a task never creates one. If an avatar
