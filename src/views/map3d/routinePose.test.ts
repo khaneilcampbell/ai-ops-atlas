@@ -70,6 +70,23 @@ describe("drawing the routine", () => {
     }
   });
 
+  it("spends most free time outside its own building, so each building's agents are found there", () => {
+    let near = 0, out = 0;
+    for (const a of withDesk) {
+      const r = planRoutine({ personaId: a.personaId, ops: quiet(a.personaId), env: routineEnv(routes, a.personaId, () => NOW)!, now: NOW });
+      const office = places.agents.get(a.personaId)!.office.id;
+      for (const s of r.segments) {
+        if (s.kind !== "stay" && s.kind !== "ride") continue;
+        if (s.activity === "at_home") continue;
+        const d = Math.min(s.t1, NOW + 90 * MIN) - Math.max(s.t0, NOW - 10 * 60 * MIN);
+        if (d <= 0) continue;
+        if (s.at === office) near += d;
+        else out += d;
+      }
+    }
+    expect(near / (near + out)).toBeGreaterThan(0.6);
+  });
+
   it("never stacks two agents on one standing spot", () => {
     const rs = named.agents.map((a) => planRoutine({ personaId: a.personaId, ops: quiet(a.personaId), env: routineEnv(routes, a.personaId, () => NOW)!, now: NOW }));
     for (let t = NOW - 6 * 60 * MIN; t < NOW + 60 * MIN; t += 60_000) {

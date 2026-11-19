@@ -38,8 +38,9 @@ Planned in the New York time zone unless the workflow's own n8n setting says oth
 (everyone at home), deterministically: the same runs and clock always give the same day, so a reload
 or a hidden tab picks up where it was without replaying a completion.
 
-1. Free time: the park, another district, the train, the yacht, the Ferris wheel, a ride on the
-   Atlas Gold Jet, the arena or home. Choices are seeded per agent (no AI calls) and never start a long
+1. Free time: mostly outside its own building (about two thirds of picks, so each building's agents
+   are found there or at their desks), with outings now and then: the park, another district, the
+   train, the yacht, the Ferris wheel, a ride on the Atlas Gold Jet, the arena or home. Choices are seeded per agent (no AI calls) and never start a long
    outing that would run into the next scheduled run.
 2. Heading to the office so it arrives just before a known scheduled run (at most 15 minutes ahead).
 3. Entering the building, going to its own desk (the desk the Inside view's office plan gives it).

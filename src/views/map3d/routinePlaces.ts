@@ -361,7 +361,8 @@ export function routineEnv(routes: CityRoutes, personaId: string, now: () => num
     },
     home: mine.home.id,
     office: mine.office.id,
-    leisure: places.leisure,
+    // Its own building first: most free time is spent outside it (ROUTINE.nearOffice), ready to go in.
+    leisure: [{ id: `near:${personaId}`, kind: "office", label: `Outside ${mine.officeLabel}`, spot: mine.office.id, exit: mine.office.id, stay: [600, 1500] }, ...places.leisure],
   };
 }
 
