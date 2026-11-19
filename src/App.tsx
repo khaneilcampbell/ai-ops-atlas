@@ -33,11 +33,10 @@ import { AlertPill } from "./views/AgentAlerts";
 import { usePropertyIncidents, usePropertyNotifications, usePropertyPolling } from "./properties/state";
 import { InstallHint } from "./components/InstallHint";
 import { formatDateTime, useTimeZone } from "./lib/timezone";
-import { decideFirstRun, useOnboardingOpen } from "./views/product/onboardingState";
+import { ensureWorkspace } from "./views/product/ensureWorkspace";
 
-// Setup and administration load only when opened, so the map's first paint doesn't wait on them.
+// Workspace and administration load only when opened, so the map's first paint doesn't wait on them.
 const WorkspaceView = lazy(() => import("./views/product/Workspace").then((m) => ({ default: m.WorkspaceView })));
-const Onboarding = lazy(() => import("./views/product/Onboarding").then((m) => ({ default: m.Onboarding })));
 
 const NAV: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Projects", icon: "map" },
@@ -71,9 +70,8 @@ export default function App() {
   useEffect(() => publishWatches(watches), [watches]);
   usePropertyPolling();
   usePropertyNotifications(usePropertyIncidents().open);
-  // First launch on a fresh device opens setup; an existing install is migrated into a workspace.
-  useEffect(() => decideFirstRun(), []);
-  const onboarding = useOnboardingOpen();
+  // Single owner: no setup popup. A device without a workspace gets the Benjaire one silently.
+  useEffect(() => ensureWorkspace(), []);
   const attention = useMemo(() => attentionItems(catalog, repos, manifestIssues, Date.now(), uncataloged), [catalog, repos, manifestIssues, uncataloged]);
 
   const trackedRepositories = new Set([...catalog.projects.map(p => p.repository), ...catalog.agents.map(a => a.repository), ...uncataloged]);
@@ -182,14 +180,6 @@ export default function App() {
           {view === "settings" && <SettingsView />}
         </ErrorBoundary>
       </main>
-
-      {onboarding && (
-        <ErrorBoundary>
-          <Suspense fallback={null}>
-            <Onboarding />
-          </Suspense>
-        </ErrorBoundary>
-      )}
 
       {/* The map docks its own inspector, and Agents shows the selected agent inline. */}
       {selection && view !== "map" && !((view === "agents" || view === "automations") && selection.kind === "agent" && !phone) && <DetailPanel />}

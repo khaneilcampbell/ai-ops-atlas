@@ -19,4 +19,9 @@ describe("MapSelect", () => {
     expect(html).toContain('<span class="map-group-value short">Tag</span>');
     expect(html).toContain("disabled");
   });
+  it("lists options that can't be picked right now as disabled", () => {
+    const html = renderToStaticMarkup(<MapSelect label="Map view" value="district" options={GROUPS} text={(g) => LABEL[g]} optionDisabled={(g) => g === "tag"} onChange={() => {}} />);
+    expect(html).toContain('<option value="tag" disabled="">By tag</option>');
+    expect(html).toContain('<option value="district" selected="">By district</option>');
+  });
 });

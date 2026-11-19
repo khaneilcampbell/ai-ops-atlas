@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { intelApi } from "./api";
 import { publishLocal, useLiveStatus } from "../live/feed";
+import { useN8nRuns } from "../n8n/runs";
 import type { IntelSource } from "../registry/registry";
 import type { AgentConfig, AgentStatus, Depth, EcoContext, EcoReport, RepoContext, Report, Run } from "./types";
 
@@ -77,14 +78,18 @@ export function IntelProvider({ children }: { children: ReactNode }) {
   }, [available, status]);
 
   const live = useLiveStatus();
+  // n8n runs are the live source for agents that run as n8n workflows, and through them for the
+  // agents that own those workflows.
+  const n8nState = useN8nRuns();
+  const n8n = n8nState.value;
   const telemetry = useMemo<IntelSource | null>(() => {
     const agentRuns = live.agentRuns;
     const production = live.production;
     const observedAt = live.checkedAt;
-    if (status) return { ...status, agentRuns, production, observedAt };
-    if (live.intelRuns || agentRuns || production.length) return { runs: live.intelRuns ?? [], agentRuns, production, observedAt };
+    if (status) return { ...status, agentRuns, production, observedAt, n8n };
+    if (live.intelRuns || agentRuns || production.length || n8n?.state === "ok") return { runs: live.intelRuns ?? [], agentRuns, production, observedAt, n8n };
     return null;
-  }, [status, live.intelRuns, live.agentRuns, live.production, live.checkedAt]);
+  }, [status, live.intelRuns, live.agentRuns, live.production, live.checkedAt, n8n]);
 
   const value = useMemo<IntelState>(
     () => ({
@@ -130,5 +135,5 @@ export function useIntel(): IntelState {
 /** What the website needs to show a run: status, timing and cost. No trace, prompts or report text. */
 function liveRun(r: Run): Partial<Run> {
   const { id, repo, trigger, depth, model, force, status, queued_at, started_at, finished_at, duration_ms, attempts, github_requests, cost_usd } = r;
-  return { id, repo, trigger, depth, model, force, status, queued_at, started_at, finished_at, duration_ms, attempts, github_requests, cost_usd, error: r.error ? { ...r.error, message: "" } : null, usage: null, estimate: null, trace: [] };
+  return { id, repo, trigger, depth, model, force, status, queued_at, started_at, finished_at, duration_ms, attempts, github_requests, cost_usd, error: r.error ? { ...r.error, message: "" } : null, usage: r.usage ?? null, estimate: null, trace: [] };
 }

@@ -10,18 +10,18 @@ import { buildingStates } from "../views/office/activity";
 import { runtimeFor } from "../views/office/model";
 import { mergeAgentRuns, toAgentRun, type AgentRun, type LiveEvent } from "./apply";
 
-// One real source end to end: the Observability Center's signal-watch agent posts run results to
+// One real source end to end: the Data Intelligence Center's dataset-census agent posts run results to
 // /api/hooks/agents, the feed turns them into agent runs, and the desk, module and map building
 // read the same state from them. Local evidence only; production is checked against the live D1.
 const dir = join(__dirname, "../../catalog");
 const { catalog } = buildCatalog(Object.fromEntries(readdirSync(dir).filter((f) => f.endsWith(".yaml")).map((f) => [f, readFileSync(join(dir, f), "utf8")])));
-const agent = catalog.agents.find((a) => a.id === "signal-watch")!;
+const agent = catalog.agents.find((a) => a.id === "dataset-census")!;
 const T0 = Date.parse("2026-11-17T09:00:00Z");
 const MIN = 60_000;
 
 const event = (id: number, at: number, status: string): LiveEvent => ({
   id, at: new Date(at).toISOString(), source: "agent", kind: "agent_run", repo: "khaneilcampbell/ai-ops-atlas",
-  body: { project: "ai-ops-atlas", agents: ["signal-watch"], phase: "signal-watch", status, detail: "" },
+  body: { project: "ai-ops-atlas", agents: ["dataset-census"], phase: "dataset-census", status, detail: "" },
 });
 const feed = (runs: AgentRun[] | null, events: LiveEvent[]) => mergeAgentRuns(runs ?? [], events.map(toAgentRun).filter((r): r is AgentRun => !!r));
 
@@ -32,10 +32,10 @@ function at(runs: AgentRun[] | null, now: number) {
   return { runtime, watch, building: buildingStates([agent], new Map([[agent.id, runtime]])).get(`agent:${agent.id}`) ?? "idle" };
 }
 
-describe("live telemetry path (signal-watch)", () => {
+describe("live telemetry path (dataset-census)", () => {
   it("is declared on the live feed with a report window", () => {
     expect(agent.observe?.agentFeed).toBe(true);
-    expect(agent.alerts?.reportWithinMs).toBe(90 * MIN);
+    expect(agent.alerts?.reportWithinMs).toBe(7 * 60 * MIN);
   });
 
   it("shows Not connected with a next step before the feed answers", () => {
@@ -59,7 +59,7 @@ describe("live telemetry path (signal-watch)", () => {
 
   it("expires old evidence: a success past the report window is Stale everywhere and unlit", () => {
     const runs = feed(null, [event(1, T0, "ok")]);
-    const s = at(runs, T0 + 91 * MIN);
+    const s = at(runs, T0 + 7 * 60 * MIN + MIN);
     expect([s.runtime.state, s.watch.state, s.building]).toEqual(["stale", "silent", "idle"]);
   });
 

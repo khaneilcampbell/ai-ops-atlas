@@ -14,7 +14,7 @@ Atlas organizes the catalog in three ways. Each value is either **declared** in 
 
 Each manifest declares `project.district`. Without it, the rules look at the tags and at the most common registry category among the project's items (CI pipelines don't count): career or portfolio, then security or infrastructure, then business, and AI Engineering otherwise. Atlas itself is always AI Operations. A test checks that the rules reproduce every declared district, so a new manifest without the field still lands in the right place.
 
-On the map, **By district** is the default grouping (stored as `mapGroupBy2`). Districts stay on one landmass with walkways, roads and bridges between them, with a quiet name label at each district's back corner. The other groupings are unchanged.
+On the map, **By district** is the default (district names on unless `mapProjectGrouping` is "none"). Districts stay on one landmass with walkways, roads and bridges between them, with a quiet name label at each district's back corner.
 
 ## Agent tiers
 
@@ -34,9 +34,11 @@ Continuous Integration, Security, Monitoring, Business, Intelligence and Mainten
 
 ## Map views
 
-The toolbar's view menu has three views (3D map only, stored as `mapLens`):
+The toolbar's one **Map view** menu has three views (stored as `mapLens`). It replaced the separate
+Infrastructure view and Group projects menus (2026-11-18): By status and By tag drew the same district
+names as By district, and the Infrastructure view drew nothing at rest, so neither changed the map.
 
-- **Infrastructure view** (default): no lines at rest. Selecting a building shows only its own connections, without fading the rest of the map. "Show connections" in the Connections menu still draws everything.
+- **By district** (default, key `infrastructure`; the only view on the flat map): district names on and no lines at rest. Picking it also turns district names back on. Selecting a building shows only its own connections, without fading the rest of the map. "Show connections" in the Connections menu still draws everything.
 - **Agent network**: links between agents from registry dependencies (AI agents, n8n and cross-project dependencies), at every zoom.
 - **Automation flow**: each repository to the automations whose source or workflow it hosts, plus n8n flows.
 

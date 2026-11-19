@@ -687,6 +687,70 @@
                     ]
                   }
                 }
+              },
+              "identity": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": false,
+                "required": [
+                  "display_name"
+                ],
+                "description": "Persistent persona shown with the agent across Atlas. Display only; the id, tasks and permissions never change.",
+                "properties": {
+                  "display_name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "accent": {
+                    "type": "string",
+                    "pattern": "^#[0-9A-Fa-f]{6}$"
+                  },
+                  "intro": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "voice": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "appearance": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "portrait": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "path"
+                    ],
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "pattern": "^agents/[a-z0-9][a-z0-9-]*\\.webp$"
+                      },
+                      "model": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "job_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "prompt_version": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "generated_at": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  }
+                }
               }
             }
           },
@@ -746,7 +810,20 @@
                   "then": {
                     "properties": {
                       "room": {
-                        "enum": ["1-content", "1-social", "1-strategy", "1-review", "1-gallery", "2-archive", "2-insights", "2-exhibition", "2-workshop", "3-hall", "3-foyer", "3-green"]
+                        "enum": [
+                          "1-content",
+                          "1-social",
+                          "1-strategy",
+                          "1-review",
+                          "1-gallery",
+                          "2-archive",
+                          "2-insights",
+                          "2-exhibition",
+                          "2-workshop",
+                          "3-hall",
+                          "3-foyer",
+                          "3-green"
+                        ]
                       }
                     }
                   },

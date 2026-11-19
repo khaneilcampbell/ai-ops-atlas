@@ -7,6 +7,9 @@ import { filterOutputs, redact, safeUrl, type OutputFilter } from "../../outputs
 import type { Goal, NodeStatus, RunMode, WorkflowDefinition } from "../../workflows/types";
 import { OutputBody } from "./OutputRenderers";
 import "../../styles/outputs.css";
+import { catalog } from "../../catalog";
+import { identityFor } from "../../registry/identity";
+import { AgentAvatar, AiAgentLabel } from "../../components/AgentIdentity";
 
 // Agent Output Studio: every output of the workflow on screen, grouped and filterable, under the
 // Execution canvas. It shares the canvas's one node selection: picking a step highlights its
@@ -192,12 +195,22 @@ interface CardProps {
 }
 
 const OutputCard = memo(function OutputCard({ o, step, agent, on, open, onToggle, onSelect, onOpenTask }: CardProps) {
+  // Results are attributed to the agent that produced them; a catalog agent shows its identity.
+  const identity = o.agentId && catalog.agents.some((a) => a.id === o.agentId) ? identityFor(o.agentId, catalog.agents) : null;
   return (
     <article className={`os-card${on ? " on" : ""}${o.category === "errors" ? " is-error" : ""}${o.latest ? "" : " is-old"}`} data-node={o.nodeId} data-output={o.id}>
       <button className="os-card-head" onClick={() => onSelect(o.nodeId)} aria-pressed={on} title="Show this step on the canvas">
         <span className="os-card-title">{redact(o.title)}</span>
         <span className="os-card-sub">
-          {agent} · {step}
+          {identity ? (
+            <>
+              <AgentAvatar identity={identity} size={18} /> {identity.name} <AiAgentLabel /> · {step}
+            </>
+          ) : (
+            <>
+              {agent} · {step}
+            </>
+          )}
         </span>
       </button>
       <div className="os-badges">
@@ -232,6 +245,10 @@ function Meta({ o, step, agent }: { o: AgentOutput; step: string; agent: string 
         <dt>From</dt>
         <dd>
           {agent} <span className="muted">({o.agentId})</span> · {step}
+          {(() => {
+            const idn = o.agentId && catalog.agents.some((a) => a.id === o.agentId) ? identityFor(o.agentId, catalog.agents) : null;
+            return idn && idn.kind !== "none" ? <div className="muted small">{idn.name}, {idn.role}{idn.via ? `, via ${idn.via}` : ""} (AI agent)</div> : null;
+          })()}
         </dd>
       </div>
       <div>

@@ -13,11 +13,24 @@ The agent feed (`/api/hooks/agents` → D1 `events` → `/api/events` → `src/l
 
 | Agent | Building | Last report seen |
 | --- | --- | --- |
-| signal-watch | Observability Center | 2026-11-17 09:12 UTC, ok |
 | dataset-census | Data Intelligence Center | 2026-11-17 03:48 UTC, ok |
-| marketplace-steward | Product Marketplace | 2026-11-17 03:40 UTC, ok |
 | Flow missed-run check (5 agents) | Benjaire HQ | 2026-11-16 16:00 UTC, ok |
 | commerce-loop | Commerce Pipeline | 2026-11-16 15:00 UTC, failed |
+
+## n8n runs and owning agents (2026-11-19)
+
+- **n8n workflows.** An agent that links an n8n workflow (a link labelled "n8n") and declares no other
+  source takes its state from that workflow's recent runs, read with the read-only key through
+  `/api/n8n` (site) or website sync (Mac). Code: `n8nExecutions` in `src/registry/telemetry.ts`.
+- **Owning agents.** An AI agent with no source of its own runs through the automations that name it in
+  `owned_by`. Its state is their runs together, each labelled with the automation that ran it
+  (`withOwnedRuns`, used by `telemetryById` in `src/registry/registry.ts`). Example: Agent Operations
+  Lead shows the runs of Agent Registry Sync, Agent Factory and Step Runner. It never borrows runs
+  when it has a source of its own.
+- The Automation Plaza and the Workflow Automation Plant name the owning agent for each workflow.
+- Still not connected: agents built as first-class n8n Agents (Release Coordinator, GitHub Profile
+  Manager, Product Lab and its skills). Their chats are n8n agent sessions, which `/api/n8n` does not
+  read, and they own no automations with a live source.
 
 ## Not connected yet
 

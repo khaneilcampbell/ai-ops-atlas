@@ -3,23 +3,24 @@ import type { Agent } from "../catalog/types";
 import { useIntel } from "../intel/state";
 import { repoData } from "../lib/derive";
 import { formatDate, relative } from "../lib/time";
-import { telemetryFor } from "../registry/telemetry";
+import { agentTelemetry } from "../registry/registry";
 import { useAtlas } from "../state";
 import { ExternalLink } from "./bits";
 import { RepositoryNotice } from "./RepositoryNotice";
 
-const SOURCE = { github: "GitHub Actions", "atlas-intel": "Atlas intelligence", "agent-feed": "Agent activity feed", production: "Production reports", manual: "Manifest" };
+const SOURCE = { github: "GitHub Actions", "atlas-intel": "Atlas intelligence", "agent-feed": "Agent activity feed", production: "Production reports", n8n: "n8n runs", automations: "Runs of the automations it owns", manual: "Manifest" };
 const RESULT = { running: "Reported running", success: "Succeeded", failure: "Failed", other: "Other / skipped" };
 
 /** Read existing evidence only. Opening this panel never starts an agent or a model call. */
 export function AgentOutput({ agent }: { agent: Agent }) {
-  const { repos, setView } = useAtlas();
+  const { catalog, repos, setView } = useAtlas();
   const intel = useIntel();
   const state = repos[agent.repository];
   const snap = repoData(state);
-  const telemetry = telemetryFor(agent, snap, intel.telemetry?.runs ?? null, null, intel.telemetry?.agentRuns, intel.telemetry?.production);
+  const telemetry = agentTelemetry(catalog, agent, repos, intel.telemetry ?? null);
   const latest = telemetry.lastAnyRun;
-  const checkedAt = telemetry.source === "github" ? snap?.runsCheckedAt ?? snap?.fetchedAt : intel.telemetry?.observedAt;
+  const n8n = intel.telemetry?.n8n;
+  const checkedAt = telemetry.source === "github" ? snap?.runsCheckedAt ?? snap?.fetchedAt : telemetry.source === "n8n" && n8n?.state === "ok" ? n8n.fetchedAt : intel.telemetry?.observedAt;
   const stale = state?.kind === "error" || (state?.kind === "ok" && state.stale);
   return <>
     {agent.id === "atlas-production-coordinator" && <ReadinessOutput key={agent.id}/>}
