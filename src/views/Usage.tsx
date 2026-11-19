@@ -717,9 +717,9 @@ function SetupState({
           )}
         </li>
         <li>
-          <div className="title">Let the GitHub agents report their calls</div>
+          <div className="title">Let the GitHub automations report their calls</div>
           <p className="muted">
-            Merge Flow, Design Consistency and Opportunity Scout send each call's token counts and estimated cost to the site when <span className="mono">ATLAS_FEED_URL</span> and{" "}
+            GitHub · Pull Request Merge Lanes, Development · Design Token Check and Development · Revenue Opportunity Scout send each call's token counts and estimated cost to the site when <span className="mono">ATLAS_FEED_URL</span> and{" "}
             <span className="mono">ATLAS_FEED_TOKEN</span> are set on GitHub. The site keeps the numbers only, never a prompt or a key.
           </p>
         </li>

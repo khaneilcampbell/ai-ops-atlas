@@ -63,6 +63,8 @@ function deskParts(d: InsideDesk, push: (list: keyof Parts, p: [number, number, 
   push("screen", [0, 1.18, -0.195], [0.78, 0.44, 0.01], off ? "#555b55" : STATE_COLOR[d.state]);
   push("chair", [0, 0.46, 0.66], [0.5, 0.07, 0.48]);
   push("chair", [0, 0.8, 0.9], [0.48, 0.56, 0.07]);
+  push("lamp", [0.6, 0.9, -0.24], [0.22, 0.22, 0.22], STATE_COLOR[d.state]);
+  if (d.state === "awaiting" || d.state === "failed") push("marker", [0, 1.98, -0.22], [0.36, 0.36, 0.36], STATE_COLOR[d.state]);
   push("torso", [0, 0.86, 0.66], [0.36, 0.62, 0.32], off ? C.inactive : d.accent);
   push("head", [0, 1.25, 0.64], [0.27, 0.27, 0.27], C.skin[Math.floor(h * 4) % 4]);
   // Seated with arms and legs, like the agents at their desks in the building interiors: thighs on the seat, shins to
@@ -75,9 +77,6 @@ function deskParts(d: InsideDesk, push: (list: keyof Parts, p: [number, number, 
     push("torso", [side * 0.19, 0.83, 0.38], [0.09, 0.08, 0.42], shirt);
   }
   push("hair", [0, 1.3, 0.67], [0.285, 0.24, 0.285], C.hair[Math.floor(h * 17) % 4]);
-  push("lamp", [0.6, 0.9, -0.24], [0.22, 0.22, 0.22], STATE_COLOR[d.state]);
-  // A marker over the desk when a person is needed, as inside.
-  if (d.state === "awaiting" || d.state === "failed") push("marker", [0, 1.98, -0.22], [0.36, 0.36, 0.36], STATE_COLOR[d.state]);
 }
 
 function buildParts(towers: Map<string, Tower>, offices: Map<string, InsideOffice>, tiers: InsideTiers): Parts {
