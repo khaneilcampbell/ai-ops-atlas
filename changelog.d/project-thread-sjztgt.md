@@ -1,0 +1,1 @@
+- 2026-11-12 · Portfolio Web Studio has a new Career Execution Agent, marked Draft and not running: it turns a job link into a cited resume summary, cover note and recruiter message for you to review, and never applies or messages anyone (#371)
