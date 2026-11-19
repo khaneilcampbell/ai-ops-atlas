@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 import { openAtlas, settle, waitForScene } from "./atlas";
 
 // Review shots, not baselines: RESIDENCE_SHOTS=<dir> npx playwright test -c visual visual/residence-agents.visual.ts
-// Agents inside Ellipse Residences, in the apartments their home cards name, home or out by their own day.
+// Agents inside Ellipse Residences (Team Residence Towers), each shown in the apartment its home card names.
 const out = process.env.RESIDENCE_SHOTS ?? "";
 test.skip(!out, "Set RESIDENCE_SHOTS to a folder to take these review shots");
 
