@@ -1,6 +1,9 @@
 import {StationFerrisWheel} from "./StationFerrisWheel";
 import {StationPlaza} from "./StationPlaza";
 import Commons from './Commons';
+import AutomationPlaza,{type PlazaView} from './AutomationPlaza';
+import {PLAZA,PLAZA_KEY,PLAZA_NAME} from './plazaPlan';
+import type {PlazaEffects} from '../../plaza/usePlaza';
 import {COMMONS_KEY,COMMONS_NAME} from './commonsPlan';
 import {marinaFootprint,marinaSite} from './marinaPlan';
 import {planHarbourPlatform} from './harbourPlatform';
@@ -108,6 +111,12 @@ const GoldJetRide = lazy(() => import("../office/GoldJetRide"));
 /** The yacht's decks you ride on, loaded only when you enter the yacht. */
 const YachtRide = lazy(() => import("../office/YachtRide"));
 
+export interface PlazaProps {
+  view: PlazaView;
+  effects: PlazaEffects;
+  automationProjects: ReadonlySet<string>;
+}
+
 export interface Map3DApi {
   zoom: (factor: number) => void;
   fit: () => void;
@@ -155,6 +164,8 @@ interface Props {
   landmarkMarks?: Readonly<Record<string, PlaqueMark>>;
   /** Day or night lighting. */
   light: LightMode;
+  /** Atlas Automation Plaza: live status, short-lived effects, and the projects that run automations (paths). */
+  plaza?: PlazaProps;
   /** Connections to draw, already filtered by the toolbar; empty when they are switched off. */
   links: MapLink[];
   linkSel: string | null;
@@ -214,6 +225,7 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
   if(scene.airport)m.set(GOLD_JET_KEY,{x:airportPoint(scene.airport,GOLD_JET_GATE.x+.3,GOLD_JET_GATE.z)[0],z:scene.airport.z+GOLD_JET_GATE.z,y0:TERRACE_H,y1:TERRACE_H+1.2,w:3.6,d:3.8});
   if(scene.agency)m.set(AGENCY_KEY,{x:scene.agency.cx,z:scene.agency.cz,y0:TERRACE_H,y1:TERRACE_H+AGENCY.eastHigh,w:scene.agency.w,d:scene.agency.d});
   if(scene.mall)m.set(MALL_KEY,{x:scene.mall.cx,z:scene.mall.cz,y0:TERRACE_H,y1:TERRACE_H+MALL.levels*MALL.floor+.4,w:scene.mall.rx*2,d:scene.mall.rz*2});
+  if(scene.plaza)m.set(PLAZA_KEY,{x:scene.plaza.cx,z:scene.plaza.cz,y0:TERRACE_H,y1:TERRACE_H+PLAZA.rise+PLAZA.enclosureHeight,w:PLAZA.stepsOuter*2,d:PLAZA.stepsOuter*2});
   if(scene.commons){const r=scene.commons.rect;m.set(COMMONS_KEY,{x:r.x+r.w/2,z:r.z+r.d/2,y0:TERRACE_H,y1:TERRACE_H+1.3,w:r.w,d:r.d});}
   if(scene.galleria){const f=scene.galleria.footprint;m.set(GALLERIA_KEY,{x:f.x+f.w/2,z:f.z+f.d/2,y0:TERRACE_H,y1:TERRACE_H+scene.galleria.column.top+.2,w:f.w,d:f.d});}
   {const b=yachtBounds(yachtBerth(marinaSite(scene,TERRACE_H)));m.set(YACHT_KEY,b);}
@@ -437,6 +449,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.dealership)plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"Vantor Motors",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:2,mark:PLANNED,title:"Vantor Motors · Planned visual district"});
     if(scene.agency)plaque({id:AGENCY_KEY,select:AGENCY_KEY,name:AGENCY_NAME,x:scene.agency.cx,roof:TERRACE_H+AGENCY.eastHigh+.25,z:scene.agency.cz,priority:1.2,mark:PLANNED,title:`${AGENCY_NAME} · Planned`});
     if(scene.mall)plaque({id:MALL_KEY,select:MALL_KEY,name:"Atlas Marketplace",x:scene.mall.cx,roof:TERRACE_H+MALL.levels*MALL.floor+.4,z:scene.mall.cz,priority:1.2,mark:PLANNED,title:"Atlas Marketplace · Planned"});
+    if(scene.plaza){const v=props.plaza?.view;plaque({id:PLAZA_KEY,select:PLAZA_KEY,name:PLAZA_NAME,x:scene.plaza.cx,roof:TERRACE_H+PLAZA.rise+PLAZA.enclosureHeight+.15,z:scene.plaza.cz,priority:1.3,mark:plazaMark(v),title:`${PLAZA_NAME} · ${v?.sign.status??'Status unavailable'}`});}
     if(scene.commons){const r=scene.commons.rect;plaque({id:COMMONS_KEY,select:COMMONS_KEY,name:COMMONS_NAME,x:r.x+r.w/2,roof:TERRACE_H+1.4,z:r.z+r.d/2,priority:1.3,mark:PLANNED,title:"Atlas Commons · Planned public park"});}
     if(scene.galleria){const gl=scene.galleria;plaque({id:GALLERIA_KEY,select:GALLERIA_KEY,name:GALLERIA_NAME,x:gl.column.x,roof:TERRACE_H+gl.column.top+.1,z:gl.column.z,priority:1.3,mark:PLANNED,title:`${GALLERIA_NAME} · Planned`});}
     {const yb=yachtBerth(marinaSite(scene,TERRACE_H)),bb=yachtBounds(yb);plaque({id:YACHT_KEY,select:YACHT_KEY,name:YACHT_NAME,x:bb.x,roof:bb.y1+.1,z:bb.z,priority:2,mark:PLANNED,title:`${YACHT_NAME} · Planned yacht`});
@@ -546,6 +559,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           net={net}
           hoverLink={hoverLink}
           linksMoving={props.linksMoving}
+          plaza={props.plaza}
           traffic={props.traffic}
           inside={!!props.inside}
           insideOffices={insideOffices}
@@ -619,6 +633,15 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   );
 });
 
+/** The plaza's nameplate dot, from its live status only: never green without data that came back. */
+function plazaMark(v: PlazaView | undefined): PlaqueMark {
+  if (!v || v.connection === "unavailable") return { kind: "unverified", label: "Status unavailable" };
+  if (v.preview) return { kind: "unverified", label: "Sample preview · not live data" };
+  if (v.attention) return { kind: "failing", label: `${v.attention} need${v.attention === 1 ? "s" : ""} attention` };
+  if (v.running) return { kind: "running", label: `${v.running} running` };
+  return { kind: "passing", label: "Live · idle" };
+}
+
 /** A real drawn frame, not module loading, ends the first-visit loading state. */
 function FirstMapFrame({ready}:{ready:()=>void}) {
   const scheduled=useRef(false);
@@ -640,6 +663,7 @@ function World({
   net,
   hoverLink,
   linksMoving,
+  plaza,
   traffic,
   inside,
   insideOffices,
@@ -676,6 +700,7 @@ function World({
   net: { shown: { l: MapLink; level: NetLink["level"] }[]; picked?: MapLink; focusSet: Set<string> | null };
   hoverLink: string | null;
   linksMoving: boolean;
+  plaza?: PlazaProps;
   traffic: boolean;
   inside: boolean;
   insideOffices: Map<string, InsideOffice>;
@@ -1319,6 +1344,9 @@ function World({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [net.picked?.id]);
 
+  // The plaza's gold paths lead only to buildings whose projects run automations.
+  const plazaProjects = plaza?.automationProjects;
+  const plazaPaths = useMemo(() => (scene.plaza?.paths ?? []).filter((q) => plazaProjects?.has(q.projectId)), [scene.plaza, plazaProjects]);
   // Let the core city draw before mounting expanded districts and decorative simulations.
   const [detailsReady, setDetailsReady] = useState(false);
   const detailFrame = useRef(0);
@@ -1362,6 +1390,7 @@ function World({
       {detailsReady && <AtlasYacht berth={berth} marina={marina} travel={travel} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([YACHT_KEY])} moving={!reduced&&traffic&&(office.phase===null||ridingYacht)} exclusion={scene.pedestrianExclusion}/>}
       {detailsReady && ridingYacht && <Suspense fallback={null}><YachtRide night={lightMode==="night"} controls={controls} city={{ x: center.x, z: center.z }} /></Suspense>}
       {detailsReady && <Stadium night={lightMode==="night"} plan={scene.stadium} site={scene.stadiumSite} g={g} m={m} pick={kioskPick.of([STADIUM_KEY])}/>}
+      {detailsReady && plaza && <AutomationPlaza plan={scene.plaza} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([PLAZA_KEY])} view={plaza.view} effects={plaza.effects} paths={plazaPaths} reduced={reduced}/>}
       {detailsReady && <Commons plan={scene.commons} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([COMMONS_KEY])}/>}
       {detailsReady && <Mall night={lightMode==="night"} plan={scene.mall} g={g} m={m} pick={kioskPick.of([MALL_KEY])}/>}
       {detailsReady && <Galleria night={lightMode==="night"} plan={scene.galleria} g={g} m={m} pick={kioskPick.of([GALLERIA_KEY])}/>}

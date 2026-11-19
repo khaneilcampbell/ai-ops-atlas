@@ -1,0 +1,1 @@
+- 2026-11-18 · The "Welcome to Atlas" setup popup is gone for good. Atlas is yours alone, so it sets up your workspace quietly and opens straight to the map (#469)

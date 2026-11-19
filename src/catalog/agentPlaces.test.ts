@@ -31,8 +31,8 @@ describe("agent places", () => {
   });
 
   it("works where workspace.yaml says a landmark agent operates", () => {
-    expect(places.get("signal-watch")?.work.label).toBeTruthy();
-    expect(places.get("signal-watch")!.work.label).not.toMatch(/Atlas Command Center$/);
+    expect(places.get("dataset-census")?.work.label).toBeTruthy();
+    expect(places.get("dataset-census")!.work.label).not.toMatch(/Atlas Command Center$/);
   });
 
   it("assigns automation homes from the top of the East tower, stable by id", () => {
