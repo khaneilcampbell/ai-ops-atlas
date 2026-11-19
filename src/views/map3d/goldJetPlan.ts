@@ -125,4 +125,23 @@ export const GOLD_JET_SLOT_OK=GOLD_JET_SLOT!==SHARED_SLOT&&GOLD_JET_SLOT<FLIGHT_
  * The airport clock and circuit as the map last saw them, so the interior can pick the flight up where the map left it.
  * Written by the map's Airport frame loop; the cabin you ride in follows it.
  */
-export const goldJetLive:{clock:number;circuit?:FlightCircuit;west?:boolean}={clock:0};
+export const goldJetLive:{clock:number;circuit?:FlightCircuit;west?:boolean;/** Wall time (ms) of `clock`. */wall?:number;/** The airport clock is running (not paused or reduced motion). */live?:boolean}={clock:0};
+
+/** Airport clock seconds at a wall time (ms), from the clock the map last drew; the agents' routine books jet seats with it. */
+export function airportClockAt(wall:number,live=goldJetLive):number{return live.live&&live.wall?live.clock+(wall-live.wall)/1000:wall/1000;}
+/** Wall time (ms) of an airport clock time, by the same mapping. */
+export function wallOfAirport(clock:number,now:number,live=goldJetLive):number{return now+(clock-airportClockAt(now,live))*1000;}
+/**
+ * The next round trip on the gold jet for someone at the gate by airport clock `from`: when its boarding starts and
+ * ends, and when that group has walked off again after the loop. Airport clock seconds; null if none is found.
+ */
+export function goldJetTrip(from:number,circuit?:FlightCircuit):{boardFrom:number;boardTo:number;off:number}|null{
+ const st=(t:number)=>goldJetState(t,circuit).stage,limit=from+2*FLIGHT_SCHEDULE.cycle;
+ let t=Math.ceil(from);
+ while(t<limit&&st(t)!=='boarding')t++;
+ if(t>=limit)return null;
+ let b=t;while(b<limit&&st(b)==='boarding')b++;
+ let d=b;while(d<limit+FLIGHT_SCHEDULE.cycle&&st(d)!=='deplaning')d++;
+ let e=d;while(e<limit+2*FLIGHT_SCHEDULE.cycle&&st(e)==='deplaning')e++;
+ return st(e)==='deplaning'?null:{boardFrom:t,boardTo:b,off:e};
+}
