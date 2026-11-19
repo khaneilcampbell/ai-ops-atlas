@@ -32,12 +32,13 @@ export const PLAZA = {
    * about 5 above the ground; Khaneil, 2026-11-18), so the sculpture reads over it from the map's camera.
    */
   enclosureRadius: 1.25,
-  enclosureHeight: 5.3,
+  enclosureHeight: 5.55,
   /**
-   * A solid gold dome caps the lantern (Khaneil chose concept A, 2026-11-19). Glass plus dome keep the old
-   * 5.7 total, so it still sits below the nearest tower.
+   * Concept B's top (Khaneil, 2026-11-19: "use B top part instead of A"): the glass ends in an open gold rim,
+   * with a shallow gold saucer set just inside it and the mast running up to meet it. The saucer's low dome
+   * rises this much above the rim; glass plus saucer keep the old 5.7 total, below the nearest tower.
    */
-  domeRise: 0.4,
+  crownRise: 0.15,
   /** Fine gold mullions round the glass. */
   mullions: 16,
   pedestalRadius: 0.6,

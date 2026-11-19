@@ -24,9 +24,11 @@ the integrations to connect. Stale agent reports and old n8n summaries count as 
 ## Look
 
 Concept A from Higgsfield, chosen by Khaneil on 2026-11-19 (pictures in the project files under
-`automation-plaza/higgsfield-concepts`): a solid gold dome caps the glass, 16 fine gold mullions frame it,
+`automation-plaza/higgsfield-concepts`): 16 fine gold mullions frame it,
 a gold collar sits at its foot, the three rings are gathered in the middle of the lantern over a warm
-glowing floor, and a gold ring is inlaid in the paving round the glass. The glass and dome together keep
+glowing floor, and a gold ring is inlaid in the paving round the glass. The top is concept B's, at
+Khaneil's ask: the glass ends in an open gold rim with a shallow gold saucer just inside it, and a gold
+mast runs up the middle to meet it. The glass and saucer together keep
 the old 5.7 height, so the plaza still stands above the Vendor & Supplier Hub and below the nearest tower.
 All of it is decoration; none of it shows status.
 

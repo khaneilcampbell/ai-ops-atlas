@@ -26,6 +26,8 @@ export const MAX_RING_LIGHTS = 9;
 export const PLAZA_MOTION = { orbit: 0.12, tumble: [0.22, 0.34, 0.48] } as const;
 
 const GROUND = TERRACE_H;
+/** Concept B's saucer, as a share of the lantern's radius: set just inside the rim so the rim shows round it. */
+const CROWN_DISC = 0.82;
 const TOP = GROUND + PLAZA.rise;
 const C = {
   stone: "#efe6d2",
@@ -162,9 +164,10 @@ export default function AutomationPlaza({
     const glowRing = new THREE.RingGeometry(0.42, 0.7, 48).rotateX(-Math.PI / 2);
     const inlay = new THREE.RingGeometry(PLAZA.bedInner - 0.1, PLAZA.bedInner - 0.06, 64).rotateX(-Math.PI / 2);
     const bead = new THREE.SphereGeometry(1, 10, 8);
-    // Concept A (Khaneil, 2026-11-19): a solid gold dome cap, a gold collar at the foot of the glass,
-    // a warm glowing floor inside the lantern and a gold ring inlaid in the paving.
-    const dome = new THREE.SphereGeometry(PLAZA.enclosureRadius + 0.05, 40, 10, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, PLAZA.domeRise / (PLAZA.enclosureRadius + 0.05), 1);
+    // Concept A's lantern (Khaneil, 2026-11-19): a gold collar at the foot of the glass, a warm glowing
+    // floor inside and a gold ring inlaid in the paving. The top is concept B's open crown (see parts).
+    // Concept B's top: a shallow saucer with a low domed centre.
+    const saucerDome = new THREE.SphereGeometry(PLAZA.enclosureRadius * CROWN_DISC, 36, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, (PLAZA.crownRise + 0.06) / (PLAZA.enclosureRadius * CROWN_DISC), 1);
     const band = new THREE.CylinderGeometry(PLAZA.enclosureRadius + 0.06, PLAZA.enclosureRadius + 0.06, 1, 40).translate(0, 0.5, 0);
     const floorGlow = new THREE.CircleGeometry(PLAZA.enclosureRadius - 0.04, 40).rotateX(-Math.PI / 2);
     const floorLight = new THREE.MeshBasicMaterial({ color: "#ffe9b0", transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -219,7 +222,7 @@ export default function AutomationPlaza({
     signTex.colorSpace = THREE.SRGBColorSpace;
     signTex.anisotropy = 4;
     const signFace = new THREE.MeshBasicMaterial({ map: signTex });
-    return { dome, band, floorGlow, floorLight, pavingRing, halo, haloDisc, core, coreTube, pool, poolDisc, poolSpill, beam, beamTube, disc, glassTube, rings, rim, glowRing, inlay, bead, face, glass, gold, stone, pathGlow, warm, runLight, pulse, pathLit, done, amber, green, attentionFace, doneFace, canvas, signTex, signFace };
+    return { saucerDome, band, floorGlow, floorLight, pavingRing, halo, haloDisc, core, coreTube, pool, poolDisc, poolSpill, beam, beamTube, disc, glassTube, rings, rim, glowRing, inlay, bead, face, glass, gold, stone, pathGlow, warm, runLight, pulse, pathLit, done, amber, green, attentionFace, doneFace, canvas, signTex, signFace };
   }, []);
   useEffect(
     () => () => {
@@ -428,7 +431,7 @@ export default function AutomationPlaza({
       <group position={[p.cx, TOP, p.cz]}>
         <mesh geometry={kit.disc} material={kit.stone} scale={[PLAZA.pedestalRadius, 0.16 * K, PLAZA.pedestalRadius]} castShadow receiveShadow {...handlers} />
         <mesh geometry={kit.disc} material={kit.stone} position={[0, 0.16 * K, 0]} scale={[PLAZA.pedestalRadius * 0.7, 0.06 * K, PLAZA.pedestalRadius * 0.7]} castShadow {...handlers} />
-        <mesh geometry={kit.disc} material={kit.gold} position={[0, 0.22 * K, 0]} scale={[0.018 * K, PLAZA.ringHeight - 0.22 * K, 0.018 * K]} raycast={() => null} />
+        <mesh geometry={kit.disc} material={kit.gold} position={[0, 0.22 * K, 0]} scale={[0.018 * K, PLAZA.enclosureHeight - 0.1 - 0.22 * K, 0.018 * K]} raycast={() => null} />
         <mesh geometry={kit.glowRing} material={kit.warm} position={[0, 0.006, 0]} scale={[K, 1, K]} raycast={() => null} />
         {/* Completion: a brief green glow round the pedestal, only for a completion Atlas observed. */}
         {showDone && <mesh ref={glowRef} geometry={kit.glowRing} material={kit.done} position={[0, 0.012, 0]} scale={[K, 1, K]} raycast={() => null} />}
@@ -455,8 +458,9 @@ export default function AutomationPlaza({
         <mesh geometry={kit.rim} material={kit.gold} position={[0, 0.03, 0]} rotation={[Math.PI / 2, 0, 0]} raycast={() => null} />
         <mesh geometry={kit.rim} material={kit.gold} position={[0, 0.02 + PLAZA.enclosureHeight / 2, 0]} rotation={[Math.PI / 2, 0, 0]} raycast={() => null} />
         <mesh geometry={kit.rim} material={kit.gold} position={[0, 0.02 + PLAZA.enclosureHeight, 0]} rotation={[Math.PI / 2, 0, 0]} raycast={() => null} />
-        {/* A solid gold dome caps the lantern so its top reads from across the city. */}
-        <mesh geometry={kit.dome} material={kit.gold} position={[0, 0.02 + PLAZA.enclosureHeight, 0]} castShadow {...handlers} />
+        {/* Concept B's top: a shallow gold saucer just inside the open rim, its low dome meeting the mast. */}
+        <mesh geometry={kit.disc} material={kit.gold} position={[0, 0.02 + PLAZA.enclosureHeight - 0.1, 0]} scale={[PLAZA.enclosureRadius * CROWN_DISC, 0.06, PLAZA.enclosureRadius * CROWN_DISC]} castShadow {...handlers} />
+        <mesh geometry={kit.saucerDome} material={kit.gold} position={[0, 0.02 + PLAZA.enclosureHeight - 0.04, 0]} castShadow {...handlers} />
       </group>
 
       {/* The sign's live face. */}

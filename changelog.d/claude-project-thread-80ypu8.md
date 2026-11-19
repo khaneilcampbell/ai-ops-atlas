@@ -1,1 +1,1 @@
-- 2026-11-19 · The Atlas Automation Plaza has a new look, from the Higgsfield concept you picked: a solid gold dome, fine gold frames round the glass, the rings in the middle over a warm glowing floor, and a gold ring in the paving (#484)
+- 2026-11-19 · The Atlas Automation Plaza has a new look, from the Higgsfield concepts you picked: fine gold frames round the glass, an open gold rim with a gold saucer on top and a gold mast up the middle, the rings in the middle over a warm glowing floor, and a gold ring in the paving (#484)

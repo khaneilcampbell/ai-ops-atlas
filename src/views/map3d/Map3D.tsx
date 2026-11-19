@@ -221,7 +221,7 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
   if(scene.airport)m.set(GOLD_JET_KEY,{x:airportPoint(scene.airport,GOLD_JET_GATE.x+.3,GOLD_JET_GATE.z)[0],z:scene.airport.z+GOLD_JET_GATE.z,y0:TERRACE_H,y1:TERRACE_H+1.2,w:3.6,d:3.8});
   if(scene.agency)m.set(AGENCY_KEY,{x:scene.agency.cx,z:scene.agency.cz,y0:TERRACE_H,y1:TERRACE_H+AGENCY.eastHigh,w:scene.agency.w,d:scene.agency.d});
   if(scene.mall)m.set(MALL_KEY,{x:scene.mall.cx,z:scene.mall.cz,y0:TERRACE_H,y1:TERRACE_H+MALL.levels*MALL.floor+.4,w:scene.mall.rx*2,d:scene.mall.rz*2});
-  if(scene.plaza)m.set(PLAZA_KEY,{x:scene.plaza.cx,z:scene.plaza.cz,y0:TERRACE_H,y1:TERRACE_H+PLAZA.rise+PLAZA.enclosureHeight+PLAZA.domeRise,w:PLAZA.stepsOuter*2,d:PLAZA.stepsOuter*2});
+  if(scene.plaza)m.set(PLAZA_KEY,{x:scene.plaza.cx,z:scene.plaza.cz,y0:TERRACE_H,y1:TERRACE_H+PLAZA.rise+PLAZA.enclosureHeight+PLAZA.crownRise,w:PLAZA.stepsOuter*2,d:PLAZA.stepsOuter*2});
   if(scene.commons){const r=scene.commons.rect;m.set(COMMONS_KEY,{x:r.x+r.w/2,z:r.z+r.d/2,y0:TERRACE_H,y1:TERRACE_H+1.3,w:r.w,d:r.d});}
   if(scene.galleria){const f=scene.galleria.footprint;m.set(GALLERIA_KEY,{x:f.x+f.w/2,z:f.z+f.d/2,y0:TERRACE_H,y1:TERRACE_H+scene.galleria.column.top+.2,w:f.w,d:f.d});}
   {const b=yachtBounds(yachtBerth(marinaSite(scene,TERRACE_H)));m.set(YACHT_KEY,b);}
@@ -426,7 +426,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.dealership)plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"Vantor Motors",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:2,mark:PLANNED,title:"Vantor Motors · Planned visual district"});
     if(scene.agency)plaque({id:AGENCY_KEY,select:AGENCY_KEY,name:AGENCY_NAME,x:scene.agency.cx,roof:TERRACE_H+AGENCY.eastHigh+.25,z:scene.agency.cz,priority:1.2,mark:PLANNED,title:`${AGENCY_NAME} · Planned`});
     if(scene.mall)plaque({id:MALL_KEY,select:MALL_KEY,name:"Atlas Marketplace",x:scene.mall.cx,roof:TERRACE_H+MALL.levels*MALL.floor+.4,z:scene.mall.cz,priority:1.2,mark:PLANNED,title:"Atlas Marketplace · Planned"});
-    if(scene.plaza){const v=props.plaza?.view;plaque({id:PLAZA_KEY,select:PLAZA_KEY,name:PLAZA_NAME,x:scene.plaza.cx,roof:TERRACE_H+PLAZA.rise+PLAZA.enclosureHeight+PLAZA.domeRise+.15,z:scene.plaza.cz,priority:1.3,mark:plazaMark(v),title:`${PLAZA_NAME} · ${v?.sign.status??'Status unavailable'}`});}
+    if(scene.plaza){const v=props.plaza?.view;plaque({id:PLAZA_KEY,select:PLAZA_KEY,name:PLAZA_NAME,x:scene.plaza.cx,roof:TERRACE_H+PLAZA.rise+PLAZA.enclosureHeight+PLAZA.crownRise+.15,z:scene.plaza.cz,priority:1.3,mark:plazaMark(v),title:`${PLAZA_NAME} · ${v?.sign.status??'Status unavailable'}`});}
     if(scene.commons){const r=scene.commons.rect;plaque({id:COMMONS_KEY,select:COMMONS_KEY,name:COMMONS_NAME,x:r.x+r.w/2,roof:TERRACE_H+1.4,z:r.z+r.d/2,priority:1.3,mark:PLANNED,title:"Atlas Commons · Planned public park"});}
     if(scene.galleria){const gl=scene.galleria;plaque({id:GALLERIA_KEY,select:GALLERIA_KEY,name:GALLERIA_NAME,x:gl.column.x,roof:TERRACE_H+gl.column.top+.1,z:gl.column.z,priority:1.3,mark:PLANNED,title:`${GALLERIA_NAME} · Planned`});}
     {const yb=yachtBerth(marinaSite(scene,TERRACE_H)),bb=yachtBounds(yb);plaque({id:YACHT_KEY,select:YACHT_KEY,name:YACHT_NAME,x:bb.x,roof:bb.y1+.1,z:bb.z,priority:2,mark:PLANNED,title:`${YACHT_NAME} · Planned yacht`});
