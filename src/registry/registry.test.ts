@@ -287,8 +287,9 @@ describe("directory", () => {
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    // 36 with a source of their own, 7 n8n automations, and 11 owning agents through their automations.
-    expect(s.observable).toBe(54);
+    // 36 with a source of their own, 8 with n8n workflow links (7 automations and Benjaire Product Lab,
+    // which links its hand-off workflow), and 11 owning agents through their automations.
+    expect(s.observable).toBe(55);
   });
 });
 

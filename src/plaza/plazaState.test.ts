@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { N8nState } from "../n8n/runs";
 import type { StoredTask } from "../tasks/types";
 import type { WorkflowRun } from "../workflows/types";
-import { N8N_FRESH_MS, plazaEvents, plazaSnapshot, plazaSummary, previewSnapshot, signText, type PlazaInputs, type RuntimeLike } from "./plazaState";
+import { N8N_FRESH_MS, abandonedTest, plazaEvents, plazaSnapshot, plazaSummary, previewSnapshot, signText, type PlazaInputs, type RuntimeLike } from "./plazaState";
 
 const NOW = Date.parse("2026-11-18T18:00:00Z");
 const iso = (minAgo: number) => new Date(NOW - minAgo * 60_000).toISOString();
@@ -72,6 +72,45 @@ describe("plaza snapshot", () => {
     expect(s.connection).toBe("live");
     expect(signText(s)).toEqual({ status: "0 running · 0 queued", note: null, tone: "live" });
     expect(plazaSummary(s)).toContain("Idle");
+  });
+
+  it("leaves out an n8n editor test that has waited more than a day, but keeps real waiting runs", () => {
+    const day = 24 * 60;
+    const n8n: N8nState = {
+      state: "ready",
+      message: null,
+      value: {
+        state: "ok",
+        instance: "https://x.app.n8n.cloud",
+        fetchedAt: new Date(NOW - 60_000).toISOString(),
+        window: 50,
+        workflows: [
+          {
+            id: "WF1",
+            name: "Scout daily",
+            active: true,
+            failures24h: 0,
+            runs: [
+              { id: "1", status: "waiting", mode: "manual", startedAt: iso(124 * 60), stoppedAt: null },
+              { id: "2", status: "waiting", mode: "manual", startedAt: iso(30), stoppedAt: null },
+            ],
+          },
+          { id: "WF9", name: "Approve", active: true, failures24h: 0, runs: [{ id: "3", status: "waiting", mode: "webhook", startedAt: iso(175 * 60), stoppedAt: null }] },
+        ],
+      },
+    };
+    const s = plazaSnapshot(inputs({ n8n }));
+    expect(s.running.map((r) => r.id)).toEqual(["n8n:3", "n8n:2"]);
+    expect(abandonedTest({ mode: "manual", status: "waiting", startedAt: iso(day + 1) }, NOW)).toBe(true);
+    expect(abandonedTest({ mode: "manual", status: "running", startedAt: iso(day + 1) }, NOW)).toBe(false);
+    expect(abandonedTest({ mode: "manual", status: "waiting", startedAt: null }, NOW)).toBe(false);
+  });
+
+  it("names an agent's workplace building by its current name, not its project's headquarters", () => {
+    const lab = { id: "lab", name: "Benjaire Product Lab", projectId: "benjaire-com", workplace: { building: "Benjaire Marketing Agency" }, links: [{ label: "n8n workflow", url: "https://x.app.n8n.cloud/workflow/WF9" }] };
+    const n8n: N8nState = { state: "ready", message: null, value: { state: "ok", instance: "https://x.app.n8n.cloud", fetchedAt: iso(0), window: 50, workflows: [{ id: "WF9", name: "Product Lab hand-off", active: true, failures24h: 0, runs: [{ id: "5", status: "waiting", mode: "integrated", startedAt: iso(3), stoppedAt: null }] }] } };
+    const s = plazaSnapshot(inputs({ agents: [...agents, lab], projectNames: new Map([...projectNames, ["benjaire-com", "Business Operations HQ"]]), n8n }));
+    expect(s.running[0]).toMatchObject({ agentName: "Benjaire Product Lab", buildingKey: "service:benjaire-marketing", buildingName: "Growth & Marketing Studio" });
   });
 
   it("counts running and queued work from tasks, runtimes and n8n, once per piece of work", () => {
