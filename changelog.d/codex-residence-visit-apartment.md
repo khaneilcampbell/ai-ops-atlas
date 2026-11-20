@@ -1,0 +1,1 @@
+- 2026-11-20 · In Team Residence Towers, pick an agent's apartment and press Visit apartment: the view zooms into that suite, shows who lives there, and gives shortcuts to their profile, project, tasks and saved outputs. Back to building returns to the floor, and Atlas remembers the open suite after a reload

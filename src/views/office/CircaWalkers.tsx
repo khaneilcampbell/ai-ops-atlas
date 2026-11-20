@@ -76,14 +76,14 @@ export function residentsHomeOn(residents:readonly CircaResidentNow[],level:numb
  * persona name overhead in the all-floors view (the same portraits as the Agents tab); on a single floor the
  * apartment label carries the portrait instead, so the two don't overlap. Selecting one says who it is and where.
  */
-export function CircaWalkers({level,tower,residents,chips=true,onPick}:{level:number;tower?:CircaTower;residents:CircaResidentNow[];chips?:boolean;onPick?:(text:string)=>void}) {
+export function CircaWalkers({level,tower,residents,chips=true,onPick,onSuite}:{level:number;tower?:CircaTower;residents:CircaResidentNow[];chips?:boolean;onPick?:(text:string)=>void;onSuite?:(unit:string)=>void}) {
   const here=residentsHomeOn(residents,level,tower);
   return <group>{here.map(r=>{
     const spot=r.state.home&&r.state.night?bedroomOf(r.home):livingOf(r.home),who=`${r.identity.name} · ${r.identity.role} · Apartment ${r.home.unit} · ${r.state.note}`;
-    return <group key={r.id} position={[spot.x,0.03,spot.z]} onClick={e=>{e.stopPropagation();onPick?.(who);}}>
+    return <group key={r.id} position={[spot.x,0.03,spot.z]} onClick={e=>{e.stopPropagation();onPick?.(who);onSuite?.(r.home.unit);}}>
       <ResidentFigure figure={r.figure}/>
       {chips&&<Html position={[0,2.05,0]} center zIndexRange={[40,30]}>
-        <button className="circa-resident-chip" onClick={()=>onPick?.(who)} aria-label={`${r.identity.name}, ${r.identity.role}, AI agent, apartment ${r.home.unit}`}>
+        <button className="circa-resident-chip" onClick={()=>{onPick?.(who);onSuite?.(r.home.unit);}} aria-label={`${r.identity.name}, ${r.identity.role}, AI agent, apartment ${r.home.unit}`}>
           <AgentAvatar identity={r.identity} size={26}/><b>{r.identity.name.split(" ")[0]}</b>
         </button>
       </Html>}
