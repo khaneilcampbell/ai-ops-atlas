@@ -49,13 +49,15 @@
   }
   .sidebar { overflow-x: auto; overflow-y: hidden; justify-content: flex-start; }
   .sidebar .grow { display: none; }
-  .nav-item { width: auto; flex: 0 0 76px; min-width: 76px; min-height: 50px; padding: 6px 0 4px; gap: 3px; border-radius: 10px; }
+  .nav-item, .sidebar .nav-item { width: auto; flex: 0 0 76px; min-width: 76px; min-height: 50px; padding: 6px 0 4px; gap: 3px; border-radius: 10px; }
   .nav-item span { font-size: 8.5px; letter-spacing: 0.08em; }
   .nav-item .badge { top: 2px; right: calc(50% - 22px); min-width: 16px; height: 16px; font-size: 9.5px; }
   .nav-item.active { background: none; border-color: transparent; }
 
   .main { grid-column: 1; grid-row: 2; border-top-left-radius: 0; -webkit-overflow-scrolling: touch; }
   .page { padding: 18px 14px 28px; }
+  .section-tabs { padding: 6px 5px 0; gap: 0; }
+  .section-tabs button { padding: 9px 9px; }
   .page-head { gap: 10px; margin-bottom: 14px; }
   .page-head > :first-child { flex: 1 1 100%; }
   h1 { font-size: 27px; }

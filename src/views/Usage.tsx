@@ -24,6 +24,7 @@ import {
   type Period,
   type UsageRecord,
 } from "../usage/model";
+import { SpendCaps } from "../components/ModuleWorkspaceLists";
 import "../styles/usage.css";
 import { formatDateTime, formatDay } from "../lib/timezone";
 
@@ -57,7 +58,7 @@ export function UsageView() {
     <div className="page usage">
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">API Usage</div>
+          <div className="eyebrow">Intel · API · Provider usage</div>
           <h1>AI usage command center.</h1>
           <p className="lede">Calls, tokens, cache hits, cost and models for every Atlas agent that reports its usage, ranked so the heaviest workflows and the cheapest fixes come first. Nothing here calls a model or a provider.</p>
         </div>
@@ -84,6 +85,10 @@ export function UsageView() {
           {syncConfigured(data.sync) && !data.sync?.last_error && data.sync?.last_push_at && <> · Sent to the website {relative(data.sync.last_push_at)}</>}
         </div>
       )}
+      <section className="card card-pad usage-caps">
+        <SpendCaps open />
+      </section>
+
       {syncConfigured(data.sync) && data.sync?.last_error && (
         <div className="notice usage-sync-error">
           <Icon name="alert" size={14} />
@@ -682,7 +687,7 @@ function SetupState({
     ? "Turn on Website sync in the Mac app (Settings → Website sync). After that, the Mac sends its records here after each run and when you press Refresh there."
     : snapshot.pushedAt
       ? `Your Mac last synced ${relative(snapshot.pushedAt)}, and it hadn't recorded any usage yet. Run an analysis on the Mac to see the first record.`
-      : "Website sync is set up on this site, but your Mac hasn't sent anything yet. Open API Usage on the Mac and press Refresh.";
+      : "Website sync is set up on this site, but your Mac hasn't sent anything yet. Open Intel → API → Provider usage on the Mac and press Refresh.";
   return (
     <div className="card usage-setup">
       <div className="usage-setup-head">

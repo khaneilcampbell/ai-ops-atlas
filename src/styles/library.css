@@ -130,8 +130,10 @@
 .lib-dot.s-pending { background: var(--warn); }
 
 /* The toolbar's Library button. */
-.map-controls .map-library-btn { display: inline-flex; gap: var(--space-3); }
+.map-controls .map-library-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-3); }
 .map-controls .map-library-btn .lbl { font-size: var(--text-sm); }
+/* Same icon size as the Agents button beside it. */
+.map-controls .map-library-btn svg { width: auto; height: auto; display: inline-block; flex: none; }
 
 @media (max-width: 700px) {
   .lib-head { padding: var(--space-7) var(--space-8) var(--space-5); }
@@ -141,9 +143,7 @@
   .lib-filters label:last-child { grid-column: span 2; }
   .lib-facts { grid-template-columns: 96px minmax(0, 1fr); }
   .map-controls .map-library-btn .lbl { display: none; }
-  /* The phone toolbar scrolls sideways; keep Library pinned at its right edge so it's always in view. */
-  .map-controls .map-library-btn { position: sticky; right: 0; z-index: 1; background: var(--sage-50); box-shadow: -8px 0 8px -6px rgba(0, 0, 0, 0.18); }
-  .map-controls .map-library-btn.on { background: var(--forest-700); }
+  /* Library sits beside Agents at the start of the toolbar, so it is in view without pinning. */
 }
 @media (prefers-reduced-motion: no-preference) {
   .lib-drawer { animation: lib-in 160ms ease-out; }
