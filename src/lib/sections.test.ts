@@ -5,10 +5,12 @@ import { SECTIONS, SIDEBAR_SECTIONS, sectionEntry, sectionOf, tabOf } from "./se
 const ALL: View[] = ["overview", "workflows", "tasks", "business", "agents", "automations", "repos", "map", "grid", "activity", "intel", "review", "usage", "workspace", "settings", "preferences"];
 
 describe("sidebar sections", () => {
-  it("lists Business, Agents, Intel and Settings with their pages in order", () => {
+  it("lists Projects, Business, Agents, Automations, Intel and Settings with their pages in order", () => {
     expect(SIDEBAR_SECTIONS.map((s) => [s.label, s.tabs.map((t) => t.label)])).toEqual([
+      ["Projects", ["Projects"]],
       ["Business", ["Business"]],
-      ["Agents", ["Directory", "Automations"]],
+      ["Agents", ["Agents"]],
+      ["Automations", ["Automations"]],
       ["Intel", ["Intelligence", "Engineering Review", "Repositories", "API Usage"]],
       ["Settings", ["Workspace", "Connections", "Preferences"]],
     ]);
@@ -28,7 +30,7 @@ describe("sidebar sections", () => {
   it("maps the old standalone entries to their new parent", () => {
     expect(sectionOf("repos").id).toBe("intel");
     expect(sectionOf("usage").id).toBe("intel");
-    expect(sectionOf("automations").id).toBe("agents");
+    expect(sectionOf("automations").id).toBe("automations");
     expect(sectionOf("workspace").id).toBe("settings");
     // Older links to "settings" open Connections, where the GitHub token and keys live.
     expect(SECTIONS.find((s) => s.id === "settings")!.tabs.find((t) => t.view === "settings")!.label).toBe("Connections");

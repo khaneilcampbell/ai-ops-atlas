@@ -5,8 +5,8 @@ export interface SectionTab { view: View; label: string }
 export interface Section { id: string; label: string; icon: IconName; tabs: SectionTab[] }
 
 /**
- * Where every page lives. The left sidebar shows Business, Agents, Intel and Settings; Projects,
- * Mission Control and Grid live in the top switch. A section with more than one page shows its
+ * Where every page lives. The left sidebar shows Projects, Business, Agents, Automations, Intel and Settings;
+ * Projects, Mission Control and Grid are also in the top switch. A section with more than one page shows its
  * pages as tabs above the content. View ids are unchanged, so saved views and links keep working.
  */
 export const SECTIONS: Section[] = [
@@ -14,13 +14,14 @@ export const SECTIONS: Section[] = [
   { id: "overview", label: "Mission", icon: "overview", tabs: [{ view: "overview", label: "Overview" }, { view: "tasks", label: "Task Center" }, { view: "activity", label: "Activity" }] },
   { id: "grid", label: "Grid", icon: "grid", tabs: [{ view: "grid", label: "Grid" }] },
   { id: "business", label: "Business", icon: "briefcase", tabs: [{ view: "business", label: "Business" }] },
-  { id: "agents", label: "Agents", icon: "agents", tabs: [{ view: "agents", label: "Directory" }, { view: "automations", label: "Automations" }] },
+  { id: "agents", label: "Agents", icon: "agents", tabs: [{ view: "agents", label: "Agents" }] },
+  { id: "automations", label: "Automations", icon: "network", tabs: [{ view: "automations", label: "Automations" }] },
   { id: "intel", label: "Intel", icon: "spark", tabs: [{ view: "intel", label: "Intelligence" }, { view: "review", label: "Engineering Review" }, { view: "repos", label: "Repositories" }, { view: "usage", label: "API Usage" }] },
   { id: "settings", label: "Settings", icon: "settings", tabs: [{ view: "workspace", label: "Workspace" }, { view: "settings", label: "Connections" }, { view: "preferences", label: "Preferences" }] },
 ];
 
-/** The sections the left sidebar lists; the rest open from the top switch. */
-export const SIDEBAR_SECTIONS = SECTIONS.filter((s) => ["business", "agents", "intel", "settings"].includes(s.id));
+/** The sections the left sidebar lists; Mission Control and Grid open from the top switch. */
+export const SIDEBAR_SECTIONS = SECTIONS.filter((s) => ["map", "business", "agents", "automations", "intel", "settings"].includes(s.id));
 
 /** Pages that open from inside another page and keep its section highlighted. */
 const OPENED_FROM: Partial<Record<View, View>> = { workflows: "overview" };
