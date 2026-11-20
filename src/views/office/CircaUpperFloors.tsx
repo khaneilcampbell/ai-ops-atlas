@@ -45,7 +45,7 @@ export function CircaPoolDeck({night}:{night:boolean}) {
 }
 
 /** One tower's apartment floor, tower-local; the east tower is drawn mirrored by its parent group. */
-export function CircaApartments({level,tower="west",night,labels,onPick,residents=[]}:{level:number;tower?:CircaTower;night:boolean;labels:boolean;onPick:(text:string)=>void;residents?:CircaResidentNow[]}) {
+export function CircaApartments({level,tower="west",night,labels,onPick,onSuite,residents=[]}:{level:number;tower?:CircaTower;night:boolean;labels:boolean;onPick:(text:string)=>void;onSuite?:(unit:string)=>void;residents?:CircaResidentNow[]}) {
   const parts=useMemo(()=>circaApartmentParts(level),[level]);
   const units=circaUnits(level,tower);
   return <group>
@@ -55,7 +55,7 @@ export function CircaApartments({level,tower="west",night,labels,onPick,resident
       const here=residents.filter(r=>r.home.unit===u.id),who=here.map(r=>r.identity.name).join(" · ");
       const role=here.map(r=>r.identity.role).join(" · ");
       return <group key={u.id}>
-        {labels&&<Html position={[(u.x0+u.x1)/2,1.9,(u.z0+u.z1)/2]} center><button className="skyline-room-label" onClick={()=>onPick(here.length?`Apartment ${u.id} · ${here.map(r=>`${r.identity.name} · ${r.identity.role}`).join(" · ")}`:`Apartment ${u.id} · ${u.label}`)} data-resident={here.length?"":undefined}>{here.map(r=><AgentAvatar key={r.id} identity={r.identity} size={30}/>)}<em>{`Apartment ${u.id}`}<span>{here.length?`${who} · ${role}`:u.beds===2?"2 bed · Available":"1 bed · Available"}</span></em></button></Html>}
+        {labels&&<Html position={[(u.x0+u.x1)/2,1.9,(u.z0+u.z1)/2]} center><button className="skyline-room-label" onClick={()=>{onSuite?.(u.id);onPick(here.length?`Apartment ${u.id} · ${here.map(r=>`${r.identity.name} · ${r.identity.role}`).join(" · ")}`:`Apartment ${u.id} · ${u.label}`);}} data-resident={here.length?"":undefined}>{here.map(r=><AgentAvatar key={r.id} identity={r.identity} size={30}/>)}<em>{`Apartment ${u.id}`}<span>{here.length?`${who} · ${role}`:u.beds===2?"2 bed · Available":"1 bed · Available"}</span></em></button></Html>}
       </group>;
     })}
   </group>;

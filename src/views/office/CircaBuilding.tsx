@@ -58,7 +58,7 @@ export function CircaLifts({reduced}:{reduced:boolean}) {
  * One Circa floor. `stack` is the all-floors view, where the podium floors keep a single real lamp and each tower floor
  * one per tower, and the emissive cove strips carry the rest of the night glow.
  */
-export function CircaLevel({level,stack,labels,night,reduced,residents,onPick,sign}:{level:number;stack:boolean;labels:boolean;night:boolean;reduced:boolean;residents:CircaResidentNow[];onPick:(text:string)=>void;sign:{title:string;subtitle:string}}) {
+export function CircaLevel({level,stack,labels,night,reduced,residents,onPick,onSuite,sign}:{level:number;stack:boolean;labels:boolean;night:boolean;reduced:boolean;residents:CircaResidentNow[];onPick:(text:string)=>void;onSuite?:(unit:string)=>void;sign:{title:string;subtitle:string}}) {
   const kind=circaLevelKind(level),podium=kind!=="apartments",n=circaFloorNumber(level);
   const lamp=(x:number,key:string|number,distance:number,boost=1)=><pointLight key={key} position={[x,2.9,0]} color="#ffe2a4" intensity={(night?NIGHT_LAMP:5)*boost} distance={distance} decay={2}/>;
   return <group>
@@ -70,8 +70,8 @@ export function CircaLevel({level,stack,labels,night,reduced,residents,onPick,si
       {/* Only the agents who live here are drawn: no stand-in lift visitor. */}
       <group position={[CIRCA_LIFT_SHIFT,0,0]}><ElevatorLanding level={level} reduced={reduced} labels={labels} visitor={false} runner="#9a9893" edge="#1b1b1d" finish={CIRCA_LIFT} top={CIRCA_LIFT_TOP} offset={CIRCA_LIFT_OFFSET[t.id]}
         name={podium?`${TOWER_NAME[t.id]} tower`:`${TOWER_NAME[t.id]} · Floor ${n}`}/></group>
-      {!podium&&<CircaApartments level={level} tower={t.id} night={night} labels={labels} onPick={onPick} residents={residents}/>}
-      {!podium&&<CircaWalkers level={level} tower={t.id} residents={residents} chips={!labels} onPick={onPick}/>}
+      {!podium&&<CircaApartments level={level} tower={t.id} night={night} labels={labels} onPick={onPick} onSuite={onSuite} residents={residents}/>}
+      {!podium&&<CircaWalkers level={level} tower={t.id} residents={residents} chips={!labels} onPick={onPick} onSuite={onSuite}/>}
     </Tower>)}
     {kind==="lobby"&&<group>
       <CircaLobby night={night}/>
