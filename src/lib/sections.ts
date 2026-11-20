@@ -11,12 +11,12 @@ export interface Section { id: string; label: string; icon: IconName; tabs: Sect
  */
 export const SECTIONS: Section[] = [
   { id: "map", label: "Projects", icon: "map", tabs: [{ view: "map", label: "Projects" }] },
-  { id: "overview", label: "Mission", icon: "overview", tabs: [{ view: "overview", label: "Overview" }, { view: "tasks", label: "Task Center" }, { view: "activity", label: "Activity" }] },
+  { id: "overview", label: "Mission", icon: "overview", tabs: [{ view: "overview", label: "Overview" }, { view: "tasks", label: "Task Center" }] },
   { id: "grid", label: "Grid", icon: "grid", tabs: [{ view: "grid", label: "Grid" }] },
   { id: "business", label: "Business", icon: "briefcase", tabs: [{ view: "business", label: "Business" }] },
   { id: "agents", label: "Agents", icon: "agents", tabs: [{ view: "agents", label: "Agents" }] },
   { id: "automations", label: "Automations", icon: "network", tabs: [{ view: "automations", label: "Automations" }] },
-  { id: "intel", label: "Intel", icon: "spark", tabs: [{ view: "intel", label: "Intelligence" }, { view: "review", label: "Engineering Review" }, { view: "repos", label: "Repositories" }, { view: "usage", label: "API Usage" }] },
+  { id: "intel", label: "Intel", icon: "spark", tabs: [{ view: "intel", label: "Intelligence" }, { view: "review", label: "Engineering Review" }, { view: "repos", label: "Repositories" }, { view: "usage", label: "API Usage" }, { view: "activity", label: "Activity" }] },
   { id: "settings", label: "Settings", icon: "settings", tabs: [{ view: "workspace", label: "Workspace" }, { view: "settings", label: "Connections" }, { view: "preferences", label: "Preferences" }] },
 ];
 

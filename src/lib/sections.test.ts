@@ -11,7 +11,7 @@ describe("sidebar sections", () => {
       ["Business", ["Business"]],
       ["Agents", ["Agents"]],
       ["Automations", ["Automations"]],
-      ["Intel", ["Intelligence", "Engineering Review", "Repositories", "API Usage"]],
+      ["Intel", ["Intelligence", "Engineering Review", "Repositories", "API Usage", "Activity"]],
       ["Settings", ["Workspace", "Connections", "Preferences"]],
     ]);
   });
@@ -22,8 +22,9 @@ describe("sidebar sections", () => {
     expect(new Set(placed).size).toBe(placed.length);
   });
 
-  it("keeps Task Center, Activity and Workflow Intelligence under Mission Control", () => {
-    expect(["overview", "tasks", "activity", "workflows"].map((v) => sectionOf(v as View).id)).toEqual(["overview", "overview", "overview", "overview"]);
+  it("keeps Task Center and Workflow Intelligence under Mission Control, and Activity under Intel", () => {
+    expect(["overview", "tasks", "workflows"].map((v) => sectionOf(v as View).id)).toEqual(["overview", "overview", "overview"]);
+    expect(sectionOf("activity").id).toBe("intel");
     expect(tabOf("workflows")).toBe("overview");
   });
 

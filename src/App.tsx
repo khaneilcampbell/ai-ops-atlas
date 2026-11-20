@@ -144,7 +144,7 @@ export default function App() {
               {s.id === "settings" && <div className="grow" />}
               <button className={`nav-item ${section.id === s.id ? "active" : ""}`} onClick={() => openSection(s)} aria-label={s.label} title={s.label} aria-current={section.id === s.id ? "page" : undefined}>
                 <Icon name={s.icon} size={20} />
-                <span>{s.label}</span>
+                <span className={s.label.length > 9 ? "nav-label-long" : undefined}>{s.label}</span>
               </button>
             </Fragment>
           ))}
@@ -208,8 +208,9 @@ function PhoneNav({ attention, status }: { attention: number; status: PhoneStatu
   const [open, setOpen] = useState(false);
   const openSection = useSectionNav();
   // The bar tab for this page: its own tab, else the bar tab of its section. None means More.
-  const current = PHONE_BAR.find((b) => b.view === tabOf(view)) ?? PHONE_BAR.find((b) => sectionOf(b.view).id === sectionOf(view).id);
-  const more = SIDEBAR_SECTIONS.filter((s) => !PHONE_BAR.some((b) => sectionOf(b.view).id === s.id));
+  const current = PHONE_BAR.find((b) => b.view === tabOf(view)) ?? PHONE_BAR.find((b) => b.view === sectionOf(view).tabs[0].view);
+  // A section stays in More unless the bar opens it on its first page (Activity is a bar tab but lives in Intel).
+  const more = SIDEBAR_SECTIONS.filter((s) => !PHONE_BAR.some((b) => b.view === s.tabs[0].view));
   const inMore = !current;
   const go = (v: View) => {
     setView(v);
