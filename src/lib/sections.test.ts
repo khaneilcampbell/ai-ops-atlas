@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { View } from "../state";
 import { SECTIONS, SIDEBAR_SECTIONS, sectionEntry, sectionOf, tabOf } from "./sections";
 
-const ALL: View[] = ["overview", "workflows", "tasks", "business", "agents", "automations", "repos", "map", "grid", "activity", "intel", "review", "usage", "api-costs", "api-github", "intel-api", "workspace", "settings", "preferences"];
+const ALL: View[] = ["overview", "workflows", "tasks", "business", "agents", "automations", "repos", "map", "projects", "grid", "activity", "intel", "review", "usage", "api-costs", "api-github", "intel-api", "workspace", "settings", "preferences"];
 
 describe("sidebar sections", () => {
   it("lists the sidebar sections with their pages in order", () => {
     expect(SIDEBAR_SECTIONS.map((s) => [s.label, s.tabs.map((t) => t.label)])).toEqual([
-      ["Map", ["Map"]],
+      ["Projects", ["Projects"]],
       ["Agents", ["Agents"]],
       ["Auto", ["Automations"]],
       ["Tasks", ["Tasks"]],
@@ -46,6 +46,11 @@ describe("sidebar sections", () => {
       expect(sectionOf(v).id).toBe("intel");
       expect(tabOf(v)).toBe("intel-api");
     }
+  });
+
+  it("keeps the Projects list in the sidebar and the city Map in the top switch", () => {
+    expect(sectionOf("projects").id).toBe("projects");
+    expect(SIDEBAR_SECTIONS.some((s) => s.id === "map")).toBe(false);
   });
 
   it("falls back to Projects for a view it does not know", () => {

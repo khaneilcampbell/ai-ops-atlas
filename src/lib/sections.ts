@@ -5,13 +5,15 @@ export interface SectionTab { view: View; label: string }
 export interface Section { id: string; label: string; icon: IconName; tabs: SectionTab[] }
 
 /**
- * Where every page lives. The left sidebar shows, in this order, Map, Agents, Auto (Automations), Tasks, Hub (Workspace), Intel, Grid and Settings;
+ * Where every page lives. The left sidebar shows, in this order, Projects (the list; the top switch's Map is the city), Agents, Auto (Automations), Tasks, Hub (Workspace), Intel, Grid and Settings;
  * Map, Mission Control and Business are in the top switch (Business swapped places with Grid). A section with more than one page shows its
  * pages as tabs above the content. View ids are unchanged, so saved views and links keep working.
  */
 export const SECTIONS: Section[] = [
-  // The city map, called Map in the sidebar and the top switch.
+  // The city map, Map in the top switch (and the iPhone bar).
   { id: "map", label: "Map", icon: "map", tabs: [{ view: "map", label: "Map" }] },
+  // The projects as a searchable list: the sidebar's first item.
+  { id: "projects", label: "Projects", icon: "folder", tabs: [{ view: "projects", label: "Projects" }] },
   { id: "overview", label: "Mission", icon: "overview", tabs: [{ view: "overview", label: "Overview" }] },
   { id: "grid", label: "Grid", icon: "grid", tabs: [{ view: "grid", label: "Grid" }] },
   { id: "business", label: "Business", icon: "briefcase", tabs: [{ view: "business", label: "Business" }] },
@@ -27,7 +29,7 @@ export const SECTIONS: Section[] = [
 ];
 
 /** The sections the left sidebar lists; Mission Control and Business open from the top switch. */
-export const SIDEBAR_SECTIONS = ["map", "agents", "automations", "tasks", "workspace", "intel", "grid", "settings"].map((id) => SECTIONS.find((s) => s.id === id)!);
+export const SIDEBAR_SECTIONS = ["projects", "agents", "automations", "tasks", "workspace", "intel", "grid", "settings"].map((id) => SECTIONS.find((s) => s.id === id)!);
 
 /** Pages that open from inside another page and keep its section highlighted. */
 // "api-github" was its own tab; GitHub requests now share the Claude costs page.

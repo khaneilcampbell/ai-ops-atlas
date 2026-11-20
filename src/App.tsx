@@ -19,6 +19,7 @@ import { ReposView } from "./views/Repos";
 import { MapView } from "./views/Map";
 import { SettingsView } from "./views/Settings";
 import { IntelligenceView } from "./views/Intelligence";
+import { ProjectsView } from "./views/Projects";
 import { AtlasApiView, AtlasIntelligenceView } from "./views/AtlasIntelligence";
 import { UsageView } from "./views/Usage";
 import { TaskCenterView } from "./views/tasks/TaskCenter";
@@ -175,6 +176,7 @@ export default function App() {
           {view === "workflows" && <WorkflowIntelligenceView />}
           {view === "business" && <BusinessView />}
           {view === "grid" && <GridView />}
+          {view === "projects" && <ProjectsView />}
           {view === "activity" && <ActivityView />}
           {view === "agents" && <AgentsView key="agents" kind="agents" />}
           {view === "automations" && <AgentsView key="automations" kind="automations" />}
