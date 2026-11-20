@@ -11,8 +11,9 @@ import { CAFE, CAFE_GROUND, CAFE_KEY, CAFE_NAME, type CafePlan } from "./cafePla
  * flowering planters and warm lamps.
  *
  * Draw cost is kept to a handful of calls: every solid part is one instanced box mesh in the map's shared
- * plain material (per-instance colours), with the table tops, umbrella canopies and planting as three more
- * instanced meshes, one merged glass mesh and one merged sign. No lights are added: lamps and the
+ * plain material (per-instance colours), with the round parts (table tops, planting and, by day, the lamp
+ * globes) as one ball mesh, the umbrella canopies as one more (neither casts shadows), the hipped roof, one
+ * merged glass mesh and one merged sign: six draws by day. No lights are added: lamps and the
  * interior glow use the map's shared lamp material, which lights up at night. In the Inside view the
  * roof and ceiling lift away (like the headquarters cutaways) so the room shows from above.
  */
@@ -143,7 +144,8 @@ export function cafeParts(p: CafePlan): CafeParts {
   for (const t of p.tables) {
     const g = t.area === "indoor" ? F : G + 0.01;
     solid.push({ p: [t.x, g, t.z], s: [0.03, CAFE.tableTop - 0.012, 0.03], c: C.iron }, { p: [t.x, g, t.z], s: [0.1, 0.008, 0.1], c: C.iron });
-    out.tops.push({ p: [t.x, g + CAFE.tableTop - 0.012, t.z], s: [CAFE.tableRadius * 2, 0.012, CAFE.tableRadius * 2], c: C.marble });
+    // A flattened ball reads as a round marble disc, and shares the planting's mesh (one draw fewer).
+    out.tops.push({ p: [t.x, g + CAFE.tableTop - 0.006, t.z], s: [CAFE.tableRadius, 0.006, CAFE.tableRadius], c: C.marble });
     if (t.area === "indoor") out.lamps.push({ p: [t.x, top - 0.16, t.z], s: [0.028, 0.028, 0.028] }, { p: [t.x, top - 0.14, t.z], s: [0.004, 0.14, 0.004], c: C.dark });
     if (t.umbrella) {
       const U = CAFE.umbrella;
@@ -230,15 +232,16 @@ export default function CommunityCafe({ plan, g, m, pick, night, inside }: { pla
   // One draw for every plain box: the walls and furniture, the roof slab and fascia (lifted away in the
   // Inside view, so the room shows from the map's camera) and, by day, the ceiling's light panel.
   const boxes = useMemo(() => (parts ? [...parts.solid, ...(inside ? [] : parts.roof), ...(inside || night ? [] : parts.glow)] : null), [parts, inside, night]);
+  // Table tops, planting and (by day, when they are unlit) the lamp globes share one ball mesh.
+  const rounds = useMemo(() => (parts ? [...parts.tops, ...parts.leaves, ...(night ? [] : parts.lamps)] : null), [parts, night]);
   const picks = useMemo(() => (parts && boxes ? { boxes: pick.of(boxes.map(() => CAFE_KEY)), hip: pick.of(parts.hip.map(() => CAFE_KEY)) } : null), [parts, boxes, pick]);
-  if (!plan || !parts || !kit || !picks || !boxes) return null;
+  if (!plan || !parts || !kit || !picks || !boxes || !rounds) return null;
   return (
     <group name="community-cafe" userData={{ label: CAFE_NAME }}>
       <Instanced items={boxes} geometry={g.box} material={m.plain} pick={picks.boxes} />
-      <Instanced items={parts.tops} geometry={g.cyl} material={m.plain} />
-      <Instanced items={parts.canopies} geometry={g.cone} material={m.plain} />
-      <Instanced items={parts.leaves} geometry={g.ball} material={m.plain} shadow={false} />
-      <Instanced items={parts.lamps} geometry={g.bead} material={night ? m.lamp : m.plain} shadow={false} />
+      <Instanced items={rounds} geometry={g.ball} material={m.plain} shadow={false} />
+      <Instanced items={parts.canopies} geometry={g.cone} material={m.plain} shadow={false} />
+      {night && <Instanced items={parts.lamps} geometry={g.bead} material={m.lamp} shadow={false} />}
       {!inside && <Instanced items={parts.hip} geometry={g.hip} material={m.roof} pick={picks.hip} />}
       {!inside && night && <Instanced items={parts.glow} geometry={g.box} material={m.lamp} shadow={false} />}
       <mesh geometry={kit.glassGeo} material={kit.glass} renderOrder={2} raycast={() => null} />
