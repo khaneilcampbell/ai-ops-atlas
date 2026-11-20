@@ -42,7 +42,7 @@ const WorkspaceView = lazy(() => import("./views/product/Workspace").then((m) =>
 
 /** On a phone the bar holds these four plus More; the other sections open from the More sheet. */
 const PHONE_BAR: { view: View; label: string; icon: IconName }[] = [
-  { view: "map", label: "Projects", icon: "map" },
+  { view: "map", label: "Map", icon: "map" },
   { view: "agents", label: "Agents", icon: "agents" },
   { view: "overview", label: "Mission", icon: "overview" },
   // Intel, as in the sidebar; Activity is one of its tabs.

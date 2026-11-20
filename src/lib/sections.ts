@@ -5,12 +5,13 @@ export interface SectionTab { view: View; label: string }
 export interface Section { id: string; label: string; icon: IconName; tabs: SectionTab[] }
 
 /**
- * Where every page lives. The left sidebar shows, in this order, Projects, Agents, Automations, Tasks, Workspace, Intel, Grid and Settings;
+ * Where every page lives. The left sidebar shows, in this order, Map (the city, also Projects in the top switch), Agents, Automations, Tasks, Workspace, Intel, Grid and Settings;
  * Projects, Mission Control and Business are in the top switch (Business swapped places with Grid). A section with more than one page shows its
  * pages as tabs above the content. View ids are unchanged, so saved views and links keep working.
  */
 export const SECTIONS: Section[] = [
-  { id: "map", label: "Projects", icon: "map", tabs: [{ view: "map", label: "Projects" }] },
+  // The city map. The sidebar calls it Map; the top switch keeps the name Projects.
+  { id: "map", label: "Map", icon: "map", tabs: [{ view: "map", label: "Map" }] },
   { id: "overview", label: "Mission", icon: "overview", tabs: [{ view: "overview", label: "Overview" }] },
   { id: "grid", label: "Grid", icon: "grid", tabs: [{ view: "grid", label: "Grid" }] },
   { id: "business", label: "Business", icon: "briefcase", tabs: [{ view: "business", label: "Business" }] },
