@@ -1,0 +1,1 @@
+- 2026-11-19 · Edit an agent's name, job title, description, intro and communication style right in Atlas on the website. Edits save to your Atlas database with a change log and "Use repository text" to undo, show on every tab, and never change how the agent runs (#498)

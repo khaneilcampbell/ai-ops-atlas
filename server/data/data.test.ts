@@ -12,6 +12,8 @@ import { agentFor, parseKeys } from "./policy";
 
 const UP = readFileSync(new URL("../../db/migrations/0001_atlas_core.sql", import.meta.url), "utf8");
 const DOWN = readFileSync(new URL("../../db/migrations/0001_atlas_core.down.sql", import.meta.url), "utf8");
+const UP2 = readFileSync(new URL("../../db/migrations/0002_profile_edits.sql", import.meta.url), "utf8");
+const DOWN2 = readFileSync(new URL("../../db/migrations/0002_profile_edits.down.sql", import.meta.url), "utf8");
 const KEY = "k".repeat(40);
 const ENV: DataEnv = { ATLAS_DATA_KEYS: `task-writer:${KEY},unknown-agent:${"u".repeat(40)}` };
 const BASE = "https://atlas.test";
@@ -44,9 +46,14 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await db.query("DROP SCHEMA IF EXISTS atlas CASCADE");
-  if (pg) await pg.exec(UP);
-  else await withDb({ ATLAS_DATABASE_URL: external! }, (d) => d.query(UP));
-  await db.query("INSERT INTO atlas.schema_migrations (version, name) VALUES (1, 'atlas_core')");
+  if (pg) {
+    await pg.exec(UP);
+    await pg.exec(UP2);
+  } else {
+    await withDb({ ATLAS_DATABASE_URL: external! }, (d) => d.query(UP));
+    await withDb({ ATLAS_DATABASE_URL: external! }, (d) => d.query(UP2));
+  }
+  await db.query("INSERT INTO atlas.schema_migrations (version, name) VALUES (1, 'atlas_core'), (2, 'profile_edits')");
 });
 
 const deps = () => ({ db, sink: () => {} });
@@ -77,11 +84,11 @@ async function seed() {
 describe("migration", () => {
   it("creates every table with constraints, and the down file removes them", async () => {
     const tables = (await db.query<{ table_name: string }>("SELECT table_name FROM information_schema.tables WHERE table_schema = 'atlas' ORDER BY 1")).map((r) => r.table_name);
-    expect(tables).toEqual(["agent_runs", "ai_notes", "approvals", "decisions", "documents", "goals", "idempotency_keys", "projects", "schema_migrations", "tasks"]);
+    expect(tables).toEqual(["agent_runs", "ai_notes", "approvals", "decisions", "documents", "goals", "idempotency_keys", "profile_edit_log", "profile_edits", "projects", "schema_migrations", "tasks"]);
     await expect(db.query("INSERT INTO atlas.tasks (title, area, status, origin, created_by, updated_by) VALUES ('x', 'business', 'done', 'owner', 'owner', 'owner')")).rejects.toThrow();
     await expect(db.query("INSERT INTO atlas.documents (title, doc_type, area, storage_url, origin, created_by, updated_by) VALUES ('x', 'note', 'business', 'http://plain', 'owner', 'owner', 'owner')")).rejects.toThrow();
-    if (pg) await pg.exec(DOWN);
-    else await withDb({ ATLAS_DATABASE_URL: external! }, (d) => d.query(DOWN));
+    if (pg) await pg.exec(DOWN2 + DOWN);
+    else await withDb({ ATLAS_DATABASE_URL: external! }, (d) => d.query(DOWN2 + DOWN));
     const left = await db.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'atlas' AND table_name <> 'schema_migrations'");
     expect(left).toEqual([]);
   });
@@ -114,7 +121,7 @@ describe("keys and status", () => {
 
   it("reports the schema version and key count, never the keys", async () => {
     const r = await owner("GET", "status");
-    expect(r.json).toEqual({ state: "ok", schemaVersion: 1, agentKeys: 1 });
+    expect(r.json).toEqual({ state: "ok", schemaVersion: 2, agentKeys: 1 });
     expect(JSON.stringify(r.json)).not.toContain(KEY);
   });
 });
@@ -291,5 +298,61 @@ describe("concurrency", () => {
     const body = { idempotencyKey: "n8n-exec-race", agentId: "task-writer", status: "running" };
     await Promise.all([agent("POST", "runs", body), agent("POST", "runs", body)]);
     expect((await db.query("SELECT count(*)::int AS n FROM atlas.agent_runs"))[0]).toEqual({ n: 1 });
+  });
+});
+
+describe("profile edits", () => {
+  it("saves, updates, logs and undoes one field, owner only", async () => {
+    const empty = await owner("GET", "profile-edits");
+    expect(empty).toMatchObject({ status: 200, json: { edits: [], log: [] } });
+
+    const made = await owner("POST", "profile-edits", { entityId: "repo-intelligence", field: "title", value: "  Repository   Health Analyst " });
+    expect(made.status).toBe(201);
+    expect(made.json.edit).toMatchObject({ entity_id: "repo-intelligence", field: "title", value: "Repository Health Analyst", version: 1 });
+
+    const changed = await owner("POST", "profile-edits", { entityId: "repo-intelligence", field: "title", value: "Repo Health Analyst", expectedVersion: 1 });
+    expect(changed).toMatchObject({ status: 200, json: { edit: { value: "Repo Health Analyst", version: 2 }, changed: true } });
+
+    const stale = await owner("POST", "profile-edits", { entityId: "repo-intelligence", field: "title", value: "Something else", expectedVersion: 1 });
+    expect(stale.status).toBe(409);
+
+    const same = await owner("POST", "profile-edits", { entityId: "repo-intelligence", field: "title", value: "Repo Health Analyst" });
+    expect(same.json.changed).toBe(false);
+
+    const undone = await owner("POST", "profile-edits", { entityId: "repo-intelligence", field: "title", value: null });
+    expect(undone).toMatchObject({ status: 200, json: { edit: null, changed: true } });
+
+    const after = await owner("GET", "profile-edits");
+    expect(after.json.edits).toEqual([]);
+    expect(after.json.log.map((l: J) => [l.before, l.after])).toEqual([
+      ["Repo Health Analyst", null],
+      ["Repository Health Analyst", "Repo Health Analyst"],
+      [null, "Repository Health Analyst"],
+    ]);
+    expect(after.json.log[0].actor).toBe("khaneil@example.com");
+  });
+
+  it("refuses fields that aren't display text, bad ids and oversized text", async () => {
+    expect((await owner("POST", "profile-edits", { entityId: "repo-intelligence", field: "status", value: "active" })).status).toBe(422);
+    expect((await owner("POST", "profile-edits", { entityId: "Repo Intelligence", field: "title", value: "x" })).status).toBe(422);
+    expect((await owner("POST", "profile-edits", { entityId: "repo-intelligence", field: "title", value: "x".repeat(101) })).status).toBe(422);
+    expect((await owner("POST", "profile-edits", { entityId: "repo-intelligence", field: "summary", value: "   " })).status).toBe(422);
+    expect((await owner("POST", "profile-edits", { entityId: "repo-intelligence", field: "title", value: "ok", permissions: "all" })).status).toBe(422);
+    expect((await owner("GET", "profile-edits")).json.log).toEqual([]);
+  });
+
+  it("never lets an agent key read or write profile edits", async () => {
+    expect((await agent("GET", "profile-edits")).status).toBe(403);
+    expect((await agent("POST", "profile-edits", { entityId: "repo-intelligence", field: "title", value: "Boss" }, idem())).status).toBe(403);
+    expect((await owner("GET", "profile-edits")).json.edits).toEqual([]);
+  });
+
+  it("migration 2 undoes cleanly", async () => {
+    await owner("POST", "profile-edits", { entityId: "repo-intelligence", field: "voice", value: "Short." });
+    if (pg) await pg.exec(DOWN2);
+    else await withDb({ ATLAS_DATABASE_URL: external! }, (d) => d.query(DOWN2));
+    const [row] = await db.query<{ t: string | null }>("SELECT to_regclass('atlas.profile_edits')::text AS t");
+    expect(row.t).toBeNull();
+    expect((await owner("GET", "profile-edits")).status).toBe(503);
   });
 });
