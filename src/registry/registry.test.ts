@@ -229,6 +229,21 @@ describe("telemetry", () => {
     expect(operationalState({ classification: "A" }, t)).toBe("verified");
   });
 
+  it("doesn't count a run on a deleted repository as a failure", () => {
+    const intelAgent = { ...ciAgent, observe: { atlasIntel: true } } as Agent;
+    const base = { started_at: null, duration_ms: null, cost_usd: null, trigger: "scheduled", model: "m", queued_at: "2026-11-16T14:07:00Z" };
+    const runs = [
+      { ...base, status: "failed", finished_at: "2026-11-16T14:11:48Z", repo: "me/gone", error: { kind: "github_not_found", message: "", retryable: false } },
+      { ...base, status: "succeeded", finished_at: "2026-11-16T14:08:53Z", repo: "me/b" },
+      { ...base, status: "failed", finished_at: "2026-11-16T14:08:00Z", repo: "me/c", error: { kind: "invalid_response", message: "", retryable: false } },
+    ] as Run[];
+    const t = telemetryFor(intelAgent, undefined, runs);
+    expect(t.executions.map((e) => e.result)).toEqual(["other", "success", "failure"]);
+    expect(t.executions[0].label).toContain("repository no longer on GitHub");
+    expect(t.failures).toBe(1);
+    expect(operationalState({ classification: "A" }, t)).toBe("verified");
+  });
+
   it("only reports observed KPI values that telemetry supplies", () => {
     const empty = telemetryFor(ciAgent, undefined, null);
     const kpi = { name: "Success", kind: "reliability" as const, target: "≥ 90%", targetValue: 90, direction: "min" as const, basis: null, measure: "run_success_rate" as const };

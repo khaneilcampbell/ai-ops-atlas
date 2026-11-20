@@ -14,10 +14,16 @@ const DAY = 86_400_000;
 /** The runs that decide status: everything except GitHub runs on non-default branches. */
 export const mainline = (xs: ExecutionRecord[]) => xs.filter((e) => !e.offMainline);
 
-/** A run cut off because the app closed is not a failure of the agent, so it doesn't count
- * against the success rate or the "Latest run failed" status. The scheduler runs it again. */
+/** A repository GitHub says no longer exists. The weekly schedule drops it (jobs.rs), so it's
+ * not a failure of the agent. */
+const repoGone = (r: Run) => r.status === "failed" && r.error?.kind === "github_not_found";
+
+/** A run cut off because the app closed, or one on a repository that was deleted, is not a
+ * failure of the agent, so it doesn't count against the success rate or the "Latest run
+ * failed" status. */
 function intelResult(r: Run): ExecutionRecord["result"] {
   if (r.status === "succeeded" || r.status === "reused") return "success";
+  if (repoGone(r)) return "other";
   if (r.status === "failed") return "failure";
   if (r.status === "queued" || r.status === "running") return "running";
   return "other";
@@ -94,7 +100,7 @@ export function telemetryFor(agent: Agent, snap: RepoSnapshot | undefined, intel
     executions = (intelRuns ?? []).filter((r) => (r.kind ?? "repository") === kind).map((r) => ({
       at: r.finished_at ?? r.started_at ?? r.queued_at,
       result: intelResult(r),
-      label: `${kind === "ecosystem" ? "All catalog repositories" : r.repo} · ${r.trigger} · ${r.model}${r.status === "interrupted" ? " · interrupted, app closed" : ""}`,
+      label: `${kind === "ecosystem" ? "All catalog repositories" : r.repo} · ${r.trigger} · ${r.model}${r.status === "interrupted" ? " · interrupted, app closed" : ""}${repoGone(r) ? " · repository no longer on GitHub" : ""}`,
       durationMs: r.duration_ms,
       costUsd: r.cost_usd,
       source: "atlas-intel" as const,
