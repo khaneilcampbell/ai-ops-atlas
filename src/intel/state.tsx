@@ -3,6 +3,7 @@ import { intelApi } from "./api";
 import { publishLocal, useLiveStatus } from "../live/feed";
 import { useN8nRuns } from "../n8n/runs";
 import type { IntelSource } from "../registry/registry";
+import { withoutRetired, withoutRetiredReports, withoutRetiredRuns } from "./retired";
 import type { AgentConfig, AgentStatus, Depth, EcoContext, EcoReport, RepoContext, Report, Run } from "./types";
 
 interface IntelState {
@@ -34,10 +35,13 @@ export function IntelProvider({ children }: { children: ReactNode }) {
   const reload = useCallback(async () => {
     if (!available) return;
     try {
-      const [s, rs, rv] = await Promise.all([intelApi.status(), intelApi.reports(), intelApi.review()]);
+      const [raw, rs, rv] = await Promise.all([intelApi.status(), intelApi.reports(), intelApi.review()]);
+      const s = withoutRetired(raw);
+      // A deleted repository stays off the weekly schedule, so it can't fail again.
+      if (s.config.assigned.length !== raw.config.assigned.length) void intelApi.setConfig(s.config).catch(() => {});
       setStatus(s);
       setReview(rv);
-      setReports(Object.fromEntries(rs.map((r) => [r.repo.toLowerCase(), r])));
+      setReports(Object.fromEntries(withoutRetiredReports(rs).map((r) => [r.repo.toLowerCase(), r])));
       setError(null);
     } catch (e) {
       setError(String(e));
@@ -87,7 +91,7 @@ export function IntelProvider({ children }: { children: ReactNode }) {
     const production = live.production;
     const observedAt = live.checkedAt;
     if (status) return { ...status, agentRuns, production, observedAt, n8n };
-    if (live.intelRuns || agentRuns || production.length || n8n?.state === "ok") return { runs: live.intelRuns ?? [], agentRuns, production, observedAt, n8n };
+    if (live.intelRuns || agentRuns || production.length || n8n?.state === "ok") return { runs: withoutRetiredRuns(live.intelRuns ?? []), agentRuns, production, observedAt, n8n };
     return null;
   }, [status, live.intelRuns, live.agentRuns, live.production, live.checkedAt, n8n]);
 
