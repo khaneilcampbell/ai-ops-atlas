@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { View } from "../state";
 import { SECTIONS, SIDEBAR_SECTIONS, sectionEntry, sectionOf, tabOf } from "./sections";
 
-const ALL: View[] = ["overview", "workflows", "tasks", "business", "agents", "automations", "repos", "map", "grid", "activity", "intel", "review", "usage", "api-costs", "api-github", "workspace", "settings", "preferences"];
+const ALL: View[] = ["overview", "workflows", "tasks", "business", "agents", "automations", "repos", "map", "grid", "activity", "intel", "review", "usage", "api-costs", "api-github", "intel-api", "workspace", "settings", "preferences"];
 
 describe("sidebar sections", () => {
   it("lists the sidebar sections with their pages in order", () => {
@@ -12,7 +12,7 @@ describe("sidebar sections", () => {
       ["Task", ["Task"]],
       ["Agents", ["Agents"]],
       ["Automations", ["Automations"]],
-      ["Intel", ["Intelligence", "Engineering Review", "Repositories", "Activity"]],
+      ["Intel", ["Intelligence", "Engineering Review", "Repositories", "Activity", "API"]],
       ["Workspace", ["Workspace"]],
       ["API Usage", ["Provider usage", "Claude & GitHub"]],
       ["Settings", ["Connections", "Preferences"]],

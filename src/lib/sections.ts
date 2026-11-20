@@ -18,7 +18,7 @@ export const SECTIONS: Section[] = [
   { id: "tasks", label: "Task", icon: "tasks", tabs: [{ view: "tasks", label: "Task" }] },
   { id: "agents", label: "Agents", icon: "agents", tabs: [{ view: "agents", label: "Agents" }] },
   { id: "automations", label: "Automations", icon: "network", tabs: [{ view: "automations", label: "Automations" }] },
-  { id: "intel", label: "Intel", icon: "spark", tabs: [{ view: "intel", label: "Intelligence" }, { view: "review", label: "Engineering Review" }, { view: "repos", label: "Repositories" }, { view: "activity", label: "Activity" }] },
+  { id: "intel", label: "Intel", icon: "spark", tabs: [{ view: "intel", label: "Intelligence" }, { view: "review", label: "Engineering Review" }, { view: "repos", label: "Repositories" }, { view: "activity", label: "Activity" }, { view: "intel-api", label: "API" }] },
   { id: "workspace", label: "Workspace", icon: "compass", tabs: [{ view: "workspace", label: "Workspace" }] },
   // Every API number in one place: provider usage, then Claude costs and the GitHub request budget together.
   { id: "api", label: "API Usage", icon: "usage", tabs: [{ view: "usage", label: "Provider usage" }, { view: "api-costs", label: "Claude & GitHub" }] },

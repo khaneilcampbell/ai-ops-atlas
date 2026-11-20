@@ -13,9 +13,7 @@ import { usd } from "../intel/format";
  * GitHub data already loaded. Read-only; it fetches nothing and starts no runs.
  */
 export function AtlasIntelligenceView() {
-  const { catalog, repos, select, setView, usage } = useAtlas();
-  const intel = useIntel();
-  const rate = usage?.rate;
+  const { catalog, repos, select } = useAtlas();
   const rows = useMemo(
     () =>
       catalog.projects.map((p) => {
@@ -37,7 +35,7 @@ export function AtlasIntelligenceView() {
         <div className="grow">
           <div className="eyebrow">Atlas · read-only</div>
           <h1>Data intelligence</h1>
-          <p className="lede">Every Atlas project with its agents, automations, repositories and the GitHub data Atlas has for them, plus API spend. Open a project for its details.</p>
+          <p className="lede">Every Atlas project with its agents, automations, repositories and the GitHub data Atlas has for them. Open a project for its details.</p>
         </div>
       </div>
       <div className="grid tiles" style={{ marginBottom: 16 }}>
@@ -91,10 +89,30 @@ export function AtlasIntelligenceView() {
           </tbody>
         </table>
       </section>
-      {/* API: the figures Atlas already holds; the API Usage section has the full detail. */}
-      <section className="card" style={{ marginTop: 16 }} aria-labelledby="intel-api">
+    </div>
+  );
+}
+
+/**
+ * Intel → API: the API figures Atlas already holds, read-only. The API Usage section in the
+ * sidebar has the full detail; this tab links there rather than repeating it.
+ */
+export function AtlasApiView() {
+  const { setView, usage } = useAtlas();
+  const intel = useIntel();
+  const rate = usage?.rate;
+  return (
+    <div className="page">
+      <div className="page-head">
+        <div className="grow">
+          <div className="eyebrow">Atlas · read-only</div>
+          <h1>API</h1>
+          <p className="lede">Claude spend against its monthly budget and GitHub requests against the hourly limit. Open API Usage for provider usage, costs by workflow and history.</p>
+        </div>
+      </div>
+      <section className="card" aria-labelledby="intel-api">
         <div className="card-head">
-          <h2 className="grow" id="intel-api">API</h2>
+          <h2 className="grow" id="intel-api">Spend and limits</h2>
           <button className="text-btn small" onClick={() => setView("usage")}>Provider usage →</button>
           <button className="text-btn small" onClick={() => setView("api-costs")}>Claude & GitHub →</button>
         </div>
