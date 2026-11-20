@@ -8,7 +8,7 @@ describe("sidebar sections", () => {
   it("lists the sidebar sections with their pages in order", () => {
     expect(SIDEBAR_SECTIONS.map((s) => [s.label, s.tabs.map((t) => t.label)])).toEqual([
       ["Projects", ["Projects"]],
-      ["Business", ["Business"]],
+      ["Grid", ["Grid"]],
       ["Task", ["Task"]],
       ["Agents", ["Agents"]],
       ["Automations", ["Automations"]],

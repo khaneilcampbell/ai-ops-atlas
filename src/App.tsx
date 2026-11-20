@@ -5,7 +5,7 @@ import { AtlasMark, Icon, type IconName } from "./components/Icon";
 import { DetailPanel } from "./components/DetailPanel";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAtlas, type View } from "./state";
-import { sectionEntry, sectionOf, SIDEBAR_SECTIONS, tabOf, type Section } from "./lib/sections";
+import { SECTIONS, sectionEntry, sectionOf, SIDEBAR_SECTIONS, tabOf, type Section } from "./lib/sections";
 import { attentionItems, ciSummary } from "./lib/derive";
 import { agentMatches, repoMatches, repoRows, prioritizeExact } from "./lib/search";
 import { relative } from "./lib/time";
@@ -214,7 +214,8 @@ function PhoneNav({ attention, status }: { attention: number; status: PhoneStatu
   // The bar tab for this page: its own tab, else the bar tab of its section. None means More.
   const current = PHONE_BAR.find((b) => b.view === tabOf(view)) ?? PHONE_BAR.find((b) => b.view === sectionOf(view).tabs[0].view);
   // A section stays in More unless the bar opens it on its first page (Activity is a bar tab but lives in Intel).
-  const more = SIDEBAR_SECTIONS.filter((s) => !PHONE_BAR.some((b) => b.view === s.tabs[0].view));
+  // Phones hide the top switch, so Business (a top-switch page) is listed here with the sidebar sections.
+  const more = SECTIONS.filter((s) => (SIDEBAR_SECTIONS.includes(s) || s.id === "business") && !PHONE_BAR.some((b) => b.view === s.tabs[0].view));
   const inMore = !current;
   const go = (v: View) => {
     setView(v);

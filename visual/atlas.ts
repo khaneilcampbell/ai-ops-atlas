@@ -67,7 +67,7 @@ const RENAMED: Record<string, string> = { "Task Center": "Task" };
 
 export async function goTo(page: Page, name: string) {
   const label = RENAMED[name] ?? name;
-  // The sidebar, the top switch (Projects, Mission Control, Grid) and a section's page tabs.
+  // The sidebar, the top switch (Projects, Mission Control, Business) and a section's page tabs.
   // Match from the start: the Grid button's "Compare repositories" must not match "Repositories".
   const start = new RegExp(`^\\s*${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
   const tab = page.locator(".nav-item:visible, .view-switch button:visible, .section-tabs button:visible", { hasText: start }).first();

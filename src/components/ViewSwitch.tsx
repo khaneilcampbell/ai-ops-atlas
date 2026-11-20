@@ -6,7 +6,7 @@ import { sectionOf } from "../lib/sections";
 const MODES: { view: View; label: string; icon: IconName; key: string; description: string }[] = [
   { view: "map", label: "Projects", icon: "map", key: "1", description: "Explore the city" },
   { view: "overview", label: "Mission Control", icon: "overview", key: "2", description: "Prioritized work" },
-  { view: "grid", label: "Grid", icon: "grid", key: "3", description: "Compare repositories" },
+  { view: "business", label: "Business", icon: "briefcase", key: "3", description: "Run the business" },
 ];
 
 /**
