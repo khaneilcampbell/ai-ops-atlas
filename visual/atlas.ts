@@ -60,7 +60,7 @@ export async function settle(page: Page, steps = 3) {
 }
 
 /** Pages that sit as a tab inside a section, and the section that holds them. */
-const SECTION_OF: Record<string, string> = { Activity: "Intel", API: "Intel", Intelligence: "Intel", "Engineering Review": "Intel", Repositories: "Intel", "Provider usage": "API Usage", "Claude & GitHub": "API Usage", Connections: "Settings", Preferences: "Settings" };
+const SECTION_OF: Record<string, string> = { Activity: "Intel", API: "Intel", Intelligence: "Intel", "Engineering Review": "Intel", Repositories: "Intel", Connections: "Settings", Preferences: "Settings" };
 
 /** Pages whose sidebar label differs from the name tests use. */
 const RENAMED: Record<string, string> = { "Task Center": "Task" };

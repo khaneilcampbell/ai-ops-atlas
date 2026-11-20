@@ -94,8 +94,8 @@ export function AtlasIntelligenceView() {
 }
 
 /**
- * Intel → API: the API figures Atlas already holds, read-only. The API Usage section in the
- * sidebar has the full detail; this tab links there rather than repeating it.
+ * Intel → API: the API figures Atlas already holds, read-only, with links to the full Provider usage
+ * and Claude & GitHub pages, which open with this tab still selected.
  */
 export function AtlasApiView() {
   const { setView, usage } = useAtlas();
@@ -107,7 +107,7 @@ export function AtlasApiView() {
         <div className="grow">
           <div className="eyebrow">Atlas · read-only</div>
           <h1>API</h1>
-          <p className="lede">Claude spend against its monthly budget and GitHub requests against the hourly limit. Open API Usage for provider usage, costs by workflow and history.</p>
+          <p className="lede">Claude spend against its monthly budget and GitHub requests against the hourly limit. Open Provider usage for spend caps, costs by workflow and history.</p>
         </div>
       </div>
       <section className="card" aria-labelledby="intel-api">

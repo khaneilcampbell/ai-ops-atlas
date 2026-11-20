@@ -18,7 +18,7 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number]["id"] | "review";
 
-/** One part of Intel on its own page: Engineering Review (Intel) or Claude costs (API Usage). */
+/** One part of Intel on its own page: Engineering Review (Intel) or Claude costs (Intel → API). */
 type Only = "review" | "costs";
 
 export function IntelligenceView({ only }: { only?: Only }) {
@@ -30,7 +30,7 @@ export function IntelligenceView({ only }: { only?: Only }) {
     <div className="page">
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">{only === "costs" ? "API Usage · read-only" : "Claude · read-only analysis"}</div>
+          <div className="eyebrow">{only === "costs" ? "Intel · API · read-only" : "Claude · read-only analysis"}</div>
           <h1>{only === "review" ? "Engineering review" : only === "costs" ? "Claude costs and GitHub requests" : "Repository intelligence"}</h1>
           <p className="lede">{only === "costs" ? "Tokens and estimated spend of repository intelligence runs against your monthly budget, and how much of GitHub's hourly request limit Atlas has used." : "Structured reports on your repositories, grounded in GitHub data. Open a repository and choose Analyze to run it."}</p>
         </div>

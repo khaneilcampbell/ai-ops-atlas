@@ -5,7 +5,7 @@ export interface SectionTab { view: View; label: string }
 export interface Section { id: string; label: string; icon: IconName; tabs: SectionTab[] }
 
 /**
- * Where every page lives. The left sidebar shows Projects, Business, Task, Agents, Automations, Intel, Workspace, API Usage and Settings;
+ * Where every page lives. The left sidebar shows Projects, Business, Task, Agents, Automations, Intel, Workspace and Settings;
  * Projects, Mission Control and Grid are also in the top switch. A section with more than one page shows its
  * pages as tabs above the content. View ids are unchanged, so saved views and links keep working.
  */
@@ -20,17 +20,17 @@ export const SECTIONS: Section[] = [
   { id: "automations", label: "Automations", icon: "network", tabs: [{ view: "automations", label: "Automations" }] },
   { id: "intel", label: "Intel", icon: "spark", tabs: [{ view: "intel", label: "Intelligence" }, { view: "review", label: "Engineering Review" }, { view: "repos", label: "Repositories" }, { view: "activity", label: "Activity" }, { view: "intel-api", label: "API" }] },
   { id: "workspace", label: "Workspace", icon: "compass", tabs: [{ view: "workspace", label: "Workspace" }] },
-  // Every API number in one place: provider usage, then Claude costs and the GitHub request budget together.
-  { id: "api", label: "API Usage", icon: "usage", tabs: [{ view: "usage", label: "Provider usage" }, { view: "api-costs", label: "Claude & GitHub" }] },
   { id: "settings", label: "Settings", icon: "settings", tabs: [{ view: "settings", label: "Connections" }, { view: "preferences", label: "Preferences" }] },
 ];
 
 /** The sections the left sidebar lists; Mission Control and Grid open from the top switch. */
-export const SIDEBAR_SECTIONS = SECTIONS.filter((s) => ["map", "business", "tasks", "agents", "automations", "intel", "workspace", "api", "settings"].includes(s.id));
+export const SIDEBAR_SECTIONS = SECTIONS.filter((s) => ["map", "business", "tasks", "agents", "automations", "intel", "workspace", "settings"].includes(s.id));
 
 /** Pages that open from inside another page and keep its section highlighted. */
 // "api-github" was its own tab; GitHub requests now share the Claude costs page.
-const OPENED_FROM: Partial<Record<View, View>> = { workflows: "overview", "api-github": "api-costs" };
+// Provider usage and Claude & GitHub open from Intel → API (the API Usage sidebar entry was removed);
+// "api-github" was once its own tab.
+const OPENED_FROM: Partial<Record<View, View>> = { workflows: "overview", usage: "intel-api", "api-costs": "intel-api", "api-github": "intel-api" };
 
 /** The section a view belongs to. Unknown views fall back to Projects. */
 export function sectionOf(view: View): Section {

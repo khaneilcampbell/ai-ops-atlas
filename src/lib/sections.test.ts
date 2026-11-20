@@ -14,7 +14,6 @@ describe("sidebar sections", () => {
       ["Automations", ["Automations"]],
       ["Intel", ["Intelligence", "Engineering Review", "Repositories", "Activity", "API"]],
       ["Workspace", ["Workspace"]],
-      ["API Usage", ["Provider usage", "Claude & GitHub"]],
       ["Settings", ["Connections", "Preferences"]],
     ]);
   });
@@ -34,16 +33,19 @@ describe("sidebar sections", () => {
 
   it("maps the old standalone entries to their new parent", () => {
     expect(sectionOf("repos").id).toBe("intel");
-    expect(sectionOf("usage").id).toBe("api");
+    expect(sectionOf("usage").id).toBe("intel");
+    expect(tabOf("usage")).toBe("intel-api");
     expect(sectionOf("automations").id).toBe("automations");
     expect(sectionOf("workspace").id).toBe("workspace");
     // Older links to "settings" open Connections, where the GitHub token and keys live.
     expect(SECTIONS.find((s) => s.id === "settings")!.tabs.find((t) => t.view === "settings")!.label).toBe("Connections");
   });
 
-  it("opens the old GitHub requests tab on the combined Claude & GitHub page", () => {
-    expect(sectionOf("api-github").id).toBe("api");
-    expect(tabOf("api-github")).toBe("api-costs");
+  it("keeps the API pages under Intel → API, including the old GitHub requests link", () => {
+    for (const v of ["usage", "api-costs", "api-github"] as View[]) {
+      expect(sectionOf(v).id).toBe("intel");
+      expect(tabOf(v)).toBe("intel-api");
+    }
   });
 
   it("falls back to Projects for a view it does not know", () => {
