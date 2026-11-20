@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it, vi } from "vitest";
 import type { D1, D1Statement } from "./live";
 import { handle } from "./middleware";
-import { ATTEMPTS_PER_CALL, receiveOutputs, routeOutputs, type Bucket, type OutputsEnv } from "./outputs";
+import { ATTEMPTS_PER_CALL, receiveOutputs, routeOutputs, routeOutputsForApp, type Bucket, type OutputsEnv } from "./outputs";
 import { receiveReport } from "./reports";
 import { MAX_STORAGE_ATTEMPTS, type ListPage, type OutputDetail } from "../src/library/model";
 
@@ -206,6 +206,35 @@ describe("Output Library access and safe display", () => {
     const fn = await import("../functions/api/hooks/outputs");
     expect(fn.onRequest().status).toBe(405);
     expect(readFileSync(new URL("../functions/api/hooks/outputs.ts", import.meta.url), "utf8")).not.toMatch(/onRequestGet/);
+  });
+
+  it("the Mac app reads with its website sync key only, and can't change anything", async () => {
+    const { env } = setup();
+    await receiveOutputs(hook(body()), env, noSleep);
+    const id = (await list(env)).outputs.find((o) => o.latest.title === "Product scores")!.id;
+    const app = (path: string, token: string | null = SYNC, method = "GET") =>
+      routeOutputsForApp(new Request(`https://atlas.example/api/hooks/library${path}`, { method, headers: token ? { authorization: `Bearer ${token}` } : {} }), env);
+
+    const page: ListPage = await (await app("?format=spreadsheet")).json();
+    expect(page.outputs.map((o) => o.latest.title)).toEqual(["Product scores"]);
+    const detail: OutputDetail = await (await app(`/${id}`)).json();
+    expect(detail.history).toHaveLength(1);
+    const file = await app(`/${id}/versions/1/file?download=1`);
+    expect(file.headers.get("content-disposition")).toMatch(/^attachment/);
+    expect(await file.text()).toBe(csv);
+
+    // Only the sync key opens it: not the add-only agent key, not no key.
+    expect((await app("", TOKEN)).status).toBe(401);
+    expect((await app("", null)).status).toBe(401);
+    // Read-only: reconcile and retry exist only on the signed-in page.
+    expect((await app("/reconcile", SYNC, "POST")).status).toBe(405);
+    expect((await app(`/${id}/versions/1/retry`, SYNC, "POST")).status).toBe(405);
+    expect((await app("/reconcile")).status).toBe(404);
+    expect((await app(`/${id}/versions/1/retry`)).status).toBe(404);
+    // Without the site's sync key set, it says so instead of opening.
+    expect((await routeOutputsForApp(new Request("https://atlas.example/api/hooks/library", { headers: { authorization: `Bearer ${SYNC}` } }), { ...env, USAGE_SYNC_TOKEN: undefined })).status).toBe(503);
+    const fn = await import("../functions/api/hooks/library/[[path]]");
+    expect(fn.onRequest().status).toBe(405);
   });
 
   it("serves untrusted content inert: HTML and SVG download, text is plain, everything sandboxed", async () => {
