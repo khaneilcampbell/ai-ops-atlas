@@ -13,7 +13,7 @@ export const SECTIONS: Section[] = [
   // The city map, Map in the top switch (and the iPhone bar).
   { id: "map", label: "Map", icon: "map", tabs: [{ view: "map", label: "Map" }] },
   // The projects as a searchable list: the sidebar's first item.
-  { id: "projects", label: "Projects", icon: "building", tabs: [{ view: "projects", label: "Projects" }] },
+  { id: "projects", label: "Projects", icon: "layers", tabs: [{ view: "projects", label: "Projects" }] },
   { id: "overview", label: "Mission", icon: "overview", tabs: [{ view: "overview", label: "Overview" }] },
   { id: "grid", label: "Grid", icon: "grid", tabs: [{ view: "grid", label: "Grid" }] },
   { id: "business", label: "Business", icon: "briefcase", tabs: [{ view: "business", label: "Business" }] },
