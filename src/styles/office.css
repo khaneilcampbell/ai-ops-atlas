@@ -21,7 +21,7 @@
 .office-head .eyebrow { color: var(--gold-deep); }
 .office-layer.night .office-head .eyebrow { color: var(--gold); }
 .office-back {
-  display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px 0 12px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px 0 12px; border-radius: var(--radius-pill);
   border: 0; background: var(--forest-800); color: var(--on-dark); font-weight: 600; font-size: 13.5px; cursor: pointer; box-shadow: var(--shadow);
 }
 .office-back span { color: var(--gold); font-size: 20px; line-height: 1; margin-top: -2px; }
@@ -33,7 +33,7 @@
 
 .office-roster { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: calc(100% - 340px); }
 .office-roster button {
-  display: inline-flex; align-items: center; gap: 8px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--sage-200);
+  display: inline-flex; align-items: center; gap: 8px; padding: 7px 13px; border-radius: var(--radius-pill); border: 1px solid var(--sage-200);
   background: var(--sage-50); color: var(--ink); font-size: 12.5px; font-weight: 500; cursor: pointer; box-shadow: var(--shadow);
 }
 .office-roster button.on { background: var(--forest-800); color: var(--on-dark); border-color: var(--gold); }
@@ -62,7 +62,7 @@
 }
 .office-panel .panel-head .op-pill { color: var(--on-dark); border-color: var(--forest-line); }
 .office-awaiting {
-  display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: var(--radius-pill); cursor: pointer;
   border: 1px solid var(--gold); background: #fff7e2; color: var(--gold-deep); font-weight: 600; font-size: 12.5px; box-shadow: var(--shadow);
 }
 .office-awaiting i { width: 8px; height: 8px; border-radius: 50%; background: #e7b04a; }
