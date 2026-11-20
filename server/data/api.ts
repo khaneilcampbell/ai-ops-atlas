@@ -2,6 +2,7 @@
 //
 //   /api/data/*        Khaneil, signed in through Cloudflare Access (checked by the middleware)
 //   /api/hooks/data/*  n8n and agents, each with its own key from ATLAS_DATA_KEYS (checked here)
+//   /api/hooks/data-overview  the Mac app, with its website sync key: GET overview only (read-only)
 //
 //   GET  status                       is the database set up and reachable (no secrets, no rows)
 //   GET  overview                     recent runs, pending approvals, linked records (Khaneil only)
@@ -38,6 +39,7 @@ import {
   type Values,
 } from "../../src/data/records";
 import { reply } from "../http";
+import { bearerOk } from "../live";
 import { logEvent, type Sink } from "../log";
 import { connectionStringOf, DbUnavailable, withDb, type Db, type DbEnv } from "./db";
 import { agentFor, areasOf, canRead, canWrite, documentCategoriesOf, inArea, ownerActor, parseKeys, type Actor } from "./policy";
@@ -45,6 +47,8 @@ import { agentFor, areasOf, canRead, canWrite, documentCategoriesOf, inArea, own
 export interface DataEnv extends DbEnv {
   /** "key-id:key" pairs for agent callers; ids must be listed in server/data/policy.ts. */
   ATLAS_DATA_KEYS?: string;
+  /** The website sync key the Mac app already holds (Settings → Website sync); reads the overview only. */
+  USAGE_SYNC_TOKEN?: string;
 }
 
 export const MAX_BODY_BYTES = 64 * 1024;
@@ -81,6 +85,21 @@ export async function forAgent(req: Request, env: DataEnv, path: string, deps: D
     return reply(401, { message: "The key isn't one of the site's ATLAS_DATA_KEYS." });
   }
   return handle(req, env, actor, path, deps);
+}
+
+/**
+ * /api/hooks/data-overview: the Task Center overview for the Mac app, which has no Access session.
+ * It sends the website sync key it already keeps in the Keychain. Read-only: this entry point only
+ * ever runs the overview route, so the app can see approvals but decides them on the web page.
+ */
+export async function forApp(req: Request, env: DataEnv, deps: Deps = {}): Promise<Response> {
+  if (req.method.toUpperCase() !== "GET") return reply(405, { message: "Read-only." });
+  if (!env.USAGE_SYNC_TOKEN) return reply(503, { message: "Website sync isn't set up on the site yet (USAGE_SYNC_TOKEN missing)." });
+  if (!bearerOk(req, env.USAGE_SYNC_TOKEN)) {
+    log(deps, { event: "data.auth_denied", severity: "warn", status: 401, path: "app/overview" });
+    return reply(401, { message: "The sync key doesn't match the site's USAGE_SYNC_TOKEN." });
+  }
+  return handle(req, env, ownerActor("Atlas Mac app"), "overview", deps);
 }
 
 export interface Deps {

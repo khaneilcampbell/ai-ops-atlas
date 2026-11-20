@@ -1,0 +1,1 @@
+- 2026-11-20 · The Mac app's Task Center now shows the Atlas database card too (agent runs, approvals, goals, projects and tasks), read through the website with the sync key the app already has. Approvals are still approved or rejected on the web page (#PR)
