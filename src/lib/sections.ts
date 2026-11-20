@@ -5,7 +5,7 @@ export interface SectionTab { view: View; label: string }
 export interface Section { id: string; label: string; icon: IconName; tabs: SectionTab[] }
 
 /**
- * Where every page lives. The left sidebar shows, in this order, Map, Agents, Auto (Automations), Tasks, Work (Workspace), Intel, Grid and Settings;
+ * Where every page lives. The left sidebar shows, in this order, Map, Agents, Auto (Automations), Tasks, Hub (Workspace), Intel, Grid and Settings;
  * Map, Mission Control and Business are in the top switch (Business swapped places with Grid). A section with more than one page shows its
  * pages as tabs above the content. View ids are unchanged, so saved views and links keep working.
  */
@@ -21,8 +21,8 @@ export const SECTIONS: Section[] = [
   // Labelled Auto in the sidebar; the page itself is still Automations.
   { id: "automations", label: "Auto", icon: "network", tabs: [{ view: "automations", label: "Automations" }] },
   { id: "intel", label: "Intel", icon: "spark", tabs: [{ view: "intel", label: "Intelligence" }, { view: "review", label: "Engineering Review" }, { view: "repos", label: "Repositories" }, { view: "activity", label: "Activity" }, { view: "intel-api", label: "API" }] },
-  // Labelled Work in the sidebar; the page is still the Workspace.
-  { id: "workspace", label: "Work", icon: "compass", tabs: [{ view: "workspace", label: "Workspace" }] },
+  // Labelled Hub in the sidebar; the page is still the Workspace.
+  { id: "workspace", label: "Hub", icon: "compass", tabs: [{ view: "workspace", label: "Workspace" }] },
   { id: "settings", label: "Settings", icon: "settings", tabs: [{ view: "settings", label: "Connections" }, { view: "preferences", label: "Preferences" }] },
 ];
 

@@ -11,7 +11,7 @@ describe("sidebar sections", () => {
       ["Agents", ["Agents"]],
       ["Auto", ["Automations"]],
       ["Tasks", ["Tasks"]],
-      ["Work", ["Workspace"]],
+      ["Hub", ["Workspace"]],
       ["Intel", ["Intelligence", "Engineering Review", "Repositories", "Activity", "API"]],
       ["Grid", ["Grid"]],
       ["Settings", ["Connections", "Preferences"]],
