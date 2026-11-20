@@ -21,11 +21,12 @@ import "../styles/production.css";
 export function SettingsView({ part }: { part: "connections" | "preferences" }) {
   const { settings, setSettings, clearCache, catalog, manifestIssues, refresh, usage } = useAtlas();
   return (
-    <div className="page" style={{ maxWidth: 860 }}>
+    <div className="page">
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">Settings</div>
+          <div className="eyebrow">Settings · {part === "connections" ? "Connections" : "Preferences"}</div>
           <h1>{part === "connections" ? "Connections" : "Preferences"}</h1>
+          <p className="lede">{part === "connections" ? "GitHub access, keys, sync and write access." : "Time zone, power, map navigation, data and catalog."}</p>
         </div>
       </div>
 
@@ -136,7 +137,7 @@ export function SettingsView({ part }: { part: "connections" | "preferences" }) 
   );
 }
 
-/** The GitHub request budget on its own card, for the Claude & GitHub page under API Usage. */
+/** The GitHub request budget on its own card, for the Claude & GitHub page under Intel → API. */
 export function GitHubRequests() {
   const { usage } = useAtlas();
   return (

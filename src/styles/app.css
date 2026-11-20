@@ -520,7 +520,8 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .tabs button:hover { color: var(--ink); }
 .tabs button.on { color: var(--ink); border-bottom-color: var(--gold); font-weight: 500; }
 /* A section's pages (Agents: Directory, Automations), shown above the page it opens. */
-.section-tabs { padding: 10px 32px 0; border-bottom-color: var(--sage-300); flex-wrap: wrap; }
+/* The first tab's text lines up with the page content below (1280px wide, 32px gutters; buttons pad 12px). */
+.section-tabs { padding: 10px max(20px, calc((100% - 1280px) / 2 + 20px)) 0; border-bottom-color: var(--sage-300); flex-wrap: wrap; }
 .section-tabs button { font-size: 13px; }
 .section-tabs button:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; border-radius: 6px 6px 0 0; }
 .count-pill { font-size: 10.5px; background: var(--sage-200); color: var(--ink-2); border-radius: 999px; padding: 0 6px; }

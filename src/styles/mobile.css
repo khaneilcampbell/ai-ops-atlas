@@ -56,7 +56,7 @@
 
   .main { grid-column: 1; grid-row: 2; border-top-left-radius: 0; -webkit-overflow-scrolling: touch; }
   .page { padding: 18px 14px 28px; }
-  .section-tabs { padding: 6px 10px 0; gap: 0; }
+  .section-tabs { padding: 6px 5px 0; gap: 0; }
   .section-tabs button { padding: 9px 9px; }
   .page-head { gap: 10px; margin-bottom: 14px; }
   .page-head > :first-child { flex: 1 1 100%; }

@@ -729,7 +729,7 @@ function ModelInventory() {
       ) : (
         <p className="muted small">{usage.firstLoad ? "Reading usage." : "No model calls recorded on this device in the last 30 days."}</p>
       )}
-      <p className="muted small">Every model a recorded call used in the last {WINDOW_DAYS} days, from the same records as API Usage. Hover a row for the agents that call it.</p>
+      <p className="muted small">Every model a recorded call used in the last {WINDOW_DAYS} days, from the same records as Provider usage. Hover a row for the agents that call it.</p>
     </details>
   );
 }
@@ -761,7 +761,7 @@ function ModelCost() {
       )}
       <p className="muted small">
         Estimated means reported tokens times the prices set in Atlas; billed is the provider's own figure. A model with no price set shows its cost as unknown, never $0.{" "}
-        <button className="text-btn small" onClick={() => setView("usage")}>API Usage</button>
+        <button className="text-btn small" onClick={() => setView("usage")}>Provider usage</button>
       </p>
     </details>
   );

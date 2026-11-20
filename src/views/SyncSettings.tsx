@@ -35,7 +35,7 @@ export function SyncSettings() {
           <h2 className="grow">Website sync</h2>
         </div>
         <div className="setting">
-          <div className="grow muted small">Set this up in the Mac app. It sends the Mac's recorded API usage to this site so the API Usage tab can show it here.</div>
+          <div className="grow muted small">Set this up in the Mac app. It sends the Mac's recorded API usage to this site so Intel → API → Provider usage can show it here.</div>
         </div>
       </section>
     );
@@ -64,7 +64,7 @@ export function SyncSettings() {
       </div>
       <div className="setting">
         <div className="grow muted small">
-          Sends the API usage this Mac records (time, model, repository, tokens, estimated cost) to your Atlas website after each run and when you press Refresh on API Usage. No API key is ever sent. The sync key below only lets this
+          Sends the API usage this Mac records (time, model, repository, tokens, estimated cost) to your Atlas website after each run and when you press Refresh on Provider usage. No API key is ever sent. The sync key below only lets this
           Mac replace the usage shown there.
         </div>
       </div>

@@ -80,7 +80,7 @@ export function ActivityView() {
     <div className="page">
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">Activity Center</div>
+          <div className="eyebrow">Intel · Activity</div>
           <h1>What happened, and when.</h1>
           <p className="lede">Commits and CI results read from GitHub, runs of the workflows your agents report through, repository intelligence runs, approval-required actions, and history written in manifests.</p>
         </div>

@@ -33,7 +33,7 @@ export function AtlasIntelligenceView() {
     <div className="page">
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">Atlas · read-only</div>
+          <div className="eyebrow">Intel · Intelligence</div>
           <h1>Data intelligence</h1>
           <p className="lede">Every Atlas project with its agents, automations, repositories and the GitHub data Atlas has for them. Open a project for its details.</p>
         </div>
@@ -105,7 +105,7 @@ export function AtlasApiView() {
     <div className="page">
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">Atlas · read-only</div>
+          <div className="eyebrow">Intel · API</div>
           <h1>API</h1>
           <p className="lede">Claude spend against its monthly budget and GitHub requests against the hourly limit. Open Provider usage for spend caps, costs by workflow and history.</p>
         </div>

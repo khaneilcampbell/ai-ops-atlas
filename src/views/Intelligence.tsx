@@ -30,9 +30,9 @@ export function IntelligenceView({ only }: { only?: Only }) {
     <div className="page">
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">{only === "costs" ? "Intel · API · read-only" : "Claude · read-only analysis"}</div>
+          <div className="eyebrow">{only === "costs" ? "Intel · API · Claude & GitHub" : only === "review" ? "Intel · Engineering Review" : "Intel · Repositories"}</div>
           <h1>{only === "review" ? "Engineering review" : only === "costs" ? "Claude costs and GitHub requests" : "Repository intelligence"}</h1>
-          <p className="lede">{only === "costs" ? "Tokens and estimated spend of repository intelligence runs against your monthly budget, and how much of GitHub's hourly request limit Atlas has used." : "Structured reports on your repositories, grounded in GitHub data. Open a repository and choose Analyze to run it."}</p>
+          <p className="lede">{only === "costs" ? "Tokens and estimated spend of repository intelligence runs against your monthly budget, and how much of GitHub's hourly request limit Atlas has used." : only === "review" ? "Recommendations from engineering reviews across every repository. Read-only: nothing changes without your approval." : "Structured reports on your repositories, grounded in GitHub data. Open a repository and choose Analyze to run it."}</p>
         </div>
         {!only && <div className="seg" role="tablist">
           {TABS.map((t) => (
