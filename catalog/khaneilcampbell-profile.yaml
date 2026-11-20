@@ -278,13 +278,13 @@ agents:
     purpose: >-
       Keeps Khaneil's GitHub profile README (the khaneilcampbell/khaneilcampbell repository) current with recent
       project work, presented for Forward Deployed Engineer roles. Published in n8n as
-      "Development Hub – GitHub Profile Manager"; it checks for changes every 6 hours.
+      "Development Hub – GitHub Profile Manager"; it checks for changes once a day at 9 AM New York time.
     framework: n8n Agent
-    model: Claude (claude-sonnet-5)
+    model: Claude Haiku 5.5 (anthropic/claude-haiku-5-5)
     runtime: n8n Cloud
     status: active
-    trigger: Every 6 hours (New York time), task "Sync profile README with recent repo changes"
-    last_run: null
+    trigger: Daily at 9 AM (New York time), task "Sync profile README with recent repo changes"
+    last_run: 2026-11-18T14:00:00Z
     history:
       - at: 2026-11-08
         event: Created as an unpublished n8n agent draft with one scheduled task
@@ -292,6 +292,10 @@ agents:
         event: Configuration read for the first time after Khaneil turned on MCP access; GitHub credential still missing, so it cannot run
       - at: 2026-11-17
         event: Khaneil attached the GitHub credential, published it and renamed it "Development Hub – GitHub Profile Manager" in n8n
+      - at: 2026-11-18
+        event: Second scheduled run stopped at its $0.40 per-run cap before committing; no README change
+      - at: 2026-11-19
+        event: "Checked in n8n: task now runs daily at 9 AM New York time on Claude Haiku 5.5, web search off, $5 a month and $0.40 per run caps. Still commits with no per-run approval"
     links:
       - label: Profile repository
         url: https://github.com/khaneilcampbell/khaneilcampbell
@@ -303,12 +307,12 @@ agents:
       - Report which repositories triggered the update and the commit link
     permissions:
       - 'GitHub (Khaneil''s OAuth credential): reads Khaneil''s repositories and commits README.md to the profile repository''s default branch only'
-      - Anthropic web search, at most 5 searches per run
+      - No web search (switched off in n8n)
     registry:
       identity:
         display_name: Jordan Reyes
         accent: "#16A34A"
-        intro: "Every 6 hours I check your public GitHub activity and, when something meaningful changed, rewrite your profile README for Forward Deployed Engineer roles. I commit straight to the default branch, and I never mention private repositories or invent projects."
+        intro: "Every morning at 9 I check your public GitHub activity and, when something meaningful changed, rewrite your profile README for Forward Deployed Engineer roles. I commit straight to the default branch, and I never mention private repositories or invent projects."
         voice: "Changelog voice: what changed and why it earned a line."
         appearance: "Filipino man around 30, light brown skin, black hair short on the sides, clean-shaven, grey unstructured blazer over a black crew-neck t-shirt"
         portrait:
@@ -323,11 +327,11 @@ agents:
       classification:
         type: A
         confidence: verified
-        evidence: n8n agent I4i0qQm5g0bfEID8 read on 2026-11-17 (Claude Sonnet 5, GitHub MCP server, one task on cron 0 */6 * * *); published 2026-11-17
+        evidence: n8n agent I4i0qQm5g0bfEID8 read on 2026-11-17 (GitHub MCP server, one task); published 2026-11-17; re-read 2026-11-19 (Claude Haiku 5.5, task on cron 0 9 * * *)
       mission:
         problem: The GitHub profile page falls behind the work Khaneil ships, so recruiters see an out-of-date picture.
         outcomes:
-          - A profile README that reflects every meaningful project change within 6 hours
+          - A profile README that reflects every meaningful project change within a day
           - No commit when only trivial changes happened
         beneficiaries:
           - Khaneil
@@ -340,7 +344,7 @@ agents:
           - Classify each change as meaningful or trivial
           - Rewrite the headline, What I do, Featured projects, Recent activity, Tech stack and Contact sections as needed
           - Commit README.md to the default branch and reply with the commit link
-        tools: [Claude (claude-sonnet-5), GitHub MCP server, Anthropic web search]
+        tools: [Claude Haiku 5.5, GitHub MCP server]
         inputs:
           - Khaneil's own public, non-fork repositories
           - The current profile README.md
@@ -358,26 +362,27 @@ agents:
         kpis:
           - name: Profile updated after meaningful changes
             kind: quality
-            target: Within 6 hours of a meaningful change
-            basis: Task schedule (every 6 hours); checked against the profile repository's commit history
+            target: Within a day of a meaningful change
+            basis: Task schedule (daily at 9 AM); checked against the profile repository's commit history
           - name: Commits for trivial changes
             kind: quality
             target: '0'
             basis: The task's own rule; checked by reading its commits
       execution:
         trigger_type: scheduled
-        schedule: Every 6 hours, cron 0 */6 * * * (America/New_York)
+        schedule: Daily at 9 AM, cron 0 9 * * * (America/New_York)
         environment: n8n
       governance:
         autonomy: 3
-        autonomy_note: Published 2026-11-17; commits to the profile repository on its own every 6 hours, only when something meaningful changed.
+        autonomy_note: Published 2026-11-17; commits to the profile repository on its own once a day, only when something meaningful changed. Only 3 runs so far (one by hand, two scheduled), so it has no track record yet; lowering it to level 2 needs a change in n8n first.
         data_sensitivity: public
         approval: Khaneil published it on 2026-11-17; no approval per run
         credential_owner: Khaneil (n8n account and GitHub OAuth credential)
         risk: low
         kill_switch: Unpublish the agent in n8n, or disable its task
       cost:
-        notes: Claude Sonnet 5 with up to 5 web searches per run, 4 runs a day; prompt caching is on
+        budget: $5 a month and $0.40 per run, enforced by the n8n budget guardrail
+        notes: Claude Haiku 5.5, 1 run a day, no web search; prompt caching is on
       docs:
         runbook: docs/runbooks/development-hub.md#github-profile-manager
         last_review: 2026-11-17
