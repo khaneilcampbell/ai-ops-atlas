@@ -59,11 +59,18 @@ export async function settle(page: Page, steps = 3) {
   }
 }
 
+/** Pages that sit as a tab inside a section, and the section that holds them. */
+const SECTION_OF: Record<string, string> = { "Task Center": "Mission", Activity: "Mission", Automations: "Agents", Directory: "Agents", Intelligence: "Intel", "Engineering Review": "Intel", Repositories: "Intel", "API Usage": "Intel", Workspace: "Settings", Connections: "Settings", Preferences: "Settings" };
+
 export async function goTo(page: Page, label: string) {
-  // On a phone the tab bar shows four sections; the rest sit behind More (views.visual.ts).
-  const tab = page.locator(".nav-item", { hasText: label }).first();
-  if (await tab.isVisible()) await tab.click();
-  else {
+  // The sidebar, the top switch (Projects, Mission Control, Grid) and a section's page tabs.
+  const tab = page.locator(".nav-item:visible, .view-switch button:visible, .section-tabs button:visible", { hasText: label }).first();
+  if (await tab.count()) await tab.click();
+  else if (SECTION_OF[label]) {
+    await goTo(page, SECTION_OF[label]);
+    await page.locator(".section-tabs button", { hasText: label }).first().click();
+  } else {
+    // On a phone the tab bar shows four sections; the rest sit behind More (views.visual.ts).
     await page.getByRole("button", { name: "More sections" }).click();
     await page.locator(".more-list button", { hasText: label }).first().click();
   }

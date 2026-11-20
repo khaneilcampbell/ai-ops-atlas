@@ -169,9 +169,9 @@ async function leak(page: Page) {
   const before = (await contexts(page)).filter((c) => c.alive);
   const drawsBefore = (await read(page)).draws;
   for (let i = 0; i < 3; i++) {
-    await page.locator(".nav-item").nth(1).click();
-    await page.clock.runFor(500);
     await page.locator(".nav-item").first().click();
+    await page.clock.runFor(500);
+    await page.locator(".view-switch button[aria-label='Projects']").click();
     await page.locator(".map3d canvas").first().waitFor();
     for (let j = 0; j < 4; j++) {
       await page.waitForTimeout(1500);

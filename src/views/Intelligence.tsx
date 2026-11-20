@@ -9,33 +9,34 @@ import { EngineeringReview } from "./EngineeringReview";
 import { isReviewRun } from "../intel/ecosystem";
 import { formatTime } from "../lib/timezone";
 
+// Engineering review is its own Intel page (view "review"), so it is not a tab here.
 const TABS = [
   { id: "inspector", label: "Agent inspector" },
-  { id: "review", label: "Engineering review" },
   { id: "activity", label: "Activity" },
   { id: "costs", label: "Costs" },
 ] as const;
-type Tab = (typeof TABS)[number]["id"];
+type Tab = (typeof TABS)[number]["id"] | "review";
 
-export function IntelligenceView() {
+export function IntelligenceView({ review = false }: { review?: boolean }) {
   const intel = useIntel();
-  const [tab, setTab] = useState<Tab>("inspector");
+  const [picked, setTab] = useState<Tab>("inspector");
+  const tab: Tab = review ? "review" : picked;
 
   return (
     <div className="page">
       <div className="page-head">
         <div className="grow">
           <div className="eyebrow">Claude · read-only analysis</div>
-          <h1>Repository intelligence</h1>
+          <h1>{review ? "Engineering review" : "Repository intelligence"}</h1>
           <p className="lede">Structured reports on your repositories, grounded in GitHub data. Open a repository and choose Analyze to run it.</p>
         </div>
-        <div className="seg" role="tablist">
+        {!review && <div className="seg" role="tablist">
           {TABS.map((t) => (
             <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? "on" : undefined} onClick={() => setTab(t.id)}>
               {t.label}
             </button>
           ))}
-        </div>
+        </div>}
       </div>
       {!intel.available ? (
         <div className="card empty">Repository intelligence runs in the desktop app, which keeps the Anthropic key in the Keychain.</div>
