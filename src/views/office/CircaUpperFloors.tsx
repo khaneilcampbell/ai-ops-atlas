@@ -50,12 +50,13 @@ export function CircaApartments({level,tower="west",night,labels,onPick,resident
   const units=circaUnits(level,tower);
   return <group>
     <CircaParts parts={parts} night={night}/>
-    {/* Residents are the AI agents whose home card names the apartment; CircaWalkers shows them in it. */}
+    {/* Residents are the AI agents whose home card names the apartment; CircaWalkers shows them in it while they're
+        home. While one is out (and on the city map instead), the label says where it is. */}
     {units.map(u=>{
       const here=residents.filter(r=>r.home.unit===u.id),who=here.map(r=>r.identity.name).join(" · ");
-      const role=here.map(r=>r.identity.role).join(" · ");
+      const role=here.map(r=>r.state.home?r.identity.role:`Out · ${r.state.note}`).join(" · ");
       return <group key={u.id}>
-        {labels&&<Html position={[(u.x0+u.x1)/2,1.9,(u.z0+u.z1)/2]} center><button className="skyline-room-label" onClick={()=>onPick(here.length?`Apartment ${u.id} · ${here.map(r=>`${r.identity.name} · ${r.identity.role}`).join(" · ")}`:`Apartment ${u.id} · ${u.label}`)} data-resident={here.length?"":undefined}>{here.map(r=><AgentAvatar key={r.id} identity={r.identity} size={30}/>)}<em>{`Apartment ${u.id}`}<span>{here.length?`${who} · ${role}`:u.beds===2?"2 bed · Available":"1 bed · Available"}</span></em></button></Html>}
+        {labels&&<Html position={[(u.x0+u.x1)/2,1.9,(u.z0+u.z1)/2]} center><button className="skyline-room-label" onClick={()=>onPick(here.length?`Apartment ${u.id} · ${here.map(r=>`${r.identity.name} · ${r.identity.role} · ${r.state.home?r.state.note:`Out · ${r.state.note}`}`).join(" · ")}`:`Apartment ${u.id} · ${u.label}`)} data-resident={here.length?"":undefined} data-out={here.length&&here.every(r=>!r.state.home)?"":undefined}>{here.map(r=><AgentAvatar key={r.id} identity={r.identity} size={30}/>)}<em>{`Apartment ${u.id}`}<span>{here.length?`${who} · ${role}`:u.beds===2?"2 bed · Available":"1 bed · Available"}</span></em></button></Html>}
       </group>;
     })}
   </group>;
