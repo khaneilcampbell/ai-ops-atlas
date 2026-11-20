@@ -5,7 +5,7 @@ export interface SectionTab { view: View; label: string }
 export interface Section { id: string; label: string; icon: IconName; tabs: SectionTab[] }
 
 /**
- * Where every page lives. The left sidebar shows Projects, Task, Business, Agents, Automations, Intel, Workspace, API Usage and Settings;
+ * Where every page lives. The left sidebar shows Projects, Business, Task, Agents, Automations, Intel, Workspace, API Usage and Settings;
  * Projects, Mission Control and Grid are also in the top switch. A section with more than one page shows its
  * pages as tabs above the content. View ids are unchanged, so saved views and links keep working.
  */
@@ -13,9 +13,9 @@ export const SECTIONS: Section[] = [
   { id: "map", label: "Projects", icon: "map", tabs: [{ view: "map", label: "Projects" }] },
   { id: "overview", label: "Mission", icon: "overview", tabs: [{ view: "overview", label: "Overview" }] },
   { id: "grid", label: "Grid", icon: "grid", tabs: [{ view: "grid", label: "Grid" }] },
+  { id: "business", label: "Business", icon: "briefcase", tabs: [{ view: "business", label: "Business" }] },
   // Task Center, listed as Task in the left sidebar.
   { id: "tasks", label: "Task", icon: "tasks", tabs: [{ view: "tasks", label: "Task" }] },
-  { id: "business", label: "Business", icon: "briefcase", tabs: [{ view: "business", label: "Business" }] },
   { id: "agents", label: "Agents", icon: "agents", tabs: [{ view: "agents", label: "Agents" }] },
   { id: "automations", label: "Automations", icon: "network", tabs: [{ view: "automations", label: "Automations" }] },
   { id: "intel", label: "Intel", icon: "spark", tabs: [{ view: "intel", label: "Intelligence" }, { view: "review", label: "Engineering Review" }, { view: "repos", label: "Repositories" }, { view: "activity", label: "Activity" }] },
@@ -26,7 +26,7 @@ export const SECTIONS: Section[] = [
 ];
 
 /** The sections the left sidebar lists; Mission Control and Grid open from the top switch. */
-export const SIDEBAR_SECTIONS = SECTIONS.filter((s) => ["map", "tasks", "business", "agents", "automations", "intel", "workspace", "api", "settings"].includes(s.id));
+export const SIDEBAR_SECTIONS = SECTIONS.filter((s) => ["map", "business", "tasks", "agents", "automations", "intel", "workspace", "api", "settings"].includes(s.id));
 
 /** Pages that open from inside another page and keep its section highlighted. */
 // "api-github" was its own tab; GitHub requests now share the Claude costs page.
