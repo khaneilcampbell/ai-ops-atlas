@@ -1,7 +1,7 @@
-import {CIRCA_DOOR_Z,CIRCA_PLATE,CIRCA_PODIUM,circaUnits,mirrorX,onCircaPlate,onCircaPodium,towerToPodium,CIRCA_UPPER_LEVELS,type CircaLevel,type CircaTower} from "./circaFloors";
+import {CIRCA_DOOR_Z,CIRCA_LIFT_SHIFT,CIRCA_PLATE,CIRCA_PODIUM,CIRCA_SPREAD,circaUnits,mirrorX,onCircaPlate,onCircaPodium,towerToPodium,CIRCA_UPPER_LEVELS,type CircaLevel,type CircaTower} from "./circaFloors";
 import {circaApartmentParts,circaLobbyParts,circaPoolDeckParts} from "./circaInteriorParts";
 import {LIFT_STOP_SECONDS} from "./circulation";
-import {LIFT_CAR,LIFT_STOP,LIFT_WALLS,buildGrid,findPath,placeLiftWalls,stop,type Circle,type Grid,type Lift,type Path,type Rect,type Stop} from "./walkNav";
+import {LIFT_CAR,LIFT_STOP,buildGrid,findPath,placeLiftWalls,stop,type Circle,type Grid,type Lift,type Path,type Rect,type Stop} from "./walkNav";
 
 export {LIFT_CAR,LIFT_STOP,WALK,clearLine,pathLength,snap,walkerAt,type Grid,type Leg,type Path,type Stop} from "./walkNav";
 
@@ -26,18 +26,21 @@ const LOBBY_CIRCLES:Circle[]=[
   {x:6.6,z:4.3,rad:.25},{x:-5.2,z:5.2,rad:.35},{x:5.2,z:5.2,rad:.35},
 ];
 /** Both towers' lift landings, placed on the podium. */
-const PODIUM_LIFT_WALLS:Rect[]=(["west","east"] as const).flatMap(t=>placeLiftWalls((x,z)=>towerToPodium(t,x,z)));
+const PODIUM_LIFT_WALLS:Rect[]=(["west","east"] as const).flatMap(t=>placeLiftWalls((x,z)=>towerToPodium(t,x+CIRCA_LIFT_SHIFT,z)));
 
 /** The same two lift points for a tower's lift, on the podium. */
-export const podiumLift=(tower:CircaTower)=>{const [sx,sz]=towerToPodium(tower,LIFT_STOP.x,LIFT_STOP.z),[cx,cz]=towerToPodium(tower,LIFT_CAR.x,LIFT_CAR.z);return {stop:stop("lift",`${tower} lift`,sx,sz),car:stop("car",`${tower} lift car`,cx,cz)};};
+export const podiumLift=(tower:CircaTower)=>{const [sx,sz]=towerToPodium(tower,LIFT_STOP.x+CIRCA_LIFT_SHIFT,LIFT_STOP.z),[cx,cz]=towerToPodium(tower,LIFT_CAR.x+CIRCA_LIFT_SHIFT,LIFT_CAR.z);return {stop:stop("lift",`${tower} lift`,sx,sz),car:stop("car",`${tower} lift car`,cx,cz)};};
 
 /** Rooms of each apartment, in the order a resident walks them. Unit 03 mirrors 02 about the party wall. */
-const ONE_BED=[stop("door","Front door",-1.72,1),stop("kitchen","Kitchen",-3.9,1.9),stop("bath","Bathroom",-6.8,2.05),stop("bedroom","Bedroom",-5.7,4),stop("living","Living room",-2.2,4),stop("dining","Dining",-1.9,3)];
-const TWO_BED=[stop("door","Front door",.65,-1),stop("kitchen","Kitchen",-1.6,-1.89),stop("dining","Dining",-3.4,-3.4),stop("master","Main bedroom",-4.25,-3.5),stop("master-bath","Main bathroom",-6.9,-1.89),stop("living","Living room",.7,-3.7),stop("bedroom","Second bedroom",4,-4.4),stop("bath","Second bathroom",6,-1.88)];
+const ONE_BED_DESIGN=[stop("door","Front door",-1.72,1),stop("kitchen","Kitchen",-3.9,1.9),stop("bath","Bathroom",-6.8,2.05),stop("bedroom","Bedroom",-5.7,4),stop("living","Living room",-2.2,4),stop("dining","Dining",-1.9,3)];
+const TWO_BED_DESIGN=[stop("door","Front door",.65,-1),stop("kitchen","Kitchen",-1.6,-1.89),stop("dining","Dining",-3.4,-3.4),stop("master","Main bedroom",-4.25,-3.5),stop("master-bath","Main bathroom",-6.9,-1.89),stop("living","Living room",.7,-3.7),stop("bedroom","Second bedroom",4,-4.4),stop("bath","Second bathroom",6,-1.88)];
+/** Rooms on the spread floor (circaFloors CIRCA_SPREAD). */
+const spread=(list:Stop[])=>list.map(s=>({...s,x:s.x*CIRCA_SPREAD,z:s.z*CIRCA_SPREAD}));
+const ONE_BED=spread(ONE_BED_DESIGN),TWO_BED=spread(TWO_BED_DESIGN);
 export function unitStops(suffix:string):Stop[]{
   if(suffix==="01")return TWO_BED;
   if(suffix==="02")return ONE_BED;
-  return ONE_BED.map(s=>({...s,x:mirrorX(s.x)}));
+  return ONE_BED.map(s=>({...s,x:mirrorX(s.x/CIRCA_SPREAD)*CIRCA_SPREAD}));
 }
 export const LOBBY_STOPS=[stop("desk","Front desk",3.6,-1.55),stop("lockers","Parcel lockers",-13,-6.7),stop("residents-lounge","Residents' lounge",-15.6,4.6),stop("lounge-west","West lounge",-4.6,1.95),stop("entrance","Main entrance",0,7.6),stop("lounge-east","East lounge",4.4,1.25),stop("reading","Reading corner",13,3),stop("work-table","Work table",13,-3.2)];
 export const POOL_STOPS=[stop("poolside","Pool",0,2.1),stop("cabana","Cabanas",13,3.9),stop("spa","Spa",13,-2.9),stop("lap-pool","Lap pool",0,-4.3),stop("sun-lawn","Sun lawn",-13,-3),stop("fire-pit","Fire pit",-13,2.7)];
@@ -47,7 +50,7 @@ const TOWER_PLATE={hx:CIRCA_PLATE.rx,hz:CIRCA_PLATE.rz,inside:onCircaPlate};
 const grids=new Map<CircaLevel,Grid>();
 export function circaGrid(kind:CircaLevel):Grid{
   let g=grids.get(kind);
-  if(!g){g=kind==="lobby"?buildGrid(circaLobbyParts(),PODIUM_PLATE,[...PODIUM_LIFT_WALLS,...LOBBY_RECTS],LOBBY_CIRCLES):kind==="pool"?buildGrid(circaPoolDeckParts(),PODIUM_PLATE,PODIUM_LIFT_WALLS,[]):buildGrid(circaApartmentParts(2),TOWER_PLATE,LIFT_WALLS,[]);grids.set(kind,g);}
+  if(!g){g=kind==="lobby"?buildGrid(circaLobbyParts(),PODIUM_PLATE,[...PODIUM_LIFT_WALLS,...LOBBY_RECTS],LOBBY_CIRCLES):kind==="pool"?buildGrid(circaPoolDeckParts(),PODIUM_PLATE,PODIUM_LIFT_WALLS,[]):buildGrid(circaApartmentParts(2),TOWER_PLATE,placeLiftWalls((x,z)=>[x+CIRCA_LIFT_SHIFT,z]),[]);grids.set(kind,g);}
   return g;
 }
 const paths=new Map<string,Path|null>();
