@@ -379,7 +379,8 @@ function SecurityIncidents() {
 
 const CAP_LABEL: Record<CapState, string> = { ok: "Under the cap", near: "Nearly used", over: "Cap reached", unseen: "Spend not visible to Atlas" };
 
-function SpendCaps() {
+/** Provider spend caps against this month's logged spend. Also on API Usage, open there. */
+export function SpendCaps({ open = false }: { open?: boolean }) {
   const { setView } = useAtlas();
   const intel = useIntel();
   const usage = useUsageData({ push: false });
@@ -387,7 +388,7 @@ function SpendCaps() {
   const rows = useMemo(() => SPEND_CAPS.map((c) => capStatus(c, usage.records, atlasBudget)), [usage.records, atlasBudget?.month, atlasBudget?.budget]); // eslint-disable-line react-hooks/exhaustive-deps
   const flagged = rows.filter((r) => r.state === "near" || r.state === "over").length;
   return (
-    <details className="module-list" aria-label="Spend against caps">
+    <details className="module-list" aria-label="Spend against caps" open={open}>
       <summary className="muted small">Spend against caps · {usage.firstLoad ? "Loading" : `${rows.length} caps${flagged ? `, ${flagged} nearly used or reached` : ""}`}</summary>
       <ul>
         {rows.map((r) => (

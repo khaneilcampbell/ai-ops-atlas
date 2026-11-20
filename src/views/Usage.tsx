@@ -24,6 +24,7 @@ import {
   type Period,
   type UsageRecord,
 } from "../usage/model";
+import { SpendCaps } from "../components/ModuleWorkspaceLists";
 import "../styles/usage.css";
 import { formatDateTime, formatDay } from "../lib/timezone";
 
@@ -84,6 +85,10 @@ export function UsageView() {
           {syncConfigured(data.sync) && !data.sync?.last_error && data.sync?.last_push_at && <> · Sent to the website {relative(data.sync.last_push_at)}</>}
         </div>
       )}
+      <section className="card card-pad usage-caps">
+        <SpendCaps open />
+      </section>
+
       {syncConfigured(data.sync) && data.sync?.last_error && (
         <div className="notice usage-sync-error">
           <Icon name="alert" size={14} />
