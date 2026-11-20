@@ -12,8 +12,9 @@ describe("sidebar sections", () => {
       ["Agents", ["Agents"]],
       ["Automations", ["Automations"]],
       ["Intel", ["Intelligence", "Engineering Review", "Repositories", "Activity"]],
+      ["Workspace", ["Workspace"]],
       ["API Usage", ["Provider usage", "Claude costs", "GitHub requests"]],
-      ["Settings", ["Workspace", "Connections", "Preferences"]],
+      ["Settings", ["Connections", "Preferences"]],
     ]);
   });
 
@@ -33,7 +34,7 @@ describe("sidebar sections", () => {
     expect(sectionOf("repos").id).toBe("intel");
     expect(sectionOf("usage").id).toBe("api");
     expect(sectionOf("automations").id).toBe("automations");
-    expect(sectionOf("workspace").id).toBe("settings");
+    expect(sectionOf("workspace").id).toBe("workspace");
     // Older links to "settings" open Connections, where the GitHub token and keys live.
     expect(SECTIONS.find((s) => s.id === "settings")!.tabs.find((t) => t.view === "settings")!.label).toBe("Connections");
   });

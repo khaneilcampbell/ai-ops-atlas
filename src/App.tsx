@@ -144,7 +144,7 @@ export default function App() {
               {s.id === "settings" && <div className="grow" />}
               <button className={`nav-item ${section.id === s.id ? "active" : ""}`} onClick={() => openSection(s)} aria-label={s.label} title={s.label} aria-current={section.id === s.id ? "page" : undefined}>
                 <Icon name={s.icon} size={20} />
-                <span className={s.label.length > 9 ? "nav-label-long" : undefined}>{s.label}</span>
+                <span className={s.label.length > 8 ? "nav-label-long" : undefined}>{s.label}</span>
               </button>
             </Fragment>
           ))}
