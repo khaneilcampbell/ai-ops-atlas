@@ -38,6 +38,8 @@ agents:
         event: Moved to n8n Cloud
       - at: 2026-11-19
         event: Add product idea n8n workflow got a signed Atlas Start webhook as an unpublished draft; ideas can come from the Atlas Task Center once Khaneil publishes it
+      - at: 2026-11-19
+        event: Add product idea published with the Atlas Start webhook on Khaneil's OK; ideas can now be queued from the Atlas Task Center as well as the form
     links:
       - label: n8n workflow
         url: https://khancam15.app.n8n.cloud/workflow/Pu57gD8f9Dz9gIbq

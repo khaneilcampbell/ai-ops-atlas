@@ -317,16 +317,16 @@ agents:
     owned_by: site-builder            # the only owning agent in Portfolio Web Studio; Khaneil to confirm
     model: claude-opus-5-5 (drafts), claude-haiku-5-5 (requirements)
     runtime: n8n Cloud
-    status: paused
-    trigger: Draft. Job form or a signed start from the Atlas Task Center, plus a Monday 9am summary and a daily 10am review nudge
-    alerts:
-      not_running: Draft. Unpublished in n8n until Khaneil confirms the facts table and approves publishing
+    status: active
+    trigger: Job form or a signed start from the Atlas Task Center, plus a Monday 9am summary and a daily 10am review nudge
     last_run: null
     history:
       - at: 2026-11-12
         event: Built as an unpublished n8n draft; test run on a sample job post passed with no real sending
       - at: 2026-11-19
         event: Signed Atlas Start webhook added to the draft (JWT check, input schema); the Task Center can start it once it is published and the site has N8N_START_SECRET
+      - at: 2026-11-19
+        event: Published in n8n by Khaneil with the Atlas Start webhook; an unsigned request to the webhook is refused (403). Monday summary and daily nudge emails now run
     links:
       - label: n8n workflow
         url: https://khancam15.app.n8n.cloud/workflow/Zd379gPsiCcBQfwo
@@ -388,7 +388,7 @@ agents:
       governance:
         autonomy: 1
         autonomy_note: Drafts only. Khaneil reviews every draft and applies by hand. Spend cap $3 a month checked before any AI call, each step retries at most 3 times, and failures email Khaneil.
-        approval: Khaneil reviews each draft; publishing the workflow needs Khaneil's OK
+        approval: Khaneil reviews each draft; published by Khaneil 2026-11-19
         data_sensitivity: confidential
         credential_owner: Khaneil (n8n credentials)
         risk: low
@@ -396,7 +396,6 @@ agents:
       docs:
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/khaneilcampbell-com.md#career-execution-agent
         known_issues:
-          - Draft until Khaneil confirms the facts in career_verified_facts and approves publishing
           - Atlas has no live data for it yet; results stay in n8n
         improvements:
           - Connect n8n executions to Atlas
