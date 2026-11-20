@@ -21,7 +21,7 @@ read-only report built from PostgreSQL, never a second place to edit facts.
 | --- | --- |
 | Schema `db/migrations/0001_atlas_core.sql` (+ `.down.sql`), role `db/roles.sql`, runner `scripts/db-migrate.mjs` | Built. Tested on PostgreSQL 16 and on PGlite in CI. |
 | Data API `server/data/` behind `functions/api/data/[[path]].ts` (Access) and `functions/api/hooks/data/[[path]].ts` (agent keys) | Built and tested (`server/data/data.test.ts`, 20 tests). |
-| Task Center "Atlas database" card (`src/views/tasks/DatabaseCard.tsx`) | Built. Web page only; the Mac app says so. |
+| Task Center "Atlas database" card (`src/views/tasks/DatabaseCard.tsx`) | Built. The web page reads `/api/data` (Access); the Mac app reads `/api/hooks/data-overview` with its website sync key, read-only (approve or reject on the web page). |
 | A PostgreSQL database, the Hyperdrive config, the `ATLAS_DB` binding, `nodejs_compat`, `ATLAS_DATA_KEYS` | **Not set up.** Until they are, the card says "Not set up" and the API answers 503. |
 | The example n8n workflow (task writer) | **Not built in n8n.** The node sequence is below. |
 | Atlas sending webhooks to n8n for record work | **Not built.** The format below is the contract for that step. Today Atlas only starts n8n steps through the existing step runner (`docs/workflow-execution.md`). |
@@ -97,6 +97,12 @@ database, and run `npx wrangler pages dev` after `npm run build:web`.
 
 Base paths: `/api/data/` (Khaneil, Access session) and `/api/hooks/data/` (agents, header
 `Authorization: Bearer <key>`). All answers are JSON and never cached. Bodies are capped at 64 KB.
+
+The Mac app has no Access session, so it reads one route of its own: `GET /api/hooks/data-overview`
+with the website sync key (`USAGE_SYNC_TOKEN`, the same key it uses for n8n runs and security alerts).
+It answers the same overview as `GET /api/data/overview` and nothing else; it can't write, and the
+app shows approvals with "Approve or reject this on the Atlas web page". No database password, Supabase
+key or agent key is ever in the app.
 
 | Method and path | Who | What |
 | --- | --- | --- |

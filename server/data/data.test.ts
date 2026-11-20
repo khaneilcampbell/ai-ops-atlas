@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { forAgent, forOwner, statusOf, type DataEnv } from "./api";
+import { forAgent, forApp, forOwner, statusOf, type DataEnv } from "./api";
 import { withDb, type Db } from "./db";
 import { agentFor, parseKeys } from "./policy";
 
@@ -196,6 +196,37 @@ describe("untrusted model output", () => {
   it("refuses an oversized body", async () => {
     const r = await agent("POST", "records/tasks", { fields: { title: "x", area: "business", description: "y".repeat(70_000) } }, idem());
     expect(r.status).toBe(413);
+  });
+});
+
+describe("the Mac app's read-only overview", () => {
+  const SYNC = "s".repeat(40);
+  const env: DataEnv = { ...ENV, USAGE_SYNC_TOKEN: SYNC };
+  const app = async (method: string, key: string | null, e: DataEnv = env) => {
+    const req = new Request(`${BASE}/api/hooks/data-overview`, { method, headers: key ? { authorization: `Bearer ${key}` } : {} });
+    const res = await forApp(req, e, deps());
+    return { status: res.status, json: (await res.json()) as J };
+  };
+
+  it("answers the same overview as the web page with the website sync key", async () => {
+    await seed();
+    const r = await app("GET", SYNC);
+    expect(r.status).toBe(200);
+    expect(r.json).toEqual((await owner("GET", "overview")).json);
+    expect(r.json.records.map((x: J) => x.label)).toContain("Grow Benjaire revenue");
+  });
+
+  it("refuses a missing or wrong key, an agent key, and any write", async () => {
+    expect((await app("GET", null)).status).toBe(401);
+    expect((await app("GET", "wrong".repeat(10))).status).toBe(401);
+    expect((await app("GET", KEY)).status).toBe(401);
+    expect((await app("POST", SYNC)).status).toBe(405);
+  });
+
+  it("says so when website sync isn't set up on the site", async () => {
+    const r = await app("GET", SYNC, ENV);
+    expect(r.status).toBe(503);
+    expect(r.json.message).toContain("USAGE_SYNC_TOKEN");
   });
 });
 
