@@ -1,1 +1,1 @@
-- 2026-11-20 · The Atlas Task Writer now shows in Atlas as a draft automation under the Agent Operations Lead, linked to its n8n workflow. Its first hand run filed a task in your Atlas database (#PR)
+- 2026-11-20 · The Atlas Task Writer now shows in Atlas as a draft automation under the Agent Operations Lead, linked to its n8n workflow. Its first hand run filed a task in your Atlas database (#506)
