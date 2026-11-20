@@ -911,9 +911,10 @@ button.chip-link { cursor: pointer; font: inherit; font-size: 11.5px; }
 .map-stage.night, .map-stage.night .map3d { background: #071827; }
 .rerun a.btn { text-decoration: none; }
 
-/* Long rail labels (Repositories, Automations) fit inside a 66px button (the rail is 76px) instead of clipping. */
-.sidebar .nav-item{width:66px}
-.sidebar .nav-item .nav-label-long{font-size:8px;letter-spacing:0}
+/* Long rail labels (Automations, Workspace) fit inside the button, clear of the selected item's 3px gold edge,
+   with room for wider font rendering (Safari). The rail is 76px; buttons are 70px. */
+.sidebar:not(.phone-tabs) .nav-item{width:70px}
+.sidebar .nav-item .nav-label-long{font-size:7.5px;letter-spacing:0}
 /* The live event text gives way before the search box does. */
 .header .live-pill{max-width:260px}
 @media(max-width:1600px){.header .live-last{display:none}}
