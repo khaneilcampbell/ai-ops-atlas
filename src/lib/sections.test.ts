@@ -13,7 +13,7 @@ describe("sidebar sections", () => {
       ["Automations", ["Automations"]],
       ["Intel", ["Intelligence", "Engineering Review", "Repositories", "Activity"]],
       ["Workspace", ["Workspace"]],
-      ["API Usage", ["Provider usage", "Claude costs", "GitHub requests"]],
+      ["API Usage", ["Provider usage", "Claude & GitHub"]],
       ["Settings", ["Connections", "Preferences"]],
     ]);
   });
@@ -37,6 +37,11 @@ describe("sidebar sections", () => {
     expect(sectionOf("workspace").id).toBe("workspace");
     // Older links to "settings" open Connections, where the GitHub token and keys live.
     expect(SECTIONS.find((s) => s.id === "settings")!.tabs.find((t) => t.view === "settings")!.label).toBe("Connections");
+  });
+
+  it("opens the old GitHub requests tab on the combined Claude & GitHub page", () => {
+    expect(sectionOf("api-github").id).toBe("api");
+    expect(tabOf("api-github")).toBe("api-costs");
   });
 
   it("falls back to Projects for a view it does not know", () => {

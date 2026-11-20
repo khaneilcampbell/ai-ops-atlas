@@ -6,6 +6,7 @@ import { RUN_LABEL, duration, isActive, lastRuns, rollup, runTone, scheduleLabel
 import { formatDate, relative } from "../lib/time";
 import type { AgentStatus, Run } from "../intel/types";
 import { EngineeringReview } from "./EngineeringReview";
+import { GitHubRequests } from "./Settings";
 import { isReviewRun } from "../intel/ecosystem";
 import { formatTime } from "../lib/timezone";
 
@@ -29,9 +30,9 @@ export function IntelligenceView({ only }: { only?: Only }) {
     <div className="page">
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">Claude · read-only analysis</div>
-          <h1>{only === "review" ? "Engineering review" : only === "costs" ? "Claude API costs" : "Repository intelligence"}</h1>
-          <p className="lede">{only === "costs" ? "Tokens and estimated spend of repository intelligence runs against your monthly budget." : "Structured reports on your repositories, grounded in GitHub data. Open a repository and choose Analyze to run it."}</p>
+          <div className="eyebrow">{only === "costs" ? "API Usage · read-only" : "Claude · read-only analysis"}</div>
+          <h1>{only === "review" ? "Engineering review" : only === "costs" ? "Claude costs and GitHub requests" : "Repository intelligence"}</h1>
+          <p className="lede">{only === "costs" ? "Tokens and estimated spend of repository intelligence runs against your monthly budget, and how much of GitHub's hourly request limit Atlas has used." : "Structured reports on your repositories, grounded in GitHub data. Open a repository and choose Analyze to run it."}</p>
         </div>
         {!only && <div className="seg" role="tablist">
           {TABS.map((t) => (
@@ -54,6 +55,7 @@ export function IntelligenceView({ only }: { only?: Only }) {
       ) : (
         <Costs status={intel.status} />
       )}
+      {only === "costs" && <GitHubRequests />}
     </div>
   );
 }

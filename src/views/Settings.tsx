@@ -18,19 +18,17 @@ import { BackupSetting } from "./BackupSetting";
 import "../styles/production.css";
 
 /** Settings in two pages: Connections (accounts, keys, sync, write access) and Preferences. */
-export function SettingsView({ part }: { part: "connections" | "preferences" | "github" }) {
+export function SettingsView({ part }: { part: "connections" | "preferences" }) {
   const { settings, setSettings, clearCache, catalog, manifestIssues, refresh, usage } = useAtlas();
   return (
     <div className="page" style={{ maxWidth: 860 }}>
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">{part === "github" ? "API Usage" : "Settings"}</div>
-          <h1>{part === "connections" ? "Connections" : part === "github" ? "GitHub requests" : "Preferences"}</h1>
+          <div className="eyebrow">Settings</div>
+          <h1>{part === "connections" ? "Connections" : "Preferences"}</h1>
         </div>
       </div>
 
-      {/* The GitHub API budget, also shown under Connections beside the token that spends it. */}
-      {part === "github" && <section className="card"><UsageSetting usage={usage} /></section>}
 
       {part === "connections" ? <>
       <section className="card" style={{ marginBottom: 16 }}>
@@ -135,6 +133,19 @@ export function SettingsView({ part }: { part: "connections" | "preferences" | "
       </section>
       </> : null}
     </div>
+  );
+}
+
+/** The GitHub request budget on its own card, for the Claude & GitHub page under API Usage. */
+export function GitHubRequests() {
+  const { usage } = useAtlas();
+  return (
+    <section className="card" style={{ marginTop: 16 }}>
+      <div className="card-head">
+        <h2 className="grow">GitHub requests</h2>
+      </div>
+      <UsageSetting usage={usage} />
+    </section>
   );
 }
 
