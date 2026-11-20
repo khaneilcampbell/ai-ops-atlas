@@ -5,12 +5,12 @@ export interface SectionTab { view: View; label: string }
 export interface Section { id: string; label: string; icon: IconName; tabs: SectionTab[] }
 
 /**
- * Where every page lives. The left sidebar shows, in this order, Map (the city, also Projects in the top switch), Agents, Automations, Tasks, Workspace, Intel, Grid and Settings;
- * Projects, Mission Control and Business are in the top switch (Business swapped places with Grid). A section with more than one page shows its
+ * Where every page lives. The left sidebar shows, in this order, Map, Agents, Automations, Tasks, Workspace, Intel, Grid and Settings;
+ * Map, Mission Control and Business are in the top switch (Business swapped places with Grid). A section with more than one page shows its
  * pages as tabs above the content. View ids are unchanged, so saved views and links keep working.
  */
 export const SECTIONS: Section[] = [
-  // The city map. The sidebar calls it Map; the top switch keeps the name Projects.
+  // The city map, called Map in the sidebar and the top switch.
   { id: "map", label: "Map", icon: "map", tabs: [{ view: "map", label: "Map" }] },
   { id: "overview", label: "Mission", icon: "overview", tabs: [{ view: "overview", label: "Overview" }] },
   { id: "grid", label: "Grid", icon: "grid", tabs: [{ view: "grid", label: "Grid" }] },
@@ -33,7 +33,7 @@ export const SIDEBAR_SECTIONS = ["map", "agents", "automations", "tasks", "works
 // "api-github" was once its own tab.
 const OPENED_FROM: Partial<Record<View, View>> = { workflows: "overview", usage: "intel-api", "api-costs": "intel-api", "api-github": "intel-api" };
 
-/** The section a view belongs to. Unknown views fall back to Projects. */
+/** The section a view belongs to. Unknown views fall back to the Map. */
 export function sectionOf(view: View): Section {
   const v = OPENED_FROM[view] ?? view;
   return SECTIONS.find((s) => s.tabs.some((t) => t.view === v)) ?? SECTIONS[0];
