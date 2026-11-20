@@ -431,6 +431,85 @@ agents:
         runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/project-intelligence-hub.md#atlas-step-runner
         last_review: 2026-11-17
 
+  - id: atlas-task-writer
+    name: Atlas Task Writer
+    purpose: >-
+      n8n workflow that writes the Workflows by Agent tab of the Atlas Agent Registry sheet (every n8n
+      workflow listed under the Atlas agent that runs it), then records its run and files one low-priority
+      review task in the Atlas database through the data API with the task-writer key. No AI step; it can
+      only write tasks in the business, projects and career areas.
+    framework: n8n
+    owned_by: agent-operations-lead
+    model: None (plain code, no AI step)
+    runtime: n8n Cloud
+    status: paused
+    trigger: Run by hand in n8n (unpublished draft)
+    last_run: 2026-11-20T13:34:24Z
+    history:
+      - at: 2026-11-19
+        event: Built as an unpublished n8n draft that writes the Workflows by Agent sheet tab; its database steps were skipped until the data key was added in n8n
+      - at: 2026-11-20
+        event: Khaneil added the data key in n8n and Cloudflare; a hand run recorded its run and filed the first task in the Atlas database
+    links:
+      - label: n8n workflow (Task writer)
+        url: https://khancam15.app.n8n.cloud/workflow/aYk4xDGoE4HgAi2G
+    permissions:
+      - 'Atlas data API key "task-writer" (ATLAS_DATA_KEYS): reads goals, projects, tasks, decisions and shared or internal documents; writes tasks only, in the business, projects and career areas'
+      - 'Google Sheets: clears and rewrites the Workflows by Agent tab of the Atlas Agent Registry sheet'
+      - 'n8n API: reads the workflow list'
+    registry:
+      title: "Agent Ops · Database Task Writer"
+      category: engineering
+      subcategory: Workflow automation
+      classification:
+        type: B
+        confidence: verified
+        evidence: n8n workflow aYk4xDGoE4HgAi2G (unpublished draft) run 842 on 2026-11-20 got status ok from /api/hooks/data/status, recorded its run and created one task (201)
+      mission:
+        problem: Atlas's database needs a safe, tested way for n8n to file tasks, and Khaneil needs a list of which agent runs each n8n workflow.
+        outcomes:
+          - The Workflows by Agent tab matches n8n and the catalog
+          - Each run is recorded in the Atlas database with one review task
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks: [Write the Workflows by Agent sheet tab, Record its run in the Atlas database, File one review task per day]
+        tools: [Google Sheets, Atlas data API]
+        inputs: [The catalog on GitHub, The Agent Registry sheet, The n8n workflow list]
+        outputs: [Workflows by Agent sheet tab, A run and a task in the Atlas database]
+        dependencies:
+          - Atlas data API
+          - Google Sheets
+        limitations:
+          - Writes tasks only; it cannot change goals, projects, decisions or documents
+          - A change to a task Khaneil owns waits for his approval
+          - Runs only when started by hand
+      goals:
+        objective: Keep the workflow list current and prove the n8n to database path works.
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: Every hand run records its run and task
+            target_value: 100
+            direction: min
+            basis: A failed write means the data key or the site needs attention
+      execution:
+        trigger_type: manual
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Files low-priority review tasks only; edits to Khaneil's records become approvals.
+        data_sensitivity: internal
+        credential_owner: Khaneil (n8n credentials and Cloudflare Pages secrets)
+        risk: low
+        audit_log: n8n executions and the Atlas database agent_runs table
+      cost:
+        budget: No model calls
+      docs:
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/data-foundation.md#example-workflow-task-writer-node-sequence
+        last_review: 2026-11-20
+
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
   - id: agent-operations-lead
@@ -495,6 +574,7 @@ agents:
           - agent-registry-sync
           - atlas-agent-factory
           - atlas-step-runner
+          - atlas-task-writer
         limitations:
           - Acts only through the automations it owns; it has no model, schedule or credentials of its own
           - New agents need Khaneil's approval
