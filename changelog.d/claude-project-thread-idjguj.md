@@ -1,1 +1,1 @@
-- 2026-11-20 · Benjaire Dashboard and the job applications workflow are gone from Atlas: Repository Intelligence no longer lists them, their old failed runs no longer count as failures or alerts, and they come off the weekly schedule (#PR)
+- 2026-11-20 · Benjaire Dashboard and the job applications workflow are gone from Atlas: Repository Intelligence no longer lists them, their old failed runs no longer count as failures or alerts, and they come off the weekly schedule (#500)
