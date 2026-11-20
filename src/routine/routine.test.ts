@@ -333,3 +333,38 @@ describe("free time sent from Atlas", () => {
     expect([...kept.keys()]).toEqual(["a"]);
   });
 });
+
+describe("the Community Pavilion & Café", () => {
+  const CAFE_OPT: LeisureOption = { id: "cafe", kind: "cafe", label: "At the Community Pavilion & Café", spot: "cafe", exit: "cafe", stay: [480, 1500], leave: 12 };
+  const cafeEnv = (): RoutineEnv => ({ ...env(), leisure: [...OPTIONS, CAFE_OPT] });
+  const now0 = Date.parse("2026-11-18T19:00:00Z"); // 2pm New York
+
+  it("is a free-time destination: an agent sent there walks over and stays", () => {
+    const r = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(now0, [], new Map(), []), env: cafeEnv(), now: now0, outing: { kind: "cafe", at: now0 } });
+    const stay = r.segments.find((s) => s.kind === "stay" && s.option?.kind === "cafe")!;
+    expect(stay).toBeDefined();
+    expect(stay.activity).toBe("relaxing");
+    expect((stay.t1 - stay.t0) / 1000).toBeGreaterThanOrEqual(480);
+    const walk = r.segments[r.segments.indexOf(stay) - 1];
+    expect(walk.kind === "walk" && walk.to).toBe("cafe");
+  });
+
+  it("new work cuts the visit short, with just enough time to get out of the door, then the walk to the office", () => {
+    const sent = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(now0, [], new Map(), []), env: cafeEnv(), now: now0, outing: { kind: "cafe", at: now0 } });
+    const stay = sent.segments.find((s) => s.kind === "stay" && s.option?.kind === "cafe")!;
+    const start = Math.floor((stay.t0 + 120_000) / 1000) * 1000; // two minutes into the visit
+    const l: Ledger = new Map();
+    const runs = [{ id: "88", status: "running" as const, mode: "webhook", startedAt: new Date(start).toISOString(), stoppedAt: null }];
+    observe(l, sightingsOf(opsWith(start, runs, l, []).runs), start);
+    const r = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(start + 5000, runs, l, []), env: cafeEnv(), now: start + 5000, outing: { kind: "cafe", at: now0 } });
+    const cut = r.segments.find((s) => s.kind === "stay" && s.option?.kind === "cafe")!;
+    expect(cut.t1).toBeGreaterThanOrEqual(start);
+    expect(cut.t1).toBeLessThanOrEqual(start + 12_000);
+    expect(cut.note).toContain("leaving for the office");
+    const next = r.segments[r.segments.indexOf(cut) + 1];
+    expect(next.kind).toBe("walk");
+    expect(next.kind === "walk" && next.from).toEqual({ spot: "cafe" });
+    expect(next.phase).toBe("heading");
+    expect(r.segments.some((s) => s.phase === "working")).toBe(true);
+  });
+});

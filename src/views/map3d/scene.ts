@@ -2,6 +2,7 @@ import {uncoveredLand} from "./neighborhoodLinks";
 import {planStationPlaza,type StationPlaza} from "./stationPlazaPlan";
 import {planCommons,commonsPlanting,type CommonsPlan} from './commonsPlan';
 import {planPlaza,plazaGround,plazaPlanting,PLAZA,type PlazaPlan} from './plazaPlan';
+import {planCafe,type CafePlan} from './cafePlan';
 import {planRingRoad} from './ringRoad';
 import {planGridAvenues} from './nycGrid';
 import {planPerimeterRail} from './perimeterRailPlan';
@@ -195,6 +196,8 @@ export interface Scene3D {
   commons?:CommonsPlan;
   /** Atlas Automation Plaza on the lawn in front of the Growth & Marketing Studio (plazaPlan.ts). */
   plaza?:PlazaPlan;
+  /** Community Pavilion & Café on the square the Intelligence Hub left, east of the plaza (cafePlan.ts). */
+  cafe?:CafePlan;
   mall?:MallPlan;
   /** Atlas Galleria, the shopping mall on the green behind the Marketplace (replaced the Marketplace Gardens). */
   galleria?:GalleriaPlan;
@@ -946,10 +949,13 @@ function buildCity(layout: Layout): Scene3D {
       else if(ib){const q=rimOf([w.x0,w.z0],[w.x1,w.z1]);w.x1=q[0];w.z1=q[1];}
     }
   }
+  // Community Pavilion & Café (Khaneil, 2026-11-19) on the empty square east of the plaza: it only reads the scene.
+  const cafe=planCafe({clearedLots:towers.filter(t=>cleared.has(t.projectId)),paving,transportConnections:connections,plaza});
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {
     commons,
     plaza,
+    cafe,
     financial,
     stationPlaza,
     community,

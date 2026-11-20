@@ -10,6 +10,8 @@ import { riderPoint, type CityPlaces, type CityRoutes } from "./routinePlaces";
 import { TERRACE_H } from "./scene";
 import { AGENT_BODY, passWidth, seatedOrigin } from "./agentBody";
 import { YACHT_SCALE } from "./yachtPlan";
+import { cafeMoment, type CafeVisit } from "./cafeVisits";
+import { CAFE_NAME } from "./cafePlan";
 
 /**
  * Where and how one agent is drawn at a moment, from its routine segment (routine/routine.ts).
@@ -55,6 +57,8 @@ export interface PoseContext {
   jet?: { clock: number; circuit?: typeof goldJetLive.circuit };
   /** City figure scale for this agent (FIGURE_SCALE times its height). */
   scale: number;
+  /** Café visits for every agent, with their seats (cafeVisits.ts). */
+  cafe?: ReadonlyMap<string, CafeVisit[]>;
 }
 
 const BADGE_LIFT = 0.075;
@@ -188,6 +192,15 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
     return at(p[0] + lx * cos + lz * sin, y, p[2] - lx * sin + lz * cos, yaw + Math.PI / 2, { sit: seat.sit ? 1 : 0, place: "Aboard the Atlas yacht" });
   }
 
+  // At the café: in to the counter, its own seat, back out (seats are shared out across agents in cafeVisits.ts).
+  if (seg.option?.kind === "cafe" && c.places.cafe) {
+    const visit = c.cafe?.get(c.personaId)?.find((v) => v.t0 === seg.t0);
+    if (visit) {
+      const q = cafeMoment(c.places.cafe, visit, c.wall);
+      const y = q.seatY !== null ? seatedOrigin(q.seatY, c.scale) : q.y;
+      return at(q.x, y, q.z, q.yaw, { sit: q.seatY !== null ? 1 : 0, walking: q.walking, place: `${CAFE_NAME} · ${q.where}` });
+    }
+  }
   // Standing or sitting at a spot.
   if (spot.inside) {
     if (seg.at === mine.home.id) return { x: stand[0], y: stand[1], z: stand[2], yaw: spot.yaw, figure: false, badge: null, sit: 0, typing: false, walking: false, officeScale: null, place: mine.homeLabel };
