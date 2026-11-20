@@ -10,7 +10,7 @@ describe("sidebar sections", () => {
       ["Projects", ["Projects"]],
       ["Agents", ["Agents"]],
       ["Automations", ["Automations"]],
-      ["Task", ["Task"]],
+      ["Tasks", ["Tasks"]],
       ["Workspace", ["Workspace"]],
       ["Intel", ["Intelligence", "Engineering Review", "Repositories", "Activity", "API"]],
       ["Grid", ["Grid"]],
