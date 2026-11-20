@@ -1,0 +1,1 @@
+- 2026-11-19 · Point at a building's name on the map (or tap it on iPhone) to see the faces of the agents who work and live there; click a face to open that agent's card (#497)

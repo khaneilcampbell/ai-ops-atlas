@@ -987,3 +987,29 @@ button.chip-link { cursor: pointer; font: inherit; font-size: 11.5px; }
 .building-people { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 8px; }
 .building-people li { display: grid; gap: 2px; }
 .building-people .text-btn { justify-self: start; padding-left: 0; }
+
+/* Faces of the agents who work or live in a building, over its nameplate (BuildingFaces.tsx).
+   The padding joins the card to the plaque, so moving the pointer up onto a face keeps the hover. */
+.m3-labels > div.has-faces { z-index: 6; }
+.m3-faces { position: absolute; left: 50%; bottom: 100%; transform: translateX(calc(-50% + var(--shift, 0px))); padding-bottom: 6px; cursor: default; }
+.m3-faces.below { bottom: auto; top: 100%; padding-bottom: 0; padding-top: 10px; }
+.m3-faces-card {
+  display: grid; gap: 6px; padding: 8px 10px 7px; border-radius: 10px; white-space: nowrap;
+  background: rgba(14, 28, 30, 0.9); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  border: 1px solid rgba(201, 163, 90, 0.45); box-shadow: 0 8px 20px rgba(6, 12, 14, 0.35); color: #f4efe1;
+  animation: m3-faces-in 0.14s ease-out;
+}
+.m3-faces-row { display: grid; gap: 4px; }
+.m3-faces-label { font-size: 9.5px; font-weight: 600; letter-spacing: 0.9px; text-transform: uppercase; color: #c9a35a; }
+.m3-faces-list { display: grid; grid-template-columns: repeat(6, auto); justify-content: start; gap: 6px; align-items: start; }
+.m3-face { display: grid; justify-items: center; gap: 3px; width: 44px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.m3-face .agent-avatar { box-shadow: 0 0 0 2px var(--accent), 0 0 0 3px rgba(14, 28, 30, 0.9); }
+.m3-face:hover .agent-avatar, .m3-face:focus-visible .agent-avatar { box-shadow: 0 0 0 2px #e2c27a, 0 0 0 4px rgba(226, 194, 122, 0.35); }
+.m3-face:focus-visible { outline: none; }
+.m3-face-name { font-size: 10px; line-height: 12px; max-width: 44px; overflow: hidden; text-overflow: ellipsis; color: #e9e4d6; }
+.m3-face.more { cursor: default; }
+.m3-face-more { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; font-size: 10.5px; font-weight: 600; background: rgba(201, 163, 90, 0.16); color: #e2c27a; box-shadow: 0 0 0 1px rgba(201, 163, 90, 0.5); }
+.m3-faces-note { font-size: 9.5px; color: #9fb0a8; }
+@keyframes m3-faces-in { from { opacity: 0; translate: 0 3px; } to { opacity: 1; translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .m3-faces-card { animation: none; } }
+@media (max-width: 600px) { .m3-face { width: 40px; } .m3-faces-card { padding: 7px 8px 6px; } }
