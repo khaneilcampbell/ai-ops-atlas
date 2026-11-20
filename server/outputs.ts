@@ -524,19 +524,52 @@ export async function serveFile(url: URL, env: OutputsEnv, outputId: string, ver
   return new Response(obj.body, { status: 200, headers });
 }
 
+type Target = { kind: "list" } | { kind: "reconcile" } | { kind: "detail"; id: string } | { kind: "file" | "retry"; id: string; version: number } | { kind: "none" };
+
+/** Which Library read or change a path names, after the route's prefix. */
+function targetOf(parts: string[]): Target {
+  if (parts.length === 0) return { kind: "list" };
+  if (parts.length === 1 && parts[0] === "reconcile") return { kind: "reconcile" };
+  const [id, versions, v, action] = parts;
+  if (!id || !/^out_[0-9a-f]{20}$/.test(id)) return { kind: "none" };
+  if (parts.length === 1) return { kind: "detail", id };
+  const n = Number(v);
+  if (parts.length !== 4 || versions !== "versions" || !Number.isInteger(n) || n < 1) return { kind: "none" };
+  return action === "file" || action === "retry" ? { kind: action, id, version: n } : { kind: "none" };
+}
+
+const partsAfter = (url: URL, prefix: string) => url.pathname.slice(prefix.length).split("/").filter(Boolean);
+
 /** Routes under /api/outputs for the signed-in page (functions/api/outputs/[[path]].ts). */
 export async function routeOutputs(req: Request, env: OutputsEnv, opts: IngestOptions = {}): Promise<Response> {
   const url = new URL(req.url);
-  const parts = url.pathname.replace(/^\/api\/outputs\/?/, "").split("/").filter(Boolean);
-  if (req.method === "GET" && parts.length === 0) return listOutputs(url, env);
-  if (req.method === "POST" && parts.length === 1 && parts[0] === "reconcile") return reconcileReports(env, opts);
-  const [id, versions, v, action] = parts;
-  if (!id || !/^out_[0-9a-f]{20}$/.test(id)) return reply(404, { message: "Not found." });
-  if (req.method === "GET" && parts.length === 1) return outputDetail(env, id);
-  const n = Number(v);
-  if (versions !== "versions" || !Number.isInteger(n) || n < 1) return reply(404, { message: "Not found." });
-  if (req.method === "GET" && action === "file" && parts.length === 4) return serveFile(url, env, id, n);
-  if (req.method === "POST" && action === "retry" && parts.length === 4) return retryVersion(env, id, n, opts);
+  const t = targetOf(partsAfter(url, "/api/outputs"));
+  const get = req.method === "GET";
+  if (t.kind === "none") return reply(404, { message: "Not found." });
+  if (get && t.kind === "list") return listOutputs(url, env);
+  if (get && t.kind === "detail") return outputDetail(env, t.id);
+  if (get && t.kind === "file") return serveFile(url, env, t.id, t.version);
+  if (req.method === "POST" && t.kind === "reconcile") return reconcileReports(env, opts);
+  if (req.method === "POST" && t.kind === "retry") return retryVersion(env, t.id, t.version, opts);
   return reply(405, { message: "Not allowed." });
+}
+
+export const LIBRARY_APP_HOOK = "/api/hooks/library";
+
+/**
+ * /api/hooks/library[...]: the same Library reads for the Mac app, which has no Access session. It
+ * sends the website sync key it already keeps in the Keychain (USAGE_SYNC_TOKEN). Read-only: list,
+ * one output, and a version's file. Retry and reconcile stay on the signed-in web page.
+ */
+export async function routeOutputsForApp(req: Request, env: OutputsEnv): Promise<Response> {
+  if (req.method.toUpperCase() !== "GET") return reply(405, { message: "Read-only." });
+  if (!env.USAGE_SYNC_TOKEN) return reply(503, { message: "Website sync isn't set up on the site yet (USAGE_SYNC_TOKEN missing)." });
+  if (!bearerOk(req, env.USAGE_SYNC_TOKEN)) return reply(401, { message: "The sync key doesn't match the site's USAGE_SYNC_TOKEN." });
+  const url = new URL(req.url);
+  const t = targetOf(partsAfter(url, LIBRARY_APP_HOOK));
+  if (t.kind === "list") return listOutputs(url, env);
+  if (t.kind === "detail") return outputDetail(env, t.id);
+  if (t.kind === "file") return serveFile(url, env, t.id, t.version);
+  return reply(404, { message: "Not found." });
 }
 
