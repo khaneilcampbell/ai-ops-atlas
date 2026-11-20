@@ -24,9 +24,8 @@ test("a reported failure raises an alert until it is dismissed", async ({ page }
   await goTo(page, "Mission");
   const card = page.locator("#agent-alerts");
   await expect(card.locator(".watch.failing")).toContainText("Flow forward timed out after 3 tries");
-  // The only "not running" row is the Career Execution Agent, an unpublished n8n draft.
-  await expect(card.locator(".watch.not-running")).toHaveCount(1);
-  await expect(card.locator(".watch.not-running")).toContainText("Unpublished in n8n");
+  // No agent is off on purpose since the Career Execution Agent was published on 2026-11-19.
+  await expect(card.locator(".watch.not-running")).toHaveCount(0);
   // This browser isn't reading the live feed, so the intake's state is unknown, not healthy, and so is
   // the building agent's (Dataset Census) and the two n8n commerce
   // agents' (Order Delivery, Approve and Publish), and the seven Flow, Shop and Commerce workflows

@@ -110,8 +110,8 @@ agents:
   it("watches the customer-facing agents, including the n8n buyer and client emails, Stripe publishing and the weekly sales email", () => {
     const { catalog, issues } = buildCatalog(loadCatalogFiles());
     expect(issues).toEqual([]);
-    // The Career Execution Agent is a draft, off on purpose until Khaneil publishes it: no alerts.
-    expect(catalog.agents.filter((a) => a.alerts?.notRunning).map((a) => a.id)).toEqual(["career-execution"]);
+    // No agent is off on purpose: the Career Execution Agent was published on 2026-11-19; its failure emails come from n8n, not Atlas alerts.
+    expect(catalog.agents.filter((a) => a.alerts?.notRunning).map((a) => a.id)).toEqual([]);
     const watched = catalog.agents.filter((a) => a.alerts && !a.alerts.notRunning);
     expect(watched.map((a) => a.id).sort()).toEqual([
       "benjaire-contact-worker", "benjaire-flow-digest", "benjaire-flow-intake", "benjaire-flow-missed-runs", "benjaire-flow-reminders", "benjaire-flow-status",
