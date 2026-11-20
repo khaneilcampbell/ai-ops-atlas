@@ -16,6 +16,8 @@ import { WHEEL, WHEEL_CABIN } from "./stationPlazaPlan";
 import { buildStreetGraph, streetLines, streetRoute, type StreetGraph } from "./streetGraph";
 import { TRAVEL, TRAVEL_CLOCK, travelPlan } from "./travelLoops";
 import { marinaSite } from "./marinaPlan";
+import { drivingGraph, planVehicles } from "./vehicles";
+import type { RoadMap } from "./agentRides";
 import { COMMONS_BENCH } from "./commonsPlan";
 import { boardingRoute } from "./yachtPlan";
 
@@ -99,6 +101,8 @@ export interface CityPlaces {
   yacht?: { depart: number; period: number; aboard: Pt3 };
   /** The airport the Atlas Gold Jet flies from, for putting its passengers aboard. */
   jet?: Pick<AirportPlan, "x" | "z" | "west">;
+  /** The driving network and the Atlas cars, for trips by car (agentRides.ts). */
+  roads?: RoadMap;
 }
 
 const street = (p: [number, number] | Pt3): Pt3 => (p.length === 2 ? [p[0], STREET_Y, p[1]] : [p[0], STREET_Y, p[2]]);
@@ -207,7 +211,14 @@ export function planCityPlaces(scene: Scene3D, named: readonly NamedAgent[], job
     const a = { id: "train:board", label: loop.stops[from].name, path: platform(from), yaw: loop.stops[from].yaw, inside: false, spread: 0.2 };
     const b = { id: "train:exit", label: loop.stops[to].name, path: platform(to), yaw: loop.stops[to].yaw, inside: false, spread: 0.2 };
     opt({ id: "train", kind: "train", label: `Riding the train to ${loop.stops[to].name}`, spot: a.id, exit: b.id, stay: [0, 0] }, a, b);
+    // Every station's platform, for trips by train (agentRides.ts): board at one, get off at another.
+    loop.stops.forEach((s, i) => add({ id: `station:${i}`, label: s.name, path: platform(i), yaw: s.yaw, inside: false, spread: 0.2 }));
   }
+
+  // The roads and the Atlas cars that can pick an agent up (vehicles.ts ATLAS_CARS).
+  const roads = drivingGraph(scene);
+  const cars = planVehicles(scene).filter((v) => v.atlasCar);
+  if (roads && cars.length) out.roads = { nodes: roads.nodes, next: roads.next, cars };
 
   // The yacht: down the marina stair, along the pontoon to her gangway; aboard before she casts off, off once she's back.
   const tp = travelPlan(scene);

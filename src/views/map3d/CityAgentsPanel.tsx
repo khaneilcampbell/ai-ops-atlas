@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useActions } from "../../actions/state";
 import { agentJobs } from "../../catalog/agentJobs";
 import { districtLabel, districtOf } from "../../catalog/organization";
@@ -7,7 +7,8 @@ import { ExternalLink } from "../../components/bits";
 import { Icon } from "../../components/Icon";
 import { mapBuildings, useInsideFloors } from "../../buildings/insideFloors";
 import { useN8nRuns } from "../../n8n/runs";
-import { FREE_TIME_CHOICES, freeTimeAvailability, requestFreeTime, type FreeTimeChoice } from "../../routine/freeTime";
+import { FREE_TIME_CHOICES, TRAVEL_CHOICES, freeTimeAvailability, requestFreeTime, type FreeTimeChoice } from "../../routine/freeTime";
+import type { TravelMode } from "../../routine/routine";
 import { CONNECTION_LABEL, RUN_LABEL, type AgentOps, type OwnedWorkflow } from "../../routine/operations";
 import { clock, segmentAt } from "../../routine/routine";
 import { setRoutineHeld, useRoutineHeld, useRoutineOps, useRoutines, useWhereAll } from "../../routine/useRoutineOps";
@@ -113,11 +114,12 @@ export function CityAgentsPanel(p: CityAgentsPanelProps) {
   // Free time: only for agents in their free time now (freeTime.ts). Map picture only.
   const segOf = (id: string) => (routines.get(id) ? segmentAt(routines.get(id)!, Date.now()) : null);
   const idle = rows.filter((r) => freeTimeAvailability(segOf(r.personaId), held.has(r.personaId)).ok);
-  const sendFree = (r: RosterRow, kind: FreeTimeChoice) => {
-    requestFreeTime([r.personaId], kind);
+  const sendFree = (r: RosterRow, kind: FreeTimeChoice, travel: TravelMode) => {
+    requestFreeTime([r.personaId], kind, Date.now(), travel);
     setFreeOpen(false);
     const going = FREE_TIME_CHOICES.find((c) => c.kind === kind)?.going ?? "free time";
-    setFreeNote({ id: r.personaId, text: `${r.identity.name} is off to ${going}. Only the map changes: runs, schedules and permissions stay as they are, and a run that comes due still calls ${r.identity.name} back.` });
+    const by = travel === "car" ? " by Atlas car (picked up at the kerb)" : travel === "train" ? " by train" : travel === "walk" ? " on foot" : "";
+    setFreeNote({ id: r.personaId, text: `${r.identity.name} is off to ${going}${by}. Only the map changes: runs, schedules and permissions stay as they are, and a run that comes due still calls ${r.identity.name} back.` });
   };
   const sendAllFree = () => {
     if (!idle.length) return;
@@ -335,7 +337,7 @@ export function CityAgentsPanel(p: CityAgentsPanelProps) {
             </p>
           )}
           {followed === current.personaId && <p className="ca-note">Following {current.identity.name}. Move the map yourself or press Stop following to let go.</p>}
-          {freeOpen && <FreeTime row={current} availability={freeTimeAvailability(segOf(current.personaId), held.has(current.personaId))} onPick={(k) => sendFree(current, k)} />}
+          {freeOpen && <FreeTime row={current} availability={freeTimeAvailability(segOf(current.personaId), held.has(current.personaId))} onPick={(k, t) => sendFree(current, k, t)} />}
           {freeNote?.id === current.personaId && !freeOpen && (
             <p className="ca-note" role="status">
               {freeNote.text}
@@ -405,16 +407,27 @@ export function CityAgentsPanel(p: CityAgentsPanelProps) {
   );
 }
 
-/** What the agent can go and do, or why it can't go now. */
-function FreeTime({ row, availability, onPick }: { row: RosterRow; availability: ReturnType<typeof freeTimeAvailability>; onPick(kind: FreeTimeChoice): void }) {
+/** What the agent can go and do, and how it gets there, or why it can't go now. */
+function FreeTime({ row, availability, onPick }: { row: RosterRow; availability: ReturnType<typeof freeTimeAvailability>; onPick(kind: FreeTimeChoice, travel: TravelMode): void }) {
+  const [travel, setTravel] = useState<TravelMode>("auto");
+  const label = useId();
   return (
     <div className="ca-freetime" role="group" aria-label={`Free time for ${row.identity.name}`}>
       {availability.ok ? (
         <>
+          <p className="sub" id={label}>Travel by</p>
+          <div className="ca-travel" role="radiogroup" aria-labelledby={label}>
+            {TRAVEL_CHOICES.map((c) => (
+              <button key={c.mode} type="button" role="radio" aria-checked={travel === c.mode} className={travel === c.mode ? "on" : ""} title={c.hint} onClick={() => setTravel(c.mode)}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+          <p className="sub hint">{TRAVEL_CHOICES.find((c) => c.mode === travel)?.hint}.</p>
           <p className="sub">Where should {row.identity.name} go?</p>
           <div className="ca-freechoices">
             {FREE_TIME_CHOICES.map((c) => (
-              <button key={c.kind} type="button" onClick={() => onPick(c.kind)}>
+              <button key={c.kind} type="button" onClick={() => onPick(c.kind, travel)}>
                 {c.label}
               </button>
             ))}

@@ -243,7 +243,10 @@ function objectsOf(scene: Scene3D): { objects: InventoryObject[]; notes: string[
   };
   // Three of the city cars run the travel loops' shuttle rounds instead of a street loop (living.tsx Vehicles).
   const shuttles = travelPlan(scene)?.shuttles.map((s) => s.plan) ?? [];
-  vehicles(planVehicles(scene).slice(0, MAX_VEHICLES - shuttles.length), "City streets", "src/views/map3d/vehicles.ts planVehicles");
+  const city = planVehicles(scene).slice(0, MAX_VEHICLES - shuttles.length);
+  vehicles(city.filter((v) => !v.atlasCar), "City streets", "src/views/map3d/vehicles.ts planVehicles");
+  // Four of them are Atlas cars: still on their street loops, but they can turn off to pick an agent up (agentRides.ts).
+  vehicles(city.filter((v) => v.atlasCar), "City streets (Atlas cars that pick agents up)", "src/views/map3d/agentRides.ts");
   vehicles(shuttles, "Travel loop shuttles", "src/views/map3d/travelLoops.ts planShuttle");
   vehicles(planHighwayTraffic(scene), "Highway", "src/views/map3d/vehicles.ts planHighwayTraffic");
   vehicles(planDealershipTraffic(scene), "Infrastructure Operations Hub", "src/views/map3d/vehicles.ts planDealershipTraffic");

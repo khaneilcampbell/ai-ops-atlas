@@ -21,6 +21,7 @@ import { AgentTaskCard } from "./AgentTaskCard";
 import { selectCityAgent, useCityAgents } from "./cityAgentsStore";
 import { namedAgentAt, type NamedAgent, type NamedAgentPlan } from "./namedAgentPlan";
 import { routineEnv, type CityPlaces, type CityRoutes } from "./routinePlaces";
+import { CityRides, withTrips } from "./agentRides";
 import { routinePose } from "./routinePose";
 import { hideGait, newGait, stepGait, type Gait } from "./walkerFigure";
 import { yachtLivePose } from "./yachtRidePlan";
@@ -204,7 +205,12 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
   const [, setCardTick] = useState(0);
 
   // Each agent's day, recomputed when its runs change or the clock ticks (useRoutineOps, every 20 s while visible).
-  const envs = useMemo(() => new Map<string, RoutineEnv | null>(ids.map((id) => [id, routes ? routineEnv(routes, id) : null])), [ids, routes]);
+  // Trips by car and train share one set of cars and kerbs for the whole team (agentRides.ts).
+  const rides = useMemo(() => (routes ? new CityRides(routes, routes.places.roads) : null), [routes]);
+  const envs = useMemo(() => new Map<string, RoutineEnv | null>(ids.map((id) => {
+    const env = routes ? routineEnv(routes, id) : null;
+    return [id, env && rides ? withTrips(env, rides, id) : env];
+  })), [ids, routes, rides]);
   const routines = useMemo(() => {
     const out = new Map<string, Routine>();
     for (const id of ids) {

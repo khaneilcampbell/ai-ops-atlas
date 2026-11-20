@@ -37,7 +37,27 @@ export interface VehiclePlan {
   serviceWindow?: {start:number;duration:number};
   /** Keeps to a timetable on the train clock (travelLoops.ts shuttles): car following may delay it, then it catches up. */
   scheduled?: boolean;
+  /**
+   * One of the Atlas cars (agentRides.ts): a city car on a timetable that can turn off its loop to pick an agent up
+   * and drop it off, then rejoin its loop where it would have been. `route` is its loop as driving-graph node indices.
+   */
+  atlasCar?: { route: number[] };
 }
+
+/** How many of the city's cars can pick agents up (agentRides.ts). They stay part of the 24, on their usual loops. */
+export const ATLAS_CARS = 4;
+
+/**
+ * A pickup: for wall times [wall0, wall1) the car drives these legs instead of its loop (agentRides.ts books them).
+ * `legs` start at wall0; their durations are seconds.
+ */
+export interface Detour { id: string; wall0: number; wall1: number; legs: Leg[] }
+/** Booked pickups by vehicle id. Shared by the agents' planner and the renderer, so both see the same drive. */
+export const DETOURS = new Map<string, Detour[]>();
+/** Where each Atlas car is drawn this frame (living.tsx Vehicles, after car following), so a rider's badge sits on it. */
+export const CAR_POSES = new Map<string, { x: number; y: number; z: number }>();
+/** Wall time (ms) of a train-clock time (s): travelLoops.ts sets it from the live train clock. */
+export const DETOUR_CLOCK = { wallOf: (t: number) => t * 1000 };
 
 /** At most this many vehicles, one per district, in the busiest districts. */
 export const MAX_VEHICLES = 24;
@@ -104,7 +124,9 @@ export function planVehicles(scene: Scene3D): VehiclePlan[] {
     const order = loops[k % loops.length], share = Math.floor(k / loops.length);
     const legs = loopLegs(order.map(n => nodes[n]), order.map(n => next[n].length >= 3), order.map((n, i) => lane(n, order[(i + 1) % order.length])), SPEED);
     const period = legs.reduce((n, l) => n + l.dur, 0);
-    return { id: `city:traffic:${k}`, ...FLEET[k % FLEET.length], legs, period, offset: ((hash(`city:${k % loops.length}:offset`) + share * 0.37) % 1) * period };
+    const base = { id: `city:traffic:${k}`, ...FLEET[k % FLEET.length], legs, period, offset: ((hash(`city:${k % loops.length}:offset`) + share * 0.37) % 1) * period };
+    // The first few keep to a timetable (so where they'll be is known ahead) and can be called to pick an agent up.
+    return k < ATLAS_CARS && loops.length >= ATLAS_CARS ? { ...base, scheduled: true, atlasCar: { route: order } } : base;
   });
 }
 
@@ -351,7 +373,16 @@ function keepRightLoop(pts: Pt3[], offs: number[]): Pt3[] {
  * a wait, the way it leaves) and how steeply it climbs (rise over run).
  */
 export function vehicleAt(v: VehiclePlan, t: number): { x: number; y: number; z: number; dx: number; dz: number; slope: number } {
-  let u = (((t + v.offset) % v.period) + v.period) % v.period;
+  const detours = v.atlasCar && DETOURS.get(v.id);
+  if (detours && detours.length) {
+    const w = DETOUR_CLOCK.wallOf(t);
+    for (const d of detours) if (w >= d.wall0 && w < d.wall1) return legsAt(d.legs, (w - d.wall0) / 1000);
+  }
+  return legsAt(v.legs, (((t + v.offset) % v.period) + v.period) % v.period);
+}
+
+/** Where a run of legs is `u` seconds in (past the end: at its end). */
+export function legsAt(legs: Leg[], u: number): { x: number; y: number; z: number; dx: number; dz: number; slope: number } {
   const at = (l: Leg, f: number) => {
     const run = Math.hypot(l.b[0] - l.a[0], l.b[1] - l.a[1]);
     return {
@@ -363,11 +394,11 @@ export function vehicleAt(v: VehiclePlan, t: number): { x: number; y: number; z:
       slope: l.hold || run < 1e-6 ? 0 : (l.yb - l.ya) / run,
     };
   };
-  for (const l of v.legs) {
+  for (const l of legs) {
     if (u <= l.dur) return at(l, l.hold ? 0 : u / l.dur);
     u -= l.dur;
   }
-  return at(v.legs[v.legs.length - 1], 1);
+  return at(legs[legs.length - 1], 1);
 }
 
 /** Seconds a service car always has left in its interval, so a visit never overruns the next. */
