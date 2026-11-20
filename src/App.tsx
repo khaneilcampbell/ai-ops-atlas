@@ -19,6 +19,7 @@ import { ReposView } from "./views/Repos";
 import { MapView } from "./views/Map";
 import { SettingsView } from "./views/Settings";
 import { IntelligenceView } from "./views/Intelligence";
+import { AtlasIntelligenceView } from "./views/AtlasIntelligence";
 import { UsageView } from "./views/Usage";
 import { TaskCenterView } from "./views/tasks/TaskCenter";
 import { WorkflowIntelligenceView } from "./views/workflows/WorkflowIntelligence";
@@ -176,8 +177,9 @@ export default function App() {
           {view === "activity" && <ActivityView />}
           {view === "agents" && <AgentsView key="agents" kind="agents" />}
           {view === "automations" && <AgentsView key="automations" kind="automations" />}
-          {view === "repos" && <ReposView />}
-          {view === "intel" && <IntelligenceView />}
+          {/* Intel → Repositories: repository intelligence, then the repositories read from GitHub. */}
+          {view === "repos" && <><IntelligenceView /><ReposView /></>}
+          {view === "intel" && <AtlasIntelligenceView />}
           {view === "review" && <IntelligenceView only="review" />}
           {view === "usage" && <UsageView />}
           {(view === "api-costs" || view === "api-github") && <IntelligenceView only="costs" />}
