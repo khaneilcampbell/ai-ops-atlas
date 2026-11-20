@@ -5,13 +5,17 @@ import { rosterAgents } from "./map3d/cityRoster";
 import { ciSummary, repoData, verifiedState } from "../lib/derive";
 import { relative } from "../lib/time";
 import { useAtlas } from "../state";
+import { useIntel } from "../intel/state";
+import { usd } from "../intel/format";
 
 /**
  * Intel → Intelligence: what Atlas knows about each of its projects, from the catalog and the
  * GitHub data already loaded. Read-only; it fetches nothing and starts no runs.
  */
 export function AtlasIntelligenceView() {
-  const { catalog, repos, select } = useAtlas();
+  const { catalog, repos, select, setView, usage } = useAtlas();
+  const intel = useIntel();
+  const rate = usage?.rate;
   const rows = useMemo(
     () =>
       catalog.projects.map((p) => {
@@ -33,7 +37,7 @@ export function AtlasIntelligenceView() {
         <div className="grow">
           <div className="eyebrow">Atlas · read-only</div>
           <h1>Data intelligence</h1>
-          <p className="lede">Every Atlas project with its agents, automations, repositories and the GitHub data Atlas has for them. Open a project for its details.</p>
+          <p className="lede">Every Atlas project with its agents, automations, repositories and the GitHub data Atlas has for them, plus API spend. Open a project for its details.</p>
         </div>
       </div>
       <div className="grid tiles" style={{ marginBottom: 16 }}>
@@ -84,6 +88,26 @@ export function AtlasIntelligenceView() {
                 <td className="small muted">{pushed ? relative(pushed) : "–"}</td>
               </tr>
             ))}
+          </tbody>
+        </table>
+      </section>
+      {/* API: the figures Atlas already holds; the API Usage section has the full detail. */}
+      <section className="card" style={{ marginTop: 16 }} aria-labelledby="intel-api">
+        <div className="card-head">
+          <h2 className="grow" id="intel-api">API</h2>
+          <button className="text-btn small" onClick={() => setView("usage")}>Provider usage →</button>
+          <button className="text-btn small" onClick={() => setView("api-costs")}>Claude & GitHub →</button>
+        </div>
+        <table className="table">
+          <tbody>
+            <tr>
+              <td>Claude (repository intelligence)</td>
+              <td>{intel.status ? `${usd(intel.status.month_spent_usd, 2)} this month${intel.status.config.monthly_budget_usd > 0 ? ` of ${usd(intel.status.config.monthly_budget_usd, 0)} budget` : ""}` : "Shown in the desktop app, which keeps the Anthropic key"}</td>
+            </tr>
+            <tr>
+              <td>GitHub requests</td>
+              <td>{rate ? `${Math.max(0, rate.limit - rate.remaining).toLocaleString()} of ${rate.limit.toLocaleString()} used this hour` : "Shown after the first refresh"}</td>
+            </tr>
           </tbody>
         </table>
       </section>
