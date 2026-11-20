@@ -11,7 +11,7 @@ const MODES: { view: View; label: string; icon: IconName; key: string; descripti
 
 /**
  * Three layouts of the same workspace. ⌘1, ⌘2 and ⌘3 switch between them from anywhere.
- * Mission Control stays lit on its Task Center and Activity tabs, and carries the attention count.
+ * Mission Control stays lit on Workflow Intelligence, and carries the attention count.
  */
 export function ViewSwitch({ badge = 0 }: { badge?: number }) {
   const { view, setView } = useAtlas();

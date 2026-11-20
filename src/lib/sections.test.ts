@@ -5,9 +5,10 @@ import { SECTIONS, SIDEBAR_SECTIONS, sectionEntry, sectionOf, tabOf } from "./se
 const ALL: View[] = ["overview", "workflows", "tasks", "business", "agents", "automations", "repos", "map", "grid", "activity", "intel", "review", "usage", "api-costs", "api-github", "workspace", "settings", "preferences"];
 
 describe("sidebar sections", () => {
-  it("lists Projects, Business, Agents, Automations, Intel and Settings with their pages in order", () => {
+  it("lists the sidebar sections with their pages in order", () => {
     expect(SIDEBAR_SECTIONS.map((s) => [s.label, s.tabs.map((t) => t.label)])).toEqual([
       ["Projects", ["Projects"]],
+      ["Task", ["Task"]],
       ["Business", ["Business"]],
       ["Agents", ["Agents"]],
       ["Automations", ["Automations"]],
@@ -24,8 +25,9 @@ describe("sidebar sections", () => {
     expect(new Set(placed).size).toBe(placed.length);
   });
 
-  it("keeps Task Center and Workflow Intelligence under Mission Control, and Activity under Intel", () => {
-    expect(["overview", "tasks", "workflows"].map((v) => sectionOf(v as View).id)).toEqual(["overview", "overview", "overview"]);
+  it("keeps Workflow Intelligence under Mission Control, Task Center on its own and Activity under Intel", () => {
+    expect(["overview", "workflows"].map((v) => sectionOf(v as View).id)).toEqual(["overview", "overview"]);
+    expect(sectionOf("tasks").id).toBe("tasks");
     expect(sectionOf("activity").id).toBe("intel");
     expect(tabOf("workflows")).toBe("overview");
   });
