@@ -45,7 +45,8 @@ const PHONE_BAR: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Projects", icon: "map" },
   { view: "agents", label: "Agents", icon: "agents" },
   { view: "overview", label: "Mission", icon: "overview" },
-  { view: "activity", label: "Activity", icon: "pulse" },
+  // Intel, as in the sidebar; Activity is one of its tabs.
+  { view: "intel", label: "Intel", icon: "spark" },
 ];
 
 /** The page a section opens on remembers the tab used last this session. */
@@ -213,7 +214,7 @@ function PhoneNav({ attention, status }: { attention: number; status: PhoneStatu
   const openSection = useSectionNav();
   // The bar tab for this page: its own tab, else the bar tab of its section. None means More.
   const current = PHONE_BAR.find((b) => b.view === tabOf(view)) ?? PHONE_BAR.find((b) => b.view === sectionOf(view).tabs[0].view);
-  // A section stays in More unless the bar opens it on its first page (Activity is a bar tab but lives in Intel).
+  // A section stays in More unless the bar opens it on its first page.
   // Phones hide the top switch, so Business (a top-switch page) is listed here with the sidebar sections.
   const business = SECTIONS.find((s) => s.id === "business")!;
   const more = [...SIDEBAR_SECTIONS.slice(0, -1), business, ...SIDEBAR_SECTIONS.slice(-1)].filter((s) => !PHONE_BAR.some((b) => b.view === s.tabs[0].view));
