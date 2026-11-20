@@ -97,11 +97,12 @@
     "agent-registry-sync",
     "atlas-agent-factory",
     "atlas-step-runner",
+    "atlas-task-writer",
     "agent-operations-lead",
     "documentation-lead"
    ],
    "ai_agents": 2,
-   "automations": 5
+   "automations": 6
   },
   {
    "id": "project:soc-lab",
@@ -1652,6 +1653,20 @@
    "source": ""
   },
   {
+   "id": "atlas-task-writer",
+   "name": "Agent Ops · Database Task Writer",
+   "kind": "Automation",
+   "status": "paused",
+   "building_id": "project:intelligence-hub",
+   "building_name": "Agent Operations Center",
+   "placement": "Runs from its project building",
+   "owned_by": "agent-operations-lead",
+   "project": "intelligence-hub",
+   "runtime": "n8n Cloud",
+   "trigger": "Run by hand in n8n (unpublished draft)",
+   "source": ""
+  },
+  {
    "id": "agent-operations-lead",
    "name": "Agent Operations Lead",
    "kind": "AI agent",
@@ -2103,6 +2118,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-20T14:41:20.674Z",
- "commit": "028121ce411fb51ea92f8945369ce9ce1a93adbc"
+ "generated_at": "2026-11-20T14:51:11.647Z",
+ "commit": "71597590ffe6a56ff39c4dd84ea3870ee265e726"
 }
