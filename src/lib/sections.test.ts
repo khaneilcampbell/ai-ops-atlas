@@ -9,7 +9,7 @@ describe("sidebar sections", () => {
     expect(SIDEBAR_SECTIONS.map((s) => [s.label, s.tabs.map((t) => t.label)])).toEqual([
       ["Map", ["Map"]],
       ["Agents", ["Agents"]],
-      ["Automations", ["Automations"]],
+      ["Auto", ["Automations"]],
       ["Tasks", ["Tasks"]],
       ["Workspace", ["Workspace"]],
       ["Intel", ["Intelligence", "Engineering Review", "Repositories", "Activity", "API"]],

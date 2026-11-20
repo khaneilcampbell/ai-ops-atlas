@@ -63,7 +63,7 @@ export async function settle(page: Page, steps = 3) {
 const SECTION_OF: Record<string, string> = { Activity: "Intel", API: "Intel", Intelligence: "Intel", "Engineering Review": "Intel", Repositories: "Intel", Connections: "Settings", Preferences: "Settings" };
 
 /** Pages whose sidebar label differs from the name tests use. */
-const RENAMED: Record<string, string> = { "Task Center": "Tasks", Projects: "Map" };
+const RENAMED: Record<string, string> = { "Task Center": "Tasks", Projects: "Map", Automations: "Auto" };
 
 export async function goTo(page: Page, name: string) {
   const label = RENAMED[name] ?? name;
