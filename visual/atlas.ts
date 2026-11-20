@@ -67,10 +67,12 @@ export async function goTo(page: Page, label: string) {
   // Match from the start: the Grid button's "Compare repositories" must not match "Repositories".
   const start = new RegExp(`^\\s*${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
   const tab = page.locator(".nav-item:visible, .view-switch button:visible, .section-tabs button:visible", { hasText: start }).first();
+  // A short label still finds its page ("Repos" opens Intel, then Repositories).
+  const parent = Object.entries(SECTION_OF).find(([page]) => page.startsWith(label))?.[1];
   if (await tab.count()) await tab.click();
-  else if (SECTION_OF[label]) {
-    await goTo(page, SECTION_OF[label]);
-    await page.locator(".section-tabs button", { hasText: label }).first().click();
+  else if (parent) {
+    await goTo(page, parent);
+    await page.locator(".section-tabs button", { hasText: start }).first().click();
   } else {
     // On a phone the tab bar shows four sections; the rest sit behind More (views.visual.ts).
     await page.getByRole("button", { name: "More sections" }).click();
