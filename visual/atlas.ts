@@ -64,7 +64,9 @@ const SECTION_OF: Record<string, string> = { "Task Center": "Mission", Activity:
 
 export async function goTo(page: Page, label: string) {
   // The sidebar, the top switch (Projects, Mission Control, Grid) and a section's page tabs.
-  const tab = page.locator(".nav-item:visible, .view-switch button:visible, .section-tabs button:visible", { hasText: label }).first();
+  // Match from the start: the Grid button's "Compare repositories" must not match "Repositories".
+  const start = new RegExp(`^\\s*${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+  const tab = page.locator(".nav-item:visible, .view-switch button:visible, .section-tabs button:visible", { hasText: start }).first();
   if (await tab.count()) await tab.click();
   else if (SECTION_OF[label]) {
     await goTo(page, SECTION_OF[label]);
