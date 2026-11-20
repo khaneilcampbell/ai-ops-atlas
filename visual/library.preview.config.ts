@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { defineConfig, mergeConfig, type Plugin } from "vite";
 import base from "../vite.config";
 import type { D1, D1Statement } from "../server/live";
-import { ingestOutputs, receiveOutputs, routeOutputs, type Bucket, type OutputsEnv } from "../server/outputs";
+import { ingestOutputs, LIBRARY_APP_HOOK, receiveOutputs, routeOutputs, routeOutputsForApp, type Bucket, type OutputsEnv } from "../server/outputs";
 import { LIBRARY_DEV_TOKEN, librarySamples } from "./libraryFixtures";
 
 // A click-around preview of the Output Library, for looking before a merge:
@@ -14,6 +14,9 @@ import { LIBRARY_DEV_TOKEN, librarySamples } from "./libraryFixtures";
 // drawer says so; nothing here is Atlas storage, and nothing persists after the server stops.
 // POST more with: curl -X POST localhost:5226/api/hooks/outputs -H "authorization: Bearer <LIBRARY_DEV_TOKEN>" -d @body.json
 // LIBRARY_PREVIEW_STORAGE=off previews the "file storage not connected" state.
+// LIBRARY_PREVIEW_MAC=1 previews the Mac app's Library in the browser: a stand-in for the app's Rust
+// shell (macShim below) asks the real read-only route /api/hooks/library with a development sync key,
+// as src-tauri/src/library.rs does. Open and Save to Mac become a new tab and a browser download.
 
 function sqliteD1(): D1 {
   const db = new DatabaseSync(":memory:");
@@ -46,9 +49,44 @@ function memoryBucket(): Bucket & { failNext: number } {
   return b;
 }
 
+const MAC = process.env.LIBRARY_PREVIEW_MAC === "1";
+const MAC_DEV_SYNC_KEY = "dev-preview-sync-key-not-a-secret-000000";
+
+/** Stands in for the Mac app's Rust shell: only the Library commands; every other command answers "not set up". */
+const macShim = `
+(() => {
+  const key = ${JSON.stringify(MAC_DEV_SYNC_KEY)}, base = ${JSON.stringify(LIBRARY_APP_HOOK)};
+  const get = async (path) => {
+    const r = await fetch(path, { headers: { authorization: "Bearer " + key } });
+    if (!r.ok) throw "The site refused live updates (" + r.status + "): " + ((await r.json().catch(() => ({}))).message || "");
+    return r;
+  };
+  const b64 = (buf) => { let s = ""; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); };
+  const file = (a, preview) => get(base + "/" + a.id + "/versions/" + a.version + "/file" + (preview ? "?preview=1" : ""));
+  const commands = {
+    vault_status: async () => ({ state: "unlocked" }),
+    vault_unlock: async () => ({ state: "unlocked" }),
+    library_list: async (a) => (await get(base + (a.query.length ? "?" + new URLSearchParams(a.query) : ""))).json(),
+    library_output: async (a) => (await get(base + "/" + a.id)).json(),
+    library_file: async (a) => { const r = await file(a, a.preview); const t = r.headers.get("x-atlas-truncated"); return { mime: r.headers.get("content-type"), base64: b64(await r.arrayBuffer()), truncatedFrom: t ? Number(t) : null }; },
+    library_open: async (a) => { window.open(URL.createObjectURL(await (await file(a, false)).blob()), "_blank"); return null; },
+    library_save: async (a) => { const l = document.createElement("a"); l.href = URL.createObjectURL(await (await file(a, false)).blob()); l.download = a.name; l.click(); return true; },
+  };
+  window.__TAURI_INTERNALS__ = {
+    metadata: { currentWindow: { label: "main" }, currentWebview: { windowLabel: "main", label: "main" } },
+    transformCallback: () => 0,
+    invoke: async (cmd, args) => (commands[cmd] ? commands[cmd](args || {}) : null),
+  };
+})();`;
+
+const macPreview = (): Plugin => ({
+  name: "atlas-library-preview-mac",
+  transformIndexHtml: (html) => (MAC ? html.replace("<head>", `<head><script>${macShim}</script>`) : html),
+});
+
 const libraryApi = (): Plugin => {
   const bucket = memoryBucket();
-  const env: OutputsEnv = { LIVE: sqliteD1(), AGENT_FEED_TOKEN: LIBRARY_DEV_TOKEN, LIBRARY_ENV: "development", ...(process.env.LIBRARY_PREVIEW_STORAGE === "off" ? {} : { OUTPUTS: bucket }) };
+  const env: OutputsEnv = { LIVE: sqliteD1(), AGENT_FEED_TOKEN: LIBRARY_DEV_TOKEN, USAGE_SYNC_TOKEN: MAC_DEV_SYNC_KEY, LIBRARY_ENV: "development", ...(process.env.LIBRARY_PREVIEW_STORAGE === "off" ? {} : { OUTPUTS: bucket }) };
   const opts = { sample: true, sleep: async () => {} };
   const seeded = (async () => {
     for (const s of librarySamples(Date.now())) {
@@ -70,6 +108,7 @@ const libraryApi = (): Plugin => {
         let out: Response;
         if (path === "/api/hooks/outputs" && req.method === "POST") out = await receiveOutputs(request, env, opts);
         else if (path.startsWith("/api/outputs")) out = await routeOutputs(request, env, opts);
+        else if (path.startsWith(LIBRARY_APP_HOOK)) out = await routeOutputsForApp(request, env);
         else out = Response.json({ message: "Not in the Library preview." }, { status: 404 });
         res.statusCode = out.status;
         out.headers.forEach((v, k) => res.setHeader(k, v));
@@ -82,8 +121,8 @@ const libraryApi = (): Plugin => {
 export default mergeConfig(
   base,
   defineConfig({
-    plugins: [libraryApi()],
-    define: { "import.meta.env.VITE_ATLAS_WEB": JSON.stringify("1") },
+    plugins: [libraryApi(), macPreview()],
+    define: { "import.meta.env.VITE_ATLAS_WEB": JSON.stringify(MAC ? "" : "1") },
     server: { port: Number(process.env.PORT ?? 5226), strictPort: true, host: true },
   }),
 );

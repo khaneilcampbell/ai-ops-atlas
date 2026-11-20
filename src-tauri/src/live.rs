@@ -28,7 +28,7 @@ const PROPERTY_DOMAINS: &[&str] = &["benjaire.com", "khaneilcampbell.com"];
 const REPORT_AGENTS: &[&str] = &["github-opportunity-scout", "benjaire-product-lab"];
 const MAX_EVENTS: usize = 50;
 
-async fn refused(r: reqwest::Response, path: &str) -> String {
+pub(crate) async fn refused(r: reqwest::Response, path: &str) -> String {
     let code = r.status().as_u16();
     let msg = r
         .json::<serde_json::Value>()
