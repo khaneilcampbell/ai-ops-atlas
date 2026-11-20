@@ -1,6 +1,8 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { screenRadius } from "./farDetail";
 import { Instanced, type Inst, type PickHandlerSet, type useGeometries, type useMaterials } from "./models";
 import { CAFE, CAFE_GROUND, CAFE_KEY, CAFE_NAME, type CafePlan } from "./cafePlan";
 
@@ -11,12 +13,16 @@ import { CAFE, CAFE_GROUND, CAFE_KEY, CAFE_NAME, type CafePlan } from "./cafePla
  * flowering planters and warm lamps.
  *
  * Draw cost is kept to a handful of calls: every solid part is one instanced box mesh in the map's shared
- * plain material (per-instance colours), with the round parts (table tops, planting and, by day, the lamp
- * globes) as one ball mesh, the umbrella canopies as one more (neither casts shadows), the hipped roof, one
- * merged glass mesh and one merged sign: six draws by day. No lights are added: lamps and the
+ * plain material (per-instance colours), with the round parts (table tops, the parasol, planting and, by
+ * day, the lamp globes) as one ball mesh that casts no shadow, the hipped roof, one merged glass mesh and one
+ * merged sign: five draws by day up close, three from the overview (the ball mesh and sign are skipped while
+ * a table would be under DETAIL_PX wide on screen). No lights are added: lamps and the
  * interior glow use the map's shared lamp material, which lights up at night. In the Inside view the
  * roof and ceiling lift away (like the headquarters cutaways) so the room shows from above.
  */
+/** On-screen width (device pixels) of a café table below which the small parts and the sign are skipped. */
+const DETAIL_PX = 3;
+
 const C = {
   stone: "#efe6d2",
   cream: "#f3ead6",
@@ -150,7 +156,8 @@ export function cafeParts(p: CafePlan): CafeParts {
     if (t.umbrella) {
       const U = CAFE.umbrella;
       solid.push({ p: [t.x, g + CAFE.tableTop, t.z], s: [0.014, U.low + U.rise - CAFE.tableTop, 0.014], c: C.cream });
-      out.canopies.push({ p: [t.x, g + U.low, t.z], s: [U.radius * 2, U.rise, U.radius * 2], c: C.canvas });
+      // A flattened ball reads as a round parasol and joins the shared ball mesh.
+      out.canopies.push({ p: [t.x, g + U.low + U.rise / 2, t.z], s: [U.radius, U.rise / 2, U.radius], c: C.canvas });
       solid.push({ p: [t.x, g + U.low + U.rise - 0.005, t.z], s: [0.03, 0.025, 0.03], c: C.gold });
     }
   }
@@ -233,19 +240,31 @@ export default function CommunityCafe({ plan, g, m, pick, night, inside }: { pla
   // Inside view, so the room shows from the map's camera) and, by day, the ceiling's light panel.
   const boxes = useMemo(() => (parts ? [...parts.solid, ...(inside ? [] : parts.roof), ...(inside || night ? [] : parts.glow)] : null), [parts, inside, night]);
   // Table tops, planting and (by day, when they are unlit) the lamp globes share one ball mesh.
-  const rounds = useMemo(() => (parts ? [...parts.tops, ...parts.leaves, ...(night ? [] : parts.lamps)] : null), [parts, night]);
+  const rounds = useMemo(() => (parts ? [...parts.tops, ...parts.canopies, ...parts.leaves, ...(night ? [] : parts.lamps)] : null), [parts, night]);
+  // From the map overview a table top is under a pixel across and the sign's letters are a smudge, so the
+  // small parts (and the sign) are only drawn once a table would be at least DETAIL_PX wide on screen.
+  const details = useRef<THREE.Group>(null);
+  const centre = useMemo(() => (parts?.hip[0] ? new THREE.Vector3(...parts.hip[0].p) : null), [parts]);
+  useFrame(({ camera, gl, size }) => {
+    const grp = details.current;
+    if (!grp || !centre || !(camera as THREE.PerspectiveCamera).isPerspectiveCamera) return;
+    const px = 2 * screenRadius(CAFE.tableRadius, camera.position.distanceTo(centre), (camera as THREE.PerspectiveCamera).fov, size.height * gl.getPixelRatio());
+    grp.visible = grp.visible ? px >= DETAIL_PX / 1.25 : px >= DETAIL_PX;
+  });
   const picks = useMemo(() => (parts && boxes ? { boxes: pick.of(boxes.map(() => CAFE_KEY)), hip: pick.of(parts.hip.map(() => CAFE_KEY)) } : null), [parts, boxes, pick]);
   if (!plan || !parts || !kit || !picks || !boxes || !rounds) return null;
   return (
     <group name="community-cafe" userData={{ label: CAFE_NAME }}>
       <Instanced items={boxes} geometry={g.box} material={m.plain} pick={picks.boxes} />
-      <Instanced items={rounds} geometry={g.ball} material={m.plain} shadow={false} />
-      <Instanced items={parts.canopies} geometry={g.cone} material={m.plain} shadow={false} />
+      <group ref={details}>
+        <Instanced items={rounds} geometry={g.ball} material={m.plain} shadow={false} />
+        {!inside && <mesh geometry={kit.sign} material={kit.signFace} raycast={() => null} />}
+      </group>
       {night && <Instanced items={parts.lamps} geometry={g.bead} material={m.lamp} shadow={false} />}
-      {!inside && <Instanced items={parts.hip} geometry={g.hip} material={m.roof} pick={picks.hip} />}
+      {/* The roof slab and fascia boxes already cast the roof's shadow, so the hip itself does not. */}
+      {!inside && <Instanced items={parts.hip} geometry={g.hip} material={m.roof} pick={picks.hip} shadow={false} />}
       {!inside && night && <Instanced items={parts.glow} geometry={g.box} material={m.lamp} shadow={false} />}
       <mesh geometry={kit.glassGeo} material={kit.glass} renderOrder={2} raycast={() => null} />
-      {!inside && <mesh geometry={kit.sign} material={kit.signFace} raycast={() => null} />}
     </group>
   );
 }
