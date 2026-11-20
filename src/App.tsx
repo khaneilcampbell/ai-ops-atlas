@@ -215,7 +215,8 @@ function PhoneNav({ attention, status }: { attention: number; status: PhoneStatu
   const current = PHONE_BAR.find((b) => b.view === tabOf(view)) ?? PHONE_BAR.find((b) => b.view === sectionOf(view).tabs[0].view);
   // A section stays in More unless the bar opens it on its first page (Activity is a bar tab but lives in Intel).
   // Phones hide the top switch, so Business (a top-switch page) is listed here with the sidebar sections.
-  const more = SECTIONS.filter((s) => (SIDEBAR_SECTIONS.includes(s) || s.id === "business") && !PHONE_BAR.some((b) => b.view === s.tabs[0].view));
+  const business = SECTIONS.find((s) => s.id === "business")!;
+  const more = [...SIDEBAR_SECTIONS.slice(0, -1), business, ...SIDEBAR_SECTIONS.slice(-1)].filter((s) => !PHONE_BAR.some((b) => b.view === s.tabs[0].view));
   const inMore = !current;
   const go = (v: View) => {
     setView(v);

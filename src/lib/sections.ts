@@ -5,7 +5,7 @@ export interface SectionTab { view: View; label: string }
 export interface Section { id: string; label: string; icon: IconName; tabs: SectionTab[] }
 
 /**
- * Where every page lives. The left sidebar shows Projects, Grid, Task, Agents, Automations, Intel, Workspace and Settings;
+ * Where every page lives. The left sidebar shows, in this order, Projects, Agents, Automations, Task, Workspace, Intel, Grid and Settings;
  * Projects, Mission Control and Business are in the top switch (Business swapped places with Grid). A section with more than one page shows its
  * pages as tabs above the content. View ids are unchanged, so saved views and links keep working.
  */
@@ -24,7 +24,7 @@ export const SECTIONS: Section[] = [
 ];
 
 /** The sections the left sidebar lists; Mission Control and Business open from the top switch. */
-export const SIDEBAR_SECTIONS = SECTIONS.filter((s) => ["map", "grid", "tasks", "agents", "automations", "intel", "workspace", "settings"].includes(s.id));
+export const SIDEBAR_SECTIONS = ["map", "agents", "automations", "tasks", "workspace", "intel", "grid", "settings"].map((id) => SECTIONS.find((s) => s.id === id)!);
 
 /** Pages that open from inside another page and keep its section highlighted. */
 // "api-github" was its own tab; GitHub requests now share the Claude costs page.

@@ -8,12 +8,12 @@ describe("sidebar sections", () => {
   it("lists the sidebar sections with their pages in order", () => {
     expect(SIDEBAR_SECTIONS.map((s) => [s.label, s.tabs.map((t) => t.label)])).toEqual([
       ["Projects", ["Projects"]],
-      ["Grid", ["Grid"]],
-      ["Task", ["Task"]],
       ["Agents", ["Agents"]],
       ["Automations", ["Automations"]],
-      ["Intel", ["Intelligence", "Engineering Review", "Repositories", "Activity", "API"]],
+      ["Task", ["Task"]],
       ["Workspace", ["Workspace"]],
+      ["Intel", ["Intelligence", "Engineering Review", "Repositories", "Activity", "API"]],
+      ["Grid", ["Grid"]],
       ["Settings", ["Connections", "Preferences"]],
     ]);
   });
