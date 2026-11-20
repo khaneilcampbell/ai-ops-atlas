@@ -8,7 +8,8 @@ import { focusTasks } from "../../tasks/focus";
 import { formatDateTime } from "../../lib/timezone";
 import { relative } from "../../lib/time";
 import { SafeMarkdown } from "../workflows/OutputRenderers";
-import { closeLibrary, fetchOutput, fetchOutputs, fetchTextPreview, fileUrl, libraryAvailability, reconcileReportsOnce, retryOutput } from "../../library/client";
+import { canChangeLibrary, canOpenOnMac, closeLibrary, fetchOutput, fetchOutputs, fetchTextPreview, fileUrl, imageSource, libraryAvailability, openOnMac, reconcileReportsOnce, retryOutput, saveOnMac } from "../../library/client";
+import { isTauri } from "../../lib/env";
 import {
   APPROVAL_LABEL,
   FORMAT_LABEL,
@@ -16,6 +17,7 @@ import {
   LIBRARY_BUILDING_NAME,
   parseDelimited,
   previewKind,
+  safeFilename,
   sizeLabel,
   STORAGE_LABEL,
   type Approval,
@@ -351,6 +353,9 @@ function OutputDetailPane({
   const [preview, setPreview] = useState(false);
   const [retrying, setRetrying] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const [macBusy, setMacBusy] = useState(false);
+  const [macNote, setMacNote] = useState<{ text: string; bad: boolean } | null>(null);
+  const mac = useMemo(isTauri, []);
   const heading = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -375,6 +380,19 @@ function OutputDetailPane({
   const canFile = v.storage === "saved";
   const kind = previewKind(v.mime);
   const building = v.building ? (catalog.projects.find((p) => p.id === v.building)?.name ?? v.building) : null;
+  const fileName = safeFilename(v.title, v.mime);
+  // The Mac app opens files in their default app or saves them where Khaneil picks.
+  const onMac = async (action: "open" | "save") => {
+    setMacBusy(true);
+    setMacNote(null);
+    try {
+      if (action === "open") await openOnMac(detail.id, v.version, fileName);
+      else if (await saveOnMac(detail.id, v.version, fileName)) setMacNote({ text: `Saved ${fileName}.`, bad: false });
+    } catch (e) {
+      setMacNote({ text: e instanceof Error ? e.message : String(e), bad: true });
+    }
+    setMacBusy(false);
+  };
 
   return (
     <section className="lib-detail" aria-labelledby="lib-detail-title">
@@ -394,7 +412,8 @@ function OutputDetailPane({
       {v.storage !== "saved" && (
         <div className="lib-banner bad" role="alert">
           <b>{v.storage === "pending" ? "The file is still being saved." : "The file for this output wasn't saved."}</b> {v.storageError ?? ""}
-          {v.via === "agent_report" && v.storage === "failed" && (
+          {v.via === "agent_report" && v.storage === "failed" && !canChangeLibrary() && <span className="lib-sub"> Retry it from the Atlas web page.</span>}
+          {v.via === "agent_report" && v.storage === "failed" && canChangeLibrary() && (
             <>
               {" "}
               <button
@@ -425,7 +444,18 @@ function OutputDetailPane({
         <button type="button" className="lib-btn" disabled={!canFile || kind === "none"} aria-expanded={preview} onClick={() => setPreview(!preview)} title={kind === "none" ? "This format downloads instead" : undefined}>
           <Icon name="focus" size={14} /> {preview ? "Hide preview" : "Preview"}
         </button>
-        {canFile ? (
+        {canFile && mac ? (
+          <>
+            {canOpenOnMac(fileName) && (
+              <button type="button" className="lib-btn primary" disabled={macBusy} onClick={() => onMac("open")}>
+                <Icon name="external" size={14} /> Open
+              </button>
+            )}
+            <button type="button" className={`lib-btn${canOpenOnMac(fileName) ? "" : " primary"}`} disabled={macBusy} onClick={() => onMac("save")}>
+              <Icon name="download" size={14} /> Save to Mac…
+            </button>
+          </>
+        ) : canFile ? (
           <a className="lib-btn primary" href={fileUrl(detail.id, v.version, "download")} download>
             <Icon name="download" size={14} /> Download
           </a>
@@ -439,7 +469,9 @@ function OutputDetailPane({
         </button>
       </div>
 
-      {preview && canFile && <Preview id={detail.id} v={v} />}
+      {macNote && <p className={`lib-sub lib-mac-note${macNote.bad ? " bad" : ""}`} role={macNote.bad ? "alert" : "status"}>{macNote.text}</p>}
+
+      {preview && canFile && <Preview id={detail.id} v={v} onOpen={mac && canOpenOnMac(fileName) ? () => onMac("open") : undefined} />}
 
       {v.summary && <p className="lib-summary">{v.summary}</p>}
 
@@ -491,7 +523,7 @@ function OutputDetailPane({
       <ol className="lib-versions">
         {detail.history.map((h) => (
           <li key={h.version}>
-            <button type="button" className={h.version === v.version ? "on" : ""} aria-current={h.version === v.version || undefined} onClick={() => { setVersion(h.version); setPreview(false); }}>
+            <button type="button" className={h.version === v.version ? "on" : ""} aria-current={h.version === v.version || undefined} onClick={() => { setVersion(h.version); setPreview(false); setMacNote(null); }}>
               <span>v{h.version}</span>
               <span className="lib-sub">{formatDateTime(h.producedAt)} · {sizeLabel(h.size)}</span>
               <span className={`lib-dot s-${h.storage === "saved" && h.verifiedAt ? "verified" : h.storage}`} aria-label={h.storage === "saved" && h.verifiedAt ? "Retrieval verified" : STORAGE_LABEL[h.storage]} />
@@ -504,21 +536,33 @@ function OutputDetailPane({
 }
 
 /** Previews from the authorized file route. Text is read as text (first 256 KB) and drawn as React text. */
-function Preview({ id, v }: { id: string; v: OutputVersion }) {
+function Preview({ id, v, onOpen }: { id: string; v: OutputVersion; onOpen?: () => void }) {
   const kind = previewKind(v.mime);
   const [text, setText] = useState<{ text: string; truncatedFrom: number | null } | null>(null);
+  const [img, setImg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const textual = kind === "text" || kind === "markdown" || kind === "table";
+  const mac = isTauri();
   useEffect(() => {
-    if (!textual) return;
+    if (!textual && kind !== "image") return;
     const ac = new AbortController();
-    fetchTextPreview(id, v.version, ac.signal).then(setText).catch((e) => !ac.signal.aborted && setErr(e instanceof Error ? e.message : String(e)));
+    const fail = (e: unknown) => !ac.signal.aborted && setErr(e instanceof Error ? e.message : String(e));
+    if (kind === "image") imageSource(id, v.version, ac.signal).then(setImg).catch(fail);
+    else fetchTextPreview(id, v.version, ac.signal).then(setText).catch(fail);
     return () => ac.abort();
-  }, [id, v.version, textual]);
+  }, [id, v.version, textual, kind]);
 
-  if (kind === "image") return <figure className="lib-preview"><img src={fileUrl(id, v.version, "inline")} alt={`Preview of ${v.title}`} /></figure>;
+  // The Mac app's window can't frame a PDF, so it opens in Preview instead.
+  if (kind === "pdf" && mac)
+    return (
+      <div className="lib-preview lib-preview-mac">
+        <p>PDFs open in Preview on your Mac.</p>
+        {onOpen && <button type="button" className="lib-btn" onClick={onOpen}><Icon name="external" size={14} /> Open in Preview</button>}
+      </div>
+    );
   if (kind === "pdf") return <figure className="lib-preview pdf"><iframe src={fileUrl(id, v.version, "inline")} title={`Preview of ${v.title}`} /></figure>;
   if (err) return <p className="lib-banner bad">Couldn't load the preview: {err}</p>;
+  if (kind === "image") return img ? <figure className="lib-preview"><img src={img} alt={`Preview of ${v.title}`} /></figure> : <p className="lib-empty">Loading preview…</p>;
   if (!text) return <p className="lib-empty">Loading preview…</p>;
   const cut = text.truncatedFrom ? <p className="lib-sub">Showing the first {sizeLabel(text.text.length)} of {sizeLabel(text.truncatedFrom)}. Download for the whole file.</p> : null;
   if (kind === "table") {

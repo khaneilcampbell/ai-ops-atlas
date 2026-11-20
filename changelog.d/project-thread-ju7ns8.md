@@ -1,0 +1,1 @@
+- 2026-11-20 · The Library button now works in the Mac app: browse every agent output, preview text and images, open PDFs in Preview, and save files to your Mac. It uses the website sync you already set up (#505)

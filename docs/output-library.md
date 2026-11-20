@@ -69,7 +69,22 @@ All behind Cloudflare Access (`functions/_middleware.ts`), changes same-site onl
 - `POST /api/outputs/<id>/versions/<n>/retry`: rebuilds a failed report version from the report D1
   still holds. Other files must be sent again by their workflow (Atlas keeps no copy of a file it couldn't store).
 
-The Mac app doesn't read the Library yet (it would need its own sync-key route in Rust); it says so.
+## Reading (Mac app)
+
+The Mac app has no Access session, so it reads the same Library through its Rust shell
+(`src-tauri/src/library.rs`) with the website sync key it already keeps in the Keychain
+(Settings → Website sync; the site's `USAGE_SYNC_TOKEN`). No new key or setting is needed.
+
+- `GET /api/hooks/library[?…]`, `GET /api/hooks/library/<id>`, `GET /api/hooks/library/<id>/versions/<n>/file[?preview=1]`:
+  the same answers as the web page's reads (`server/outputs.ts` `routeOutputsForApp`). Read-only:
+  anything but GET is refused, and reconcile and retry are only on the signed-in page.
+- Text and image previews come through the shell; image bytes become a `data:` URL, which the app's
+  existing content policy allows. PDFs can't be framed in the app window, so they open in Preview.
+- **Open** writes the file to the app's cache folder and opens it in its default Mac app, only for
+  PDF, PNG, JPEG, GIF, WebP, text, Markdown, CSV, TSV, JSON, .docx, .xlsx and .pptx, and only when the
+  site served it as that type (an HTML file titled `notes.pdf` is refused). **Save to Mac…** saves any
+  file where Khaneil picks in the save dialog.
+- With website sync off, the drawer says to turn it on instead of showing an empty Library.
 
 ## Setup
 
