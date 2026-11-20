@@ -8,6 +8,9 @@ import { matches } from "../lib/search";
 import { useAtlas } from "../state";
 import { rosterAgents } from "./map3d/cityRoster";
 
+/** Agent chips shown per row; the rest open from the project. Keeps rows an even height. */
+const MAX_AGENTS = 3;
+
 /**
  * Projects: the practical list view of every Atlas project, next to the Map's city view. Each
  * project shows its status, linked repositories and assigned agents; opening one shows the same
@@ -44,14 +47,22 @@ export function ProjectsView() {
         <div className="card empty">No projects match these filters.</div>
       ) : (
         <section className="card">
-          <table className="table">
+          <table className="table projects-table">
             <caption className="sr-only">Atlas projects</caption>
+            <colgroup>
+              <col className="c-project" />
+              <col className="c-status" />
+              <col className="c-repos" />
+              <col className="c-agents" />
+              <col className="c-autos" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Project</th>
                 <th>Status</th>
                 <th>Repositories</th>
                 <th>Agents</th>
+                <th className="num">Automations</th>
               </tr>
             </thead>
             <tbody>
@@ -59,7 +70,7 @@ export function ProjectsView() {
                 <tr key={p.id}>
                   <td>
                     <button className="text-btn" onClick={() => select({ kind: "project", id: p.id })}>{p.name}</button>
-                    <div className="muted small">{p.summary}</div>
+                    <div className="muted small project-summary" title={p.summary}>{p.summary}</div>
                   </td>
                   <td><StatusPill status={p.status} /></td>
                   <td>
@@ -71,13 +82,16 @@ export function ProjectsView() {
                   </td>
                   <td>
                     <div className="chips">
-                      {agents.map(({ agent, identity }) => (
+                      {agents.slice(0, MAX_AGENTS).map(({ agent, identity }) => (
                         <button key={agent.id} className="chip" onClick={() => select({ kind: "agent", id: agent.id })}>{identity.name}</button>
                       ))}
+                      {agents.length > MAX_AGENTS && (
+                        <button className="chip more" onClick={() => select({ kind: "project", id: p.id })} title="Open the project for all its agents">+{agents.length - MAX_AGENTS} more</button>
+                      )}
                       {agents.length === 0 && <span className="muted small">No agents</span>}
                     </div>
-                    {automations > 0 && <div className="muted small">{automations} automation{automations === 1 ? "" : "s"}</div>}
                   </td>
+                  <td className="num">{automations || <span className="muted">–</span>}</td>
                 </tr>
               ))}
             </tbody>
