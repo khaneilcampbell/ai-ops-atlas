@@ -6,36 +6,41 @@ import { RUN_LABEL, duration, isActive, lastRuns, rollup, runTone, scheduleLabel
 import { formatDate, relative } from "../lib/time";
 import type { AgentStatus, Run } from "../intel/types";
 import { EngineeringReview } from "./EngineeringReview";
+import { GitHubRequests } from "./Settings";
 import { isReviewRun } from "../intel/ecosystem";
 import { formatTime } from "../lib/timezone";
 
+// Engineering review is its own Intel page (view "review"), so it is not a tab here.
 const TABS = [
   { id: "inspector", label: "Agent inspector" },
-  { id: "review", label: "Engineering review" },
   { id: "activity", label: "Activity" },
   { id: "costs", label: "Costs" },
 ] as const;
-type Tab = (typeof TABS)[number]["id"];
+type Tab = (typeof TABS)[number]["id"] | "review";
 
-export function IntelligenceView() {
+/** One part of Intel on its own page: Engineering Review (Intel) or Claude costs (Intel → API). */
+type Only = "review" | "costs";
+
+export function IntelligenceView({ only }: { only?: Only }) {
   const intel = useIntel();
-  const [tab, setTab] = useState<Tab>("inspector");
+  const [picked, setTab] = useState<Tab>("inspector");
+  const tab: Tab = only ?? picked;
 
   return (
     <div className="page">
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">Claude · read-only analysis</div>
-          <h1>Repository intelligence</h1>
-          <p className="lede">Structured reports on your repositories, grounded in GitHub data. Open a repository and choose Analyze to run it.</p>
+          <div className="eyebrow">{only === "costs" ? "Intel · API · Claude & GitHub" : only === "review" ? "Intel · Engineering Review" : "Intel · Repositories"}</div>
+          <h1>{only === "review" ? "Engineering review" : only === "costs" ? "Claude costs and GitHub requests" : "Repository intelligence"}</h1>
+          <p className="lede">{only === "costs" ? "Tokens and estimated spend of repository intelligence runs against your monthly budget, and how much of GitHub's hourly request limit Atlas has used." : only === "review" ? "Recommendations from engineering reviews across every repository. Read-only: nothing changes without your approval." : "Structured reports on your repositories, grounded in GitHub data. Open a repository and choose Analyze to run it."}</p>
         </div>
-        <div className="seg" role="tablist">
+        {!only && <div className="seg" role="tablist">
           {TABS.map((t) => (
             <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? "on" : undefined} onClick={() => setTab(t.id)}>
               {t.label}
             </button>
           ))}
-        </div>
+        </div>}
       </div>
       {!intel.available ? (
         <div className="card empty">Repository intelligence runs in the desktop app, which keeps the Anthropic key in the Keychain.</div>
@@ -50,6 +55,7 @@ export function IntelligenceView() {
       ) : (
         <Costs status={intel.status} />
       )}
+      {only === "costs" && <GitHubRequests />}
     </div>
   );
 }

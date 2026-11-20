@@ -869,7 +869,7 @@ function AdminTab({ w, probe }: { w: Workspace | null; probe: Probe }) {
         <div className="card-head">
           <h2 className="grow">Usage</h2>
           <button className="text-btn small" onClick={() => setView("usage")}>
-            API Usage details ›
+            Provider usage details ›
           </button>
         </div>
         <div className="product-stats">

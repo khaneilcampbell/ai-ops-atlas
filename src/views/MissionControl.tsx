@@ -166,7 +166,7 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
                 </div>
               </div>
               {intel.status ? (
-                <button className="api-num text-btn" onClick={() => setView("intel")} title="Open Intel">
+                <button className="api-num text-btn" onClick={() => setView("api-costs")} title="Open Claude & GitHub costs">
                   {usd(intel.status.month_spent_usd, 2)}
                   {intel.status.config.monthly_budget_usd > 0 && <span className="muted"> / {usd(intel.status.config.monthly_budget_usd, 0)}</span>}
                 </button>
