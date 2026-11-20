@@ -33,11 +33,9 @@ for (const width of [1512, 390])
     await page.getByRole("tab", { name: /^Archived/ }).click();
     await expect(page.getByRole("list", { name: "Archived entries" }).getByRole("button")).toHaveCount(11);
     await page.screenshot({ path: `${out}/archived-${width}.png` });
-    await page.getByRole("tab", { name: /^Inactive/ }).click();
-    // Only the Career Execution Agent is inactive: an unpublished n8n draft until Khaneil approves it.
-    const inactive = page.getByRole("list", { name: "Inactive entries" }).getByRole("button");
-    await expect(inactive).toHaveCount(1);
-    await expect(inactive.first()).toHaveAttribute("data-id", "career-execution");
+    // Nothing is inactive since the Career Execution Agent was published on 2026-11-19.
+    await page.getByRole("tab", { name: /^Inactive 0/ }).click();
+    await expect(page.getByText("Nothing inactive matches.")).toBeVisible();
     await page.getByRole("tab", { name: "All entries" }).click();
     await expect(page.locator(".reg-row").first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);

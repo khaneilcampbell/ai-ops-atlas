@@ -1,1 +1,1 @@
-- 2026-11-19 · The Task Center can now start two n8n workflows, the Career Execution Agent and Add product idea: fill in a short form, check it, confirm with Touch ID, and Atlas follows the run until n8n says it finished. Each start is signed by the website and limited per day; it needs a one-time setup (docs/n8n-start.md) (#PR)
+- 2026-11-19 · The Agents tab now shows the Career Execution Agent as live, and both it and Add product idea can be started from the Task Center now that they are published in n8n (#493)

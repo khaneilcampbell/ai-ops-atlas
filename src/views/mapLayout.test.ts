@@ -243,11 +243,25 @@ it("has no Skyline project or district, and no stray for its old repository", ()
 });
 
 it("adds no kiosk for an agent that is off on purpose, so a draft doesn't move the city", () => {
-  const draft = catalog.agents.find(a => a.id === "career-execution");
-  expect(draft?.alerts?.notRunning).toBeTruthy();
-  const without: Catalog = { ...catalog, agents: catalog.agents.filter(a => a !== draft) };
+  // A draft in the Portfolio district that names a service none of its live agents use (Splunk).
+  const base = catalog.agents.find(a => a.id === "career-execution")!;
+  const draft = {
+    ...base,
+    id: "draft-probe",
+    alerts: { ...base.alerts, notRunning: "Draft, off on purpose" },
+    registry: { ...base.registry, responsibilities: { ...base.registry?.responsibilities, tools: ["Splunk"] } },
+  } as typeof base;
+  const withDraft: Catalog = { ...catalog, agents: [...catalog.agents, draft] };
   const where = (l: Layout) => rects(l).map(r => `${r.id}:${r.x},${r.y},${r.w},${r.h}`).sort();
-  expect(where(layoutMap(catalog, [], "district"))).toEqual(where(layoutMap(without, [], "district")));
+  expect(where(layoutMap(withDraft, [], "district"))).toEqual(where(layoutMap(catalog, [], "district")));
+});
+
+it("keeps the city where it was now that the Career Execution Agent is live (its tools add no kiosk)", () => {
+  const career = catalog.agents.find(a => a.id === "career-execution")!;
+  expect(career.status).toBe("active");
+  const asDraft: Catalog = { ...catalog, agents: catalog.agents.map(a => (a === career ? ({ ...a, alerts: { failures: true, reportWithinMs: null, ...a.alerts, notRunning: "Draft" } } as typeof a) : a)) };
+  const where = (l: Layout) => rects(l).map(r => `${r.id}:${r.x},${r.y},${r.w},${r.h}`).sort();
+  expect(where(layoutMap(catalog, [], "district"))).toEqual(where(layoutMap(asDraft, [], "district")));
 });
 
 describe("keepRemovedLots", () => {
