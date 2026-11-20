@@ -336,19 +336,22 @@ export function planRoutine(input: RoutineInput): Routine {
    * scheduled run. `scheduled` is that run's time, when known, so the last outing ends early enough
    * to commute in. Returns the segments' end (== stopAt, or the scheduled commute start).
    */
-  const outing = input.outing && !isNight(input.outing.at, tz) ? input.outing : null;
+  // Asked for at night too: an agent still out (say walking home at 6:30 AM) goes. Only one already
+  // home for the night stays in, which is also when Atlas stops offering free time.
+  const outing = input.outing ?? null;
   let outingDone = false;
   const free = (stopAt: number, scheduled: number | null) => {
     if (outing && !outingDone && outing.at >= cur.t && outing.at < stopAt) {
       outingDone = true;
-      // Still free at that moment (not already set to head in for a scheduled run): go.
-      if (!freeLoop(outing.at, scheduled)) {
+      // Still free at that moment (not already set to head in for a scheduled run) and not home: go.
+      if (!freeLoop(outing.at, scheduled) && !homeAt(outing.at)) {
         interrupt(outing.at);
         goOuting(outing.kind, scheduled);
       }
     }
     freeLoop(stopAt, scheduled);
   };
+  const homeAt = (t: number) => segments.some((s) => s.t0 <= t && s.t1 > t && s.activity === "at_home");
   /** The outing asked for from Atlas, chosen among the places of that kind (nearest that fits first). */
   const goOuting = (kind: LeisureKind | "any", scheduled: number | null) => {
     const limit = scheduled !== null ? scheduled - leadFrom(cur.at) : Infinity;
