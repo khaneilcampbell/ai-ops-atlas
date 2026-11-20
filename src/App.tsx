@@ -178,8 +178,10 @@ export default function App() {
           {view === "automations" && <AgentsView key="automations" kind="automations" />}
           {view === "repos" && <ReposView />}
           {view === "intel" && <IntelligenceView />}
-          {view === "review" && <IntelligenceView review />}
+          {view === "review" && <IntelligenceView only="review" />}
           {view === "usage" && <UsageView />}
+          {view === "api-costs" && <IntelligenceView only="costs" />}
+          {view === "api-github" && <SettingsView part="github" />}
           {view === "workspace" && (
             <Suspense fallback={<div className="page muted">Loading…</div>}>
               <WorkspaceView />

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { View } from "../state";
 import { SECTIONS, SIDEBAR_SECTIONS, sectionEntry, sectionOf, tabOf } from "./sections";
 
-const ALL: View[] = ["overview", "workflows", "tasks", "business", "agents", "automations", "repos", "map", "grid", "activity", "intel", "review", "usage", "workspace", "settings", "preferences"];
+const ALL: View[] = ["overview", "workflows", "tasks", "business", "agents", "automations", "repos", "map", "grid", "activity", "intel", "review", "usage", "api-costs", "api-github", "workspace", "settings", "preferences"];
 
 describe("sidebar sections", () => {
   it("lists Projects, Business, Agents, Automations, Intel and Settings with their pages in order", () => {
@@ -11,7 +11,8 @@ describe("sidebar sections", () => {
       ["Business", ["Business"]],
       ["Agents", ["Agents"]],
       ["Automations", ["Automations"]],
-      ["Intel", ["Intelligence", "Engineering Review", "Repositories", "API Usage", "Activity"]],
+      ["Intel", ["Intelligence", "Engineering Review", "Repositories", "Activity"]],
+      ["API Usage", ["Provider usage", "Claude costs", "GitHub requests"]],
       ["Settings", ["Workspace", "Connections", "Preferences"]],
     ]);
   });
@@ -30,7 +31,7 @@ describe("sidebar sections", () => {
 
   it("maps the old standalone entries to their new parent", () => {
     expect(sectionOf("repos").id).toBe("intel");
-    expect(sectionOf("usage").id).toBe("intel");
+    expect(sectionOf("usage").id).toBe("api");
     expect(sectionOf("automations").id).toBe("automations");
     expect(sectionOf("workspace").id).toBe("settings");
     // Older links to "settings" open Connections, where the GitHub token and keys live.
@@ -44,7 +45,7 @@ describe("sidebar sections", () => {
   it("reopens a section on its last tab, else its first", () => {
     const intel = SECTIONS.find((s) => s.id === "intel")!;
     expect(sectionEntry(intel, {})).toBe("intel");
-    expect(sectionEntry(intel, { intel: "usage" })).toBe("usage");
+    expect(sectionEntry(intel, { intel: "repos" })).toBe("repos");
     expect(sectionEntry(intel, { intel: "agents" })).toBe("intel");
   });
 });

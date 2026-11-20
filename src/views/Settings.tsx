@@ -18,16 +18,19 @@ import { BackupSetting } from "./BackupSetting";
 import "../styles/production.css";
 
 /** Settings in two pages: Connections (accounts, keys, sync, write access) and Preferences. */
-export function SettingsView({ part }: { part: "connections" | "preferences" }) {
+export function SettingsView({ part }: { part: "connections" | "preferences" | "github" }) {
   const { settings, setSettings, clearCache, catalog, manifestIssues, refresh, usage } = useAtlas();
   return (
     <div className="page" style={{ maxWidth: 860 }}>
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">Settings</div>
-          <h1>{part === "connections" ? "Connections" : "Preferences"}</h1>
+          <div className="eyebrow">{part === "github" ? "API Usage" : "Settings"}</div>
+          <h1>{part === "connections" ? "Connections" : part === "github" ? "GitHub requests" : "Preferences"}</h1>
         </div>
       </div>
+
+      {/* The GitHub API budget, also shown under Connections beside the token that spends it. */}
+      {part === "github" && <section className="card"><UsageSetting usage={usage} /></section>}
 
       {part === "connections" ? <>
       <section className="card" style={{ marginBottom: 16 }}>
@@ -46,7 +49,7 @@ export function SettingsView({ part }: { part: "connections" | "preferences" }) 
       <SyncSettings />
 
       <ActionsSettings />
-      </> : <>
+      </> : part === "preferences" ? <>
       <TimeZoneSetting />
       <PowerSetting />
       <NavigationSetting />
@@ -130,7 +133,7 @@ export function SettingsView({ part }: { part: "connections" | "preferences" }) 
           )}
         </div>
       </section>
-      </>}
+      </> : null}
     </div>
   );
 }

@@ -17,20 +17,23 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number]["id"] | "review";
 
-export function IntelligenceView({ review = false }: { review?: boolean }) {
+/** One part of Intel on its own page: Engineering Review (Intel) or Claude costs (API Usage). */
+type Only = "review" | "costs";
+
+export function IntelligenceView({ only }: { only?: Only }) {
   const intel = useIntel();
   const [picked, setTab] = useState<Tab>("inspector");
-  const tab: Tab = review ? "review" : picked;
+  const tab: Tab = only ?? picked;
 
   return (
     <div className="page">
       <div className="page-head">
         <div className="grow">
           <div className="eyebrow">Claude · read-only analysis</div>
-          <h1>{review ? "Engineering review" : "Repository intelligence"}</h1>
-          <p className="lede">Structured reports on your repositories, grounded in GitHub data. Open a repository and choose Analyze to run it.</p>
+          <h1>{only === "review" ? "Engineering review" : only === "costs" ? "Claude API costs" : "Repository intelligence"}</h1>
+          <p className="lede">{only === "costs" ? "Tokens and estimated spend of repository intelligence runs against your monthly budget." : "Structured reports on your repositories, grounded in GitHub data. Open a repository and choose Analyze to run it."}</p>
         </div>
-        {!review && <div className="seg" role="tablist">
+        {!only && <div className="seg" role="tablist">
           {TABS.map((t) => (
             <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? "on" : undefined} onClick={() => setTab(t.id)}>
               {t.label}

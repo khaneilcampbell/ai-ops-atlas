@@ -60,7 +60,7 @@ export async function settle(page: Page, steps = 3) {
 }
 
 /** Pages that sit as a tab inside a section, and the section that holds them. */
-const SECTION_OF: Record<string, string> = { "Task Center": "Mission", Activity: "Intel", Intelligence: "Intel", "Engineering Review": "Intel", Repositories: "Intel", "API Usage": "Intel", Workspace: "Settings", Connections: "Settings", Preferences: "Settings" };
+const SECTION_OF: Record<string, string> = { "Task Center": "Mission", Activity: "Intel", Intelligence: "Intel", "Engineering Review": "Intel", Repositories: "Intel", "Provider usage": "API Usage", "Claude costs": "API Usage", "GitHub requests": "API Usage", Workspace: "Settings", Connections: "Settings", Preferences: "Settings" };
 
 export async function goTo(page: Page, label: string) {
   // The sidebar, the top switch (Projects, Mission Control, Grid) and a section's page tabs.

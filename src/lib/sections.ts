@@ -5,7 +5,7 @@ export interface SectionTab { view: View; label: string }
 export interface Section { id: string; label: string; icon: IconName; tabs: SectionTab[] }
 
 /**
- * Where every page lives. The left sidebar shows Projects, Business, Agents, Automations, Intel and Settings;
+ * Where every page lives. The left sidebar shows Projects, Business, Agents, Automations, Intel, API Usage and Settings;
  * Projects, Mission Control and Grid are also in the top switch. A section with more than one page shows its
  * pages as tabs above the content. View ids are unchanged, so saved views and links keep working.
  */
@@ -16,12 +16,14 @@ export const SECTIONS: Section[] = [
   { id: "business", label: "Business", icon: "briefcase", tabs: [{ view: "business", label: "Business" }] },
   { id: "agents", label: "Agents", icon: "agents", tabs: [{ view: "agents", label: "Agents" }] },
   { id: "automations", label: "Automations", icon: "network", tabs: [{ view: "automations", label: "Automations" }] },
-  { id: "intel", label: "Intel", icon: "spark", tabs: [{ view: "intel", label: "Intelligence" }, { view: "review", label: "Engineering Review" }, { view: "repos", label: "Repositories" }, { view: "usage", label: "API Usage" }, { view: "activity", label: "Activity" }] },
+  { id: "intel", label: "Intel", icon: "spark", tabs: [{ view: "intel", label: "Intelligence" }, { view: "review", label: "Engineering Review" }, { view: "repos", label: "Repositories" }, { view: "activity", label: "Activity" }] },
+  // Every API number in one place: provider usage, Claude costs and the GitHub request budget.
+  { id: "api", label: "API Usage", icon: "usage", tabs: [{ view: "usage", label: "Provider usage" }, { view: "api-costs", label: "Claude costs" }, { view: "api-github", label: "GitHub requests" }] },
   { id: "settings", label: "Settings", icon: "settings", tabs: [{ view: "workspace", label: "Workspace" }, { view: "settings", label: "Connections" }, { view: "preferences", label: "Preferences" }] },
 ];
 
 /** The sections the left sidebar lists; Mission Control and Grid open from the top switch. */
-export const SIDEBAR_SECTIONS = SECTIONS.filter((s) => ["map", "business", "agents", "automations", "intel", "settings"].includes(s.id));
+export const SIDEBAR_SECTIONS = SECTIONS.filter((s) => ["map", "business", "agents", "automations", "intel", "api", "settings"].includes(s.id));
 
 /** Pages that open from inside another page and keep its section highlighted. */
 const OPENED_FROM: Partial<Record<View, View>> = { workflows: "overview" };
