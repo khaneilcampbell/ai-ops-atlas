@@ -1,7 +1,7 @@
 // Small stroke icon set (24px grid, Lucide-style) so the app ships without an icon dependency.
 const PATHS: Record<string, string> = {
-  // Mission Control: a gauge, distinct from Grid's four squares.
-  overview: "M3.5 16a8.5 8.5 0 0 1 17 0M12 16l4.2-5.2M12 16h.01M5 20h14M5.6 9.6l1.1 1.1M12 7.5V9M18.4 9.6l-1.1 1.1",
+  // Mission Control: a control-room screen with a live trend line, distinct from Grid's four squares.
+  overview: "M3 4h18v12H3zM8 20h8M12 16v4M6.5 12l3-3 2.5 2 5-4.5",
   agents: "M12 8V4H8M4 8h16v12H4zM2 14h2M20 14h2M15 13v2M9 13v2",
   repos: "M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 9a9 9 0 0 1-9 9",
   map: "M14.1 5.9 9 3 3 5.9v15l6-2.9 5.1 2.9 6-2.9v-15zM9 3v15M15 6v15",
