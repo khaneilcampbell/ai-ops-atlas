@@ -1,49 +1,92 @@
-import {useMemo,useRef} from "react";
-import {useFrame} from "@react-three/fiber";
-import type * as THREE from "three";
-import {Person} from "./InteriorPrimitives";
-import {circaItinerary,unitStops,walkerAt,type Itinerary} from "./circaNav";
+import {useEffect,useLayoutEffect,useMemo,useRef,useState} from "react";
+import * as THREE from "three";
+import {Html} from "@react-three/drei";
+import {figureParts,partMatrix,poseBones,RIG} from "../map3d/agentFigures";
 import type {CircaTower} from "./circaFloors";
+import {bedroomOf,circaResidents,homeStateAt,livingOf,type CircaResident,type HomeState} from "./circaHomes";
+import {useRoutines} from "../../routine/useRoutineOps";
+import {useTimeZone} from "../../lib/timezone";
+import type {AgentJob} from "../../catalog/agentJobs";
+import {catalog} from "../../catalog";
+import {cityFigureFor,type CityFigure} from "../../registry/cityFigures";
+import {identityFor,type ResolvedIdentity} from "../../registry/identity";
+import {AgentAvatar} from "../../components/AgentIdentity";
 
-/** The AI agents who live in Circa, each with a looping day inside the building. */
-export type CircaResident={id:string;name:string;color:string;itinerary:Itinerary};
+/** A resident as drawn: who, in its own city look, portrait and persona name, and whether its day has it home now. */
+export type CircaResidentNow=CircaResident&{figure:CityFigure|null;identity:ResolvedIdentity;state:HomeState};
 
-const COLORS=["#806c9e","#496e84","#b58b49","#5a8067","#8a5a4a","#4f6f8f","#9a7b3c","#6b5a86"];
+/**
+ * The agents who live in Team Residence Towers, each in the apartment its home card names, home or out by the same
+ * day the city map draws (circaHomes.ts homeStateAt), so each one is in one place at a time. Re-checked every 20 s,
+ * so one who comes home appears without leaving the building.
+ */
+export function useCircaResidents(jobs:readonly AgentJob[]):CircaResidentNow[]{
+  const routines=useRoutines(),tz=useTimeZone();
+  const [now,setNow]=useState(()=>Date.now());
+  useEffect(()=>{const id=window.setInterval(()=>setNow(Date.now()),20_000);return()=>window.clearInterval(id);},[]);
+  const residents=useMemo(()=>circaResidents(jobs,id=>!!cityFigureFor(id)).map(r=>({...r,figure:cityFigureFor(r.id),identity:identityFor(r.id,catalog.agents,r.name)})),[jobs]);
+  return useMemo(()=>residents.map(r=>({...r,state:homeStateAt(r.id,routines.get(r.id),now,tz)})),[residents,routines,now,tz]);
+}
 
-/** Agents sorted by id take the twenty-four apartments in turn; their days start a few seconds apart. */
-export function useCircaResidents(agents:{id:string;name:string}[]):CircaResident[]{
-  // Keyed on ids and names, so a fresh agents array with the same people keeps the same residents.
-  const key=agents.map(a=>`${a.id}\u0000${a.name}`).sort().join("\u0001");
-  return useMemo(()=>key?key.split("\u0001").map((entry,i)=>{
-    const [id,name]=entry.split("\u0000");
-    return {id,name,color:COLORS[i%COLORS.length],itinerary:circaItinerary(i,i*11.3)};
-  }):[],[key]);
+/** The residence draws the city rig at furniture scale: the same height the residents stood at before, about 1.5. */
+const RESIDENT_HEIGHT=1.5;
+/** Only if a resident somehow has no city look: residents are chosen from agents that have one (useCircaResidents). */
+const FALLBACK_FIGURE:CityFigure={skin:"#c79875",hair:{style:"short",color:"#2b211b"},top:"#5a8067",trousers:"#294237",shoes:"#2a2522",build:{height:1,shoulders:1}};
+const SHARED={box:new THREE.BoxGeometry(1,1,1),ball:new THREE.SphereGeometry(1,12,8),mat:new THREE.MeshStandardMaterial({roughness:.78,metalness:0})};
+
+/**
+ * A standing figure in the agent's own city look, built from the very same parts as its character on the city map
+ * (agentFigures.ts: hair style, glasses, beard, jacket, collar), so it looks the same inside as outside (Khaneil,
+ * 2026-11-19: "agents should look like same like they did on the outside of the map"). Two draw calls per resident.
+ */
+function ResidentFigure({figure}:{figure:CityFigure|null}){
+  const f=figure??FALLBACK_FIGURE;
+  const parts=useMemo(()=>figureParts(f),[f]);
+  const boxes=useMemo(()=>parts.filter(p=>p.shape==="box"),[parts]),balls=useMemo(()=>parts.filter(p=>p.shape==="ball"),[parts]);
+  const boxRef=useRef<THREE.InstancedMesh>(null),ballRef=useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(()=>{
+    const scale=RESIDENT_HEIGHT/RIG.top*f.build.height;
+    const bones=poseBones({x:0,y:0,z:0,yaw:0,swing:0,look:0,sway:0,scale},f.build.shoulders,[]);
+    const m=new THREE.Matrix4(),c=new THREE.Color();
+    for(const [ref,list] of [[boxRef,boxes],[ballRef,balls]] as const){
+      const mesh=ref.current;if(!mesh)continue;
+      list.forEach((p,k)=>{mesh.setMatrixAt(k,partMatrix(bones,p,m));mesh.setColorAt(k,c.set(p.c));});
+      mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
+      mesh.computeBoundingSphere();
+    }
+  },[f,boxes,balls]);
+  return <group>
+    <instancedMesh ref={boxRef} args={[SHARED.box,SHARED.mat,boxes.length]} castShadow/>
+    <instancedMesh ref={ballRef} args={[SHARED.ball,SHARED.mat,balls.length]} castShadow/>
+  </group>;
+}
+
+/** Residents who live on this level, in this tower. The podium (lobby, pool deck) has none: nobody lives there. */
+export function residentsOn(residents:readonly CircaResidentNow[],level:number,tower?:CircaTower){
+  return residents.filter(r=>r.home.level===level&&r.home.tower===tower);
+}
+
+/** Residents drawn inside on this level: only those home now. The rest are out on the city map. */
+export function residentsHomeOn(residents:readonly CircaResidentNow[],level:number,tower?:CircaTower){
+  return residentsOn(residents,level,tower).filter(r=>r.state.home);
 }
 
 /**
- * The residents on one level: the podium (no `tower`) or one tower's floor. Each walks its route while its day is
- * there, waits at the lift, hides while it rides and steps out when the car opens on its floor. The clock is the same
- * one the lifts run on, so riders board and leave with the doors. With reduced motion everyone stays home in their
- * living room.
+ * The residents home now on one tower floor, each standing in its own living room (its bedroom at night), with its portrait and
+ * persona name overhead in the all-floors view (the same portraits as the Agents tab); on a single floor the
+ * apartment label carries the portrait instead, so the two don't overlap. Selecting one says who it is and where.
  */
-export function CircaWalkers({level,tower,residents,reduced,onPick}:{level:number;tower?:CircaTower;residents:CircaResident[];reduced:boolean;onPick?:(text:string)=>void}) {
-  const refs=useRef<(THREE.Group|null)[]>([]);
-  useFrame(state=>{
-    if(reduced)return;
-    const t=state.clock.elapsedTime;
-    residents.forEach((r,i)=>{
-      const g=refs.current[i];if(!g)return;
-      const w=walkerAt(r.itinerary,t);
-      g.visible=w.level===level&&w.frame===tower&&!w.hidden;
-      if(g.visible){g.position.set(w.x,0.03,w.z);g.rotation.y=w.heading;}
-    });
-  });
-  return <group>{residents.map((r,i)=>{
-    const home=r.itinerary.home,living=unitStops(home.layout).find(s=>s.id==="living")!;
-    const still=reduced&&home.level===level&&home.tower===tower;
-    return <group key={r.id} ref={el=>{refs.current[i]=el;}} visible={still} position={still?[living.x,0.03,living.z]:[0,0,0]}
-      onClick={e=>{e.stopPropagation();onPick?.(`${r.name} · Apartment ${home.unit}`);}}>
-      <Person x={0} z={0} color={r.color}/>
+export function CircaWalkers({level,tower,residents,chips=true,onPick}:{level:number;tower?:CircaTower;residents:CircaResidentNow[];chips?:boolean;onPick?:(text:string)=>void}) {
+  const here=residentsHomeOn(residents,level,tower);
+  return <group>{here.map(r=>{
+    const spot=r.state.home&&r.state.night?bedroomOf(r.home):livingOf(r.home),who=`${r.identity.name} · ${r.identity.role} · Apartment ${r.home.unit} · ${r.state.note}`;
+    return <group key={r.id} position={[spot.x,0.03,spot.z]} onClick={e=>{e.stopPropagation();onPick?.(who);}}>
+      <ResidentFigure figure={r.figure}/>
+      {chips&&<Html position={[0,2.05,0]} center zIndexRange={[40,30]}>
+        <button className="circa-resident-chip" onClick={()=>onPick?.(who)} aria-label={`${r.identity.name}, ${r.identity.role}, AI agent, apartment ${r.home.unit}`}>
+          <AgentAvatar identity={r.identity} size={26}/><b>{r.identity.name.split(" ")[0]}</b>
+        </button>
+      </Html>}
     </group>;
   })}</group>;
 }

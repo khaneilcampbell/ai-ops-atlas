@@ -2,9 +2,9 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { TERRACE_H } from "./scene";
-import { wheelAngle } from "./routinePlaces";
+import { WHEEL_LIVE, wheelAngle } from "./routinePlaces";
 
-import { PLAZA_WHEEL, WHEEL, type StationPlaza } from "./stationPlazaPlan";
+import { PLAZA_WHEEL, WHEEL, WHEEL_CABIN as C, type StationPlaza } from "./stationPlazaPlan";
 
 const RADIUS = WHEEL.radius;
 const CABINS = 12;
@@ -18,6 +18,8 @@ function Wheel({ x, z, reduced }: { x: number; z: number; reduced: boolean }) {
   const rotor = useRef<THREE.Group>(null);
   const cabins = useRef<(THREE.Group | null)[]>([]);
   const angle = useRef(0);
+  // Riders follow the cabins: a still wheel (reduced motion) keeps them in its still cabins.
+  WHEEL_LIVE.turning = !reduced;
   useFrame(() => {
     if (reduced || !rotor.current) return;
     // Turns by the wall clock, so agents riding a cabin (NamedAgents, routinePlaces.ts) sit in it exactly.
@@ -31,6 +33,8 @@ function Wheel({ x, z, reduced }: { x: number; z: number; reduced: boolean }) {
       <mesh position={[side * 0.65, WHEEL.hub / 2, 0.28]} rotation={[0, 0, side * 0.29]} castShadow><boxGeometry args={[0.13, WHEEL.hub / Math.cos(0.29) + 0.05, 0.15]} /><meshStandardMaterial color={STEEL} metalness={0.3} roughness={0.38} /></mesh>
       <mesh position={[side * 0.85, 0.14, 0.28]}><boxGeometry args={[0.65, 0.18, 0.55]} /><meshStandardMaterial color={GOLD} /></mesh>
     </group>)}
+    {/* Boarding platform: level with the bottom cabin's floor, in front of the wheel, with a step down to the plaza. */}
+    <mesh position={[0, (WHEEL.hub - RADIUS + C.floor + 0.1) / 2, C.d / 2 + 0.17]} receiveShadow><boxGeometry args={[C.w + 0.2, WHEEL.hub - RADIUS + C.floor - 0.1, 0.3]} /><meshStandardMaterial color="#d9d9d4" roughness={0.85} /></mesh>
     <group position={[0, WHEEL.hub, 0]} ref={rotor}>
       {[-0.16, 0.16].map(depth => <mesh key={depth} position={[0, 0, depth]}><torusGeometry args={[RADIUS, 0.045, 6, 64]} /><meshStandardMaterial color={GOLD} metalness={0.45} roughness={0.35} /></mesh>)}
       {Array.from({ length: CABINS }, (_, i) => {
@@ -38,11 +42,13 @@ function Wheel({ x, z, reduced }: { x: number; z: number; reduced: boolean }) {
         return <group key={i}>
           <mesh position={[Math.cos(a) * RADIUS / 2, Math.sin(a) * RADIUS / 2, 0]} rotation={[0, 0, a]}><boxGeometry args={[RADIUS, 0.018, 0.025]} /><meshStandardMaterial color={STEEL} /></mesh>
           <group position={[Math.cos(a) * RADIUS, Math.sin(a) * RADIUS, 0]} ref={node => { cabins.current[i] = node; }}>
-            <mesh position={[0, -0.11, 0]}><boxGeometry args={[0.025, 0.23, 0.025]} /><meshStandardMaterial color={GOLD} /></mesh>
-            <mesh position={[0, -0.34, 0]} castShadow><boxGeometry args={[0.31, 0.24, 0.38]} /><meshStandardMaterial color={GLASS} transparent opacity={0.78} roughness={0.2} /></mesh>
-            <mesh position={[0, -0.49, 0]}><boxGeometry args={[0.34, 0.08, 0.4]} /><meshStandardMaterial color={i % 3 === 0 ? GOLD : STEEL} /></mesh>
-            <mesh position={[0, -0.2, 0]}><boxGeometry args={[0.36, 0.05, 0.42]} /><meshStandardMaterial color={STEEL} /></mesh>
-            <mesh position={[0, -0.2, 0.22]}><sphereGeometry args={[0.025, 6, 4]} /><meshStandardMaterial color="#fff1cd" emissive="#fff1cd" emissiveIntensity={1.4} toneMapped={false} /></mesh>
+            <mesh position={[0, C.rod / 2, 0]}><boxGeometry args={[0.025, -C.rod, 0.025]} /><meshStandardMaterial color={GOLD} /></mesh>
+            <mesh position={[0, (C.roof - C.roofT / 2 + C.floor) / 2, 0]} castShadow><boxGeometry args={[C.w, C.roof - C.roofT / 2 - C.floor, C.d]} /><meshStandardMaterial color={GLASS} transparent opacity={0.78} roughness={0.2} /></mesh>
+            <mesh position={[0, C.floor - C.floorT / 2, 0]}><boxGeometry args={[C.w + 0.03, C.floorT, C.d + 0.02]} /><meshStandardMaterial color={i % 3 === 0 ? GOLD : STEEL} /></mesh>
+            {/* The bench the rider sits on, at hip height, against the cabin's back wall. */}
+            <mesh position={[0, (C.seatY + C.floor) / 2, -C.d / 2 + 0.06]}><boxGeometry args={[C.w - 0.04, C.seatY - C.floor, 0.1]} /><meshStandardMaterial color={STEEL} /></mesh>
+            <mesh position={[0, C.roof, 0]}><boxGeometry args={[C.w + 0.05, C.roofT, C.d + 0.04]} /><meshStandardMaterial color={STEEL} /></mesh>
+            <mesh position={[0, C.roof, C.d / 2 + 0.02]}><sphereGeometry args={[0.025, 6, 4]} /><meshStandardMaterial color="#fff1cd" emissive="#fff1cd" emissiveIntensity={1.4} toneMapped={false} /></mesh>
           </group>
         </group>;
       })}

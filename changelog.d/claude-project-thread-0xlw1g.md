@@ -1,0 +1,1 @@
+- 2026-11-20 · Team Residence Towers no longer shows agents twice: an agent stands in their apartment only while their day has them home. When they're out, their apartment label says where they are and they're only on the city map

@@ -2,6 +2,7 @@ import type {Rect,Scene3D} from './scene';
 import {distanceToRoad} from './highway';
 import {TRANSPORT} from './transportScale';
 import {stadiumCrown} from './stadiumGeometry';
+import {AGENT_BODY,SEAT_HEIGHT,passWidth,seatedClearHeight} from './agentBody';
 type Pt=[number,number];
 /**
  * One skyline for the stadium centre (Khaneil, 2026-11-09): the wheel's hub sits at the station
@@ -12,6 +13,27 @@ type Pt=[number,number];
 // so the wheel keeps its size and the forecourt its footprint.
 const HUB=2.36;
 export const WHEEL={hub:HUB,radius:stadiumCrown()-.04-HUB} as const;
+/**
+ * One cabin, hanging from its pivot on the rim (y down from the pivot), sized for a seated agent
+ * (agentBody.ts): seat at hip height, the seated body plus clearance under the roof, and the seated
+ * body's depth with room at both ends. Riders sit at `seatY` (routinePlaces.riderPoint).
+ */
+const CABIN_ROOF=-.2,CABIN_ROOF_T=.05,CABIN_FLOOR_T=.08;
+const CABIN_CLEAR=SEAT_HEIGHT+seatedClearHeight;
+export const WHEEL_CABIN={
+ rod:CABIN_ROOF+CABIN_ROOF_T/2,
+ roof:CABIN_ROOF,roofT:CABIN_ROOF_T,
+ /** Cabin floor (top of its base), below the pivot. */
+ floor:CABIN_ROOF-CABIN_ROOF_T/2-CABIN_CLEAR,
+ floorT:CABIN_FLOOR_T,
+ /** Glass walls: across the wheel (x) and along its axle (z). */
+ w:Math.max(.31,passWidth+.04),d:Math.max(.38,AGENT_BODY.seatedDepth+2*AGENT_BODY.clearance+.12),
+ /** The seat surface below the pivot, and how far back of centre the rider sits (legs forward, +z). */
+ seatY:CABIN_ROOF-CABIN_ROOF_T/2-CABIN_CLEAR+SEAT_HEIGHT,
+ seatZ:-.04,
+} as const;
+/** Lowest point of a cabin below its pivot. */
+export const CABIN_DROP=-(WHEEL_CABIN.floor-WHEEL_CABIN.floorT);
 export const PLAZA_WHEEL={width:4.1*WHEEL.radius/1.65,depth:1.5} as const;
 /** The pavilion's footprint, slab included. */
 const PAVILION={w:3.8,d:2.8} as const;

@@ -1,5 +1,5 @@
 import {useMemo} from "react";
-import {Box,Person} from "./InteriorPrimitives";
+import {Box} from "./InteriorPrimitives";
 import {CircaParts} from "./CircaUpperFloors";
 import {circaLobbyParts} from "./circaInteriorParts";
 import {CIRCA_PODIUM} from "./circaFloors";
@@ -37,7 +37,6 @@ export default function CircaLobby({night}:{night:boolean}) {
     {[-18,-12,-6,0,6,12,18].map(x=><group key={x}><Round p={[x,3.26,-6.6]} r={.12} h={.1} color={black}/><Glow p={[x,3.2,-6.6]} s={[.14,.02,.14]} night={night}/></group>)}
     {/* Reception: white marble base, walnut top and a glow reveal, under a cluster of hanging light rods. */}
     <Box p={[3.6,.5,-2.5]} s={[2.8,1,.8]} color={marble}/><Box p={[3.6,1.04,-2.5]} s={[3,.08,1]} color={walnut}/><Glow p={[3.6,.06,-2.08]} s={[2.7,.04,.02]} night={night}/>
-    <Person x={3.6} z={-3.2} color="#2b3440"/>
     {[-1.2,-.8,-.4,0,.4,.8,1.2].map((dx,i)=>{const len=.45+.2*(i%2);return <group key={dx}><Box p={[3.6+dx,3.4-(1.05-len)/2,-2.5]} s={[.01,1.05-len,.01]} color={black}/><Glow p={[3.6+dx,2.35+len/2,-2.5]} s={[.05,len,.05]} night={night}/></group>;})}
     {/* Centre: a round dark pedestal table with a white bouquet under a diamond chandelier. */}
     <Round p={[-3,.4,-2.3]} r={.18} h={.8} color="#2a2623"/><Round p={[-3,.83,-2.3]} r={.75} h={.06} color="#2a2623"/><Round p={[-3,1,-2.3]} r={.12} h={.3} color="#dcdcdc"/>

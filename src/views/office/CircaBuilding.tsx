@@ -4,8 +4,8 @@ import {ElevatorLanding,MovingLift} from "./BuildingCirculation";
 import LobbyEntrance from "./LobbyEntrance";
 import CircaLobby from "./CircaLobby";
 import {CircaApartments,CircaPoolDeck} from "./CircaUpperFloors";
-import {CircaWalkers,type CircaResident} from "./CircaWalkers";
-import {CIRCA_DOOR_Z,CIRCA_LIFT,CIRCA_PLATE,CIRCA_PODIUM,CIRCA_TOWERS,circaFloorNumber,circaLevelKind} from "./circaFloors";
+import {CircaWalkers,type CircaResidentNow} from "./CircaWalkers";
+import {CIRCA_DOOR_Z,CIRCA_LIFT,CIRCA_LIFT_SHIFT,CIRCA_PLATE,CIRCA_PODIUM,CIRCA_TOWERS,circaFloorNumber,circaLevelKind} from "./circaFloors";
 import {CIRCA_LIFT_OFFSET,CIRCA_LIFT_TOP} from "./circaNav";
 import {LAND_BOTTOM,LAND_TOP,type buildScene} from "../map3d/scene";
 import type {useMaterials} from "../map3d/models";
@@ -49,16 +49,16 @@ export function CircaNightFill({night}:{night:boolean}) {
   return night?<ambientLight color="#ffdcae" intensity={0.6}/>:null;
 }
 
-/** The two lift cars moving through the stack in the all-floors view. */
+/** The two lift cars moving through the stack in the all-floors view, empty: no stand-in rider. */
 export function CircaLifts({reduced}:{reduced:boolean}) {
-  return <group>{CIRCA_TOWERS.map(t=><Tower key={t.id} x={t.x} mirror={t.mirror}><MovingLift reduced={reduced} finish={CIRCA_LIFT} top={CIRCA_LIFT_TOP} offset={CIRCA_LIFT_OFFSET[t.id]}/></Tower>)}</group>;
+  return <group>{CIRCA_TOWERS.map(t=><Tower key={t.id} x={t.x} mirror={t.mirror}><group position={[CIRCA_LIFT_SHIFT,0,0]}><MovingLift reduced={reduced} rider={false} finish={CIRCA_LIFT} top={CIRCA_LIFT_TOP} offset={CIRCA_LIFT_OFFSET[t.id]}/></group></Tower>)}</group>;
 }
 
 /**
  * One Circa floor. `stack` is the all-floors view, where the podium floors keep a single real lamp and each tower floor
  * one per tower, and the emissive cove strips carry the rest of the night glow.
  */
-export function CircaLevel({level,stack,labels,night,reduced,residents,onPick,sign}:{level:number;stack:boolean;labels:boolean;night:boolean;reduced:boolean;residents:CircaResident[];onPick:(text:string)=>void;sign:{title:string;subtitle:string}}) {
+export function CircaLevel({level,stack,labels,night,reduced,residents,onPick,sign}:{level:number;stack:boolean;labels:boolean;night:boolean;reduced:boolean;residents:CircaResidentNow[];onPick:(text:string)=>void;sign:{title:string;subtitle:string}}) {
   const kind=circaLevelKind(level),podium=kind!=="apartments",n=circaFloorNumber(level);
   const lamp=(x:number,key:string|number,distance:number,boost=1)=><pointLight key={key} position={[x,2.9,0]} color="#ffe2a4" intensity={(night?NIGHT_LAMP:5)*boost} distance={distance} decay={2}/>;
   return <group>
@@ -67,11 +67,11 @@ export function CircaLevel({level,stack,labels,night,reduced,residents,onPick,si
     {podium&&<Box p={[0,-0.15,0]} s={[CIRCA_PODIUM.w,0.3,CIRCA_PODIUM.d]} color={SLAB}/>}
     {CIRCA_TOWERS.map(t=><Tower key={t.id} x={t.x} mirror={t.mirror}>
       {!podium&&<OvalSlab/>}
-      {/* The residents ride for real, so the stand-in lift visitor stays off. */}
-      <ElevatorLanding level={level} reduced={reduced} labels={labels} visitor={false} runner="#9a9893" edge="#1b1b1d" finish={CIRCA_LIFT} top={CIRCA_LIFT_TOP} offset={CIRCA_LIFT_OFFSET[t.id]}
-        name={podium?`${TOWER_NAME[t.id]} tower`:`${TOWER_NAME[t.id]} · Floor ${n}`}/>
-      {!podium&&<CircaApartments level={level} tower={t.id} night={night} labels={labels} onPick={onPick}/>}
-      {!podium&&<CircaWalkers level={level} tower={t.id} residents={residents} reduced={reduced} onPick={onPick}/>}
+      {/* Only the agents who live here are drawn: no stand-in lift visitor. */}
+      <group position={[CIRCA_LIFT_SHIFT,0,0]}><ElevatorLanding level={level} reduced={reduced} labels={labels} visitor={false} runner="#9a9893" edge="#1b1b1d" finish={CIRCA_LIFT} top={CIRCA_LIFT_TOP} offset={CIRCA_LIFT_OFFSET[t.id]}
+        name={podium?`${TOWER_NAME[t.id]} tower`:`${TOWER_NAME[t.id]} · Floor ${n}`}/></group>
+      {!podium&&<CircaApartments level={level} tower={t.id} night={night} labels={labels} onPick={onPick} residents={residents}/>}
+      {!podium&&<CircaWalkers level={level} tower={t.id} residents={residents} chips={!labels} onPick={onPick}/>}
     </Tower>)}
     {kind==="lobby"&&<group>
       <CircaLobby night={night}/>
@@ -81,6 +81,5 @@ export function CircaLevel({level,stack,labels,night,reduced,residents,onPick,si
       {labels&&<Html position={[0,2.8,-CIRCA_PODIUM.d/2+.3]} center><div className="skyline-wall-sign financial-wall-sign">{sign.title}<span>{sign.subtitle}</span></div></Html>}
     </group>}
     {kind==="pool"&&<CircaPoolDeck night={night}/>}
-    {podium&&<CircaWalkers level={level} residents={residents} reduced={reduced} onPick={onPick}/>}
   </group>;
 }

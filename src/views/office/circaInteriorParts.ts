@@ -1,4 +1,4 @@
-import {CIRCA_CORRIDOR as C,CIRCA_PARTY_WALL,CIRCA_PLATE,CIRCA_PODIUM,CIRCA_UNITS_EAST,circaEdgeX,circaEdgeZ,circaRim,circaUnits,mirrorX} from "./circaFloors";
+import {CIRCA_CORRIDOR as C,CIRCA_PARTY_WALL,CIRCA_PLATE,CIRCA_PODIUM,CIRCA_SPREAD,CIRCA_UNITS_EAST,circaEdgeX,circaEdgeZ,circaRim,circaUnits,designEdgeX,designEdgeZ,mirrorX} from "./circaFloors";
 
 /**
  * Pure part lists for Circa's pool deck and apartment floors inside "Enter building".
@@ -90,8 +90,8 @@ export function bath(o:Parts,x0:number,x1:number,z0:number,z1:number,tubAlongX:b
 function oneBed(o:Parts,mirror:boolean,sofa:string){
   const loc=emptyParts(),X0=-8,Z0=C.z1;
   // Rooms: bath (corridor corner) and bedroom along the west wall, open kitchen, dining and living to the east.
-  wallX(loc.box,2.9,-circaEdgeX(2.9)+.12,-5.4,WALL.low);
-  wallZ(loc.box,-5.4,Z0,circaEdgeZ(-5.4)-.12,WALL.low,[[1.6,2.2],[3.45,4.35]]);
+  wallX(loc.box,2.9,-designEdgeX(2.9)+.12,-5.4,WALL.low);
+  wallZ(loc.box,-5.4,Z0,designEdgeZ(-5.4)-.12,WALL.low,[[1.6,2.2],[3.45,4.35]]);
   bath(loc,X0,-5.4,Z0,2.9,true,1);
   // Bed headboard on the bath wall, foot toward the curved glass; wardrobe on the bedroom's east wall.
   bed(loc,-6.75,4.0,-Math.PI/2,1.4);
@@ -122,13 +122,13 @@ function oneBed(o:Parts,mirror:boolean,sofa:string){
 function twoBed(o:Parts){
   const X0=-8,X1=CIRCA_UNITS_EAST,Z1=C.z0;
   // Master suite (west): bedroom, bath in the corridor corner, wardrobe wall.
-  wallZ(o.box,-4,-circaEdgeZ(-4)+.12,Z1,WALL.low,[[-3.3,-2.5]]);
-  wallX(o.box,-2.6,-circaEdgeX(-2.6)+.12,-6.2,WALL.low);wallZ(o.box,-6.2,-2.6,Z1,WALL.low,[[-2.4,-1.7]]);
+  wallZ(o.box,-4,-designEdgeZ(-4)+.12,Z1,WALL.low,[[-3.3,-2.5]]);
+  wallX(o.box,-2.6,-designEdgeX(-2.6)+.12,-6.2,WALL.low);wallZ(o.box,-6.2,-2.6,Z1,WALL.low,[[-2.4,-1.7]]);
   bath(o,X0,-6.2,-2.6,Z1,true,-1);
   bed(o,-5.9,-3.85,Math.PI/2,1.7);
   b(o.box,-4.32,0,-4.6,.5,1.9,1.6,col.walnut);
   // Second bedroom and bath (east).
-  wallZ(o.box,3.6,-circaEdgeZ(3.6)+.12,Z1,WALL.low,[[-4.9,-4.1]]);
+  wallZ(o.box,3.6,-designEdgeZ(3.6)+.12,Z1,WALL.low,[[-4.9,-4.1]]);
   wallX(o.box,-2.6,5,X1,WALL.low);wallZ(o.box,5,-2.6,Z1,WALL.low,[[-2.4,-1.7]]);
   bath(o,5,X1,-2.6,Z1,false,-1);
   // Headboard on the east wall, so a clear aisle runs from the door up to the bathroom.
@@ -157,9 +157,7 @@ function twoBed(o:Parts){
 
 /** Oak floor, curved glass, corridor walls and front doors shared by every apartment floor. Walls run out to the rim. */
 function corridor(o:Parts,level:number){
-  const units=circaUnits(level),west=-circaEdgeX(C.z1)+.12,rim=(x:number)=>circaEdgeZ(x)-.12;
-  // Floor-to-ceiling glass all the way round, so the 1 beds get the same windows as the 2 bed.
-  ovalFloor(o,col.oak,col.plank,.5);glassRim(o,()=>true);
+  const units=circaUnits(level,"west",true),west=-designEdgeX(C.z1)+.12,rim=(x:number)=>designEdgeZ(x)-.12;
   wallX(o.box,C.z0,west,CIRCA_UNITS_EAST,WALL.low,units.filter(u=>u.z1<=C.z0).map(u=>u.door));
   wallX(o.box,C.z1,west,CIRCA_UNITS_EAST,WALL.low,units.filter(u=>u.z0>=C.z1).map(u=>u.door));
   wallZ(o.box,CIRCA_PARTY_WALL,C.z1,rim(CIRCA_PARTY_WALL),WALL.low);
@@ -168,10 +166,28 @@ function corridor(o:Parts,level:number){
     b(o.box,u.door[0]-.04,0,z,.06,2.2,.14,col.black);b(o.box,u.door[1]+.04,0,z,.06,2.2,.14,col.black);b(o.box,x,2.2,z,u.door[1]-u.door[0]+.14,.08,.14,col.black);}
 }
 
+/**
+ * Spread a floor drawn on the design grid by `k`: every piece moves out from the centre, walls and floor finishes
+ * stretch along their length, and furniture keeps its own size, so the rooms get roomier around it.
+ */
+export function spreadParts(d:Parts,k:number):Parts{
+  const o=emptyParts();
+  for(const key of Object.keys(d) as (keyof Parts)[])for(const part of d[key]){
+    const [w,h,dd]=part.s,axis=!part.r&&!part.rx&&key!=="round";
+    const wall=axis&&h>=.9&&Math.min(w,dd)<=.16&&Math.max(w,dd)>=.5,flat=axis&&h<=.02;
+    const s:[number,number,number]=wall?(w>dd?[w*k,h,dd]:[w,h,dd*k]):flat?[w*k,h,dd*k]:part.s;
+    o[key].push({...part,p:[part.p[0]*k,part.p[1],part.p[2]*k],s});
+  }
+  return o;
+}
+
 export function circaApartmentParts(level:number):Parts{
-  const o=emptyParts();if(!circaUnits(level).length)return o;
-  corridor(o,level);twoBed(o);
-  oneBed(o,false,SOFAS[level%SOFAS.length]);oneBed(o,true,SOFAS[(level+1)%SOFAS.length]);
+  const d=emptyParts();if(!circaUnits(level).length)return d;
+  corridor(d,level);twoBed(d);
+  oneBed(d,false,SOFAS[level%SOFAS.length]);oneBed(d,true,SOFAS[(level+1)%SOFAS.length]);
+  const o=spreadParts(d,CIRCA_SPREAD);
+  // Floor-to-ceiling glass all the way round the full-size plate, so the 1 beds get the same windows as the 2 bed.
+  ovalFloor(o,col.oak,col.plank,.5);glassRim(o,()=>true);
   return o;
 }
 

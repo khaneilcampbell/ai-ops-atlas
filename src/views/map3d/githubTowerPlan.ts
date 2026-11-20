@@ -22,7 +22,8 @@ export const GITHUB_TOWER={
  share:.97,
  /** Two stepped podium tiers: x0,x1,z0,z1 in footprints, h tall, then a rounded concrete slab. */
  podium:[
-  {x0:-.55,x1:.55,z0:-.55,z1:.51,h:.26},
+  // The lower tier holds the lobby door, so it stands an agent's height plus clearance (agentBody.ts).
+  {x0:-.55,x1:.55,z0:-.55,z1:.51,h:.44},
   {x0:-.52,x1:.52,z0:-.52,z1:.34,h:.24},
  ],
  slab:.05,
