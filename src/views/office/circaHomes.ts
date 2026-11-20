@@ -1,14 +1,17 @@
 import type { AgentJob } from "../../catalog/agentJobs";
 import { AGENT_RESIDENCE } from "../../catalog/agentJobs";
+import { activityText, isNight, segmentAt, type Routine } from "../../routine/routine";
 import type { CircaTower } from "./circaFloors";
 import { unitStops } from "./circaNav";
 import type { Stop } from "./walkNav";
 
 /**
  * Who lives in Team Residence Towers (Ellipse Residences inside). Each resident is an AI agent whose home card
- * (agentJobs.ts) names this building, in the apartment the card names. Inside, each one is shown standing in its own
- * living room (Khaneil, 2026-11-19: "no loop just have them show"); its day already runs on the city map.
- * Placement is a visualization, not live activity.
+ * (agentJobs.ts) names this building, in the apartment the card names. Each agent is in one place at a time: inside
+ * its apartment only while its own day (the routine the city map walks, routine.ts) has it at home, and out on the
+ * map otherwise, when its apartment label says where it is (Khaneil, 2026-11-20: "Fix the duplicate. There are agents
+ * on the inside of the building and outside of the building as well"). Inside it simply stands, no loop (Khaneil,
+ * 2026-11-19: "no loop just have them show"). Placement is a visualization, not live activity.
  */
 
 export interface CircaHome {
@@ -46,5 +49,25 @@ export function circaResidents(jobs: readonly AgentJob[], named: (id: string) =>
   return out;
 }
 
-/** Its living room, where it is shown inside. */
+/** Home or out, by the agent's own day. */
+export type HomeState = { home: true; night: boolean; note: string } | { home: false; note: string };
+
+/**
+ * Whether the agent is home at `now`, by the same day the city map draws: home exactly when its day has it at its own
+ * home spot, which is when the map hides it (routinePose.ts), so it is never drawn both inside and outside. With no
+ * day worked out yet (the map hasn't planned one), the routine's own rule: home at night, out by day.
+ */
+export function homeStateAt(id: string, routine: Routine | undefined, now: number, tz: string): HomeState {
+  const night = isNight(now, tz);
+  if (routine) {
+    const seg = segmentAt(routine, now);
+    if (seg && seg.kind !== "walk" && seg.at === `home:${id}`) return { home: true, night: night && seg.activity === "at_home", note: seg.note };
+    if (seg) return { home: false, note: seg.kind === "ride" ? seg.note : activityText(seg) };
+  }
+  return night ? { home: true, night: true, note: "At home for the night" } : { home: false, note: "Out for the day" };
+}
+
+/** Its bedroom (the main bedroom in a 2 bed), where it is at night. */
+export const bedroomOf = (home: CircaHome): Stop => unitStops(home.layout).find((s) => s.id === (home.layout === "01" ? "master" : "bedroom"))!;
+/** Its living room, where it is the rest of the time it is home. */
 export const livingOf = (home: CircaHome): Stop => unitStops(home.layout).find((s) => s.id === "living")!;

@@ -1,25 +1,31 @@
-import {useLayoutEffect,useMemo,useRef} from "react";
+import {useEffect,useLayoutEffect,useMemo,useRef,useState} from "react";
 import * as THREE from "three";
 import {Html} from "@react-three/drei";
 import {figureParts,partMatrix,poseBones,RIG} from "../map3d/agentFigures";
 import type {CircaTower} from "./circaFloors";
-import {circaResidents,livingOf,type CircaResident} from "./circaHomes";
+import {bedroomOf,circaResidents,homeStateAt,livingOf,type CircaResident,type HomeState} from "./circaHomes";
+import {useRoutines} from "../../routine/useRoutineOps";
+import {useTimeZone} from "../../lib/timezone";
 import type {AgentJob} from "../../catalog/agentJobs";
 import {catalog} from "../../catalog";
 import {cityFigureFor,type CityFigure} from "../../registry/cityFigures";
 import {identityFor,type ResolvedIdentity} from "../../registry/identity";
 import {AgentAvatar} from "../../components/AgentIdentity";
 
-/** A resident as drawn: who, in its own city look and its own portrait and persona name. */
-export type CircaResidentNow=CircaResident&{figure:CityFigure|null;identity:ResolvedIdentity};
+/** A resident as drawn: who, in its own city look, portrait and persona name, and whether its day has it home now. */
+export type CircaResidentNow=CircaResident&{figure:CityFigure|null;identity:ResolvedIdentity;state:HomeState};
 
 /**
- * The agents who live in Team Residence Towers, each in the apartment its home card names (Khaneil, 2026-11-19:
- * "agents are not showing when i go inside building ... no loop just have them show"). Their day already runs on the
- * city map, so inside they don't walk a second loop: each one is simply shown in its own living room.
+ * The agents who live in Team Residence Towers, each in the apartment its home card names, home or out by the same
+ * day the city map draws (circaHomes.ts homeStateAt), so each one is in one place at a time. Re-checked every 20 s,
+ * so one who comes home appears without leaving the building.
  */
 export function useCircaResidents(jobs:readonly AgentJob[]):CircaResidentNow[]{
-  return useMemo(()=>circaResidents(jobs,id=>!!cityFigureFor(id)).map(r=>({...r,figure:cityFigureFor(r.id),identity:identityFor(r.id,catalog.agents,r.name)})),[jobs]);
+  const routines=useRoutines(),tz=useTimeZone();
+  const [now,setNow]=useState(()=>Date.now());
+  useEffect(()=>{const id=window.setInterval(()=>setNow(Date.now()),20_000);return()=>window.clearInterval(id);},[]);
+  const residents=useMemo(()=>circaResidents(jobs,id=>!!cityFigureFor(id)).map(r=>({...r,figure:cityFigureFor(r.id),identity:identityFor(r.id,catalog.agents,r.name)})),[jobs]);
+  return useMemo(()=>residents.map(r=>({...r,state:homeStateAt(r.id,routines.get(r.id),now,tz)})),[residents,routines,now,tz]);
 }
 
 /** The residence draws the city rig at furniture scale: the same height the residents stood at before, about 1.5. */
@@ -60,15 +66,20 @@ export function residentsOn(residents:readonly CircaResidentNow[],level:number,t
   return residents.filter(r=>r.home.level===level&&r.home.tower===tower);
 }
 
+/** Residents drawn inside on this level: only those home now. The rest are out on the city map. */
+export function residentsHomeOn(residents:readonly CircaResidentNow[],level:number,tower?:CircaTower){
+  return residentsOn(residents,level,tower).filter(r=>r.state.home);
+}
+
 /**
- * The residents on one tower floor, each standing in its own living room facing the open side, with its portrait and
+ * The residents home now on one tower floor, each standing in its own living room (its bedroom at night), with its portrait and
  * persona name overhead in the all-floors view (the same portraits as the Agents tab); on a single floor the
  * apartment label carries the portrait instead, so the two don't overlap. Selecting one says who it is and where.
  */
 export function CircaWalkers({level,tower,residents,chips=true,onPick,onSuite}:{level:number;tower?:CircaTower;residents:CircaResidentNow[];chips?:boolean;onPick?:(text:string)=>void;onSuite?:(unit:string)=>void}) {
-  const here=residentsOn(residents,level,tower);
+  const here=residentsHomeOn(residents,level,tower);
   return <group>{here.map(r=>{
-    const spot=livingOf(r.home),who=`${r.identity.name} · ${r.identity.role} · Apartment ${r.home.unit}`;
+    const spot=r.state.home&&r.state.night?bedroomOf(r.home):livingOf(r.home),who=`${r.identity.name} · ${r.identity.role} · Apartment ${r.home.unit} · ${r.state.note}`;
     return <group key={r.id} position={[spot.x,0.03,spot.z]} onClick={e=>{e.stopPropagation();onPick?.(who);onSuite?.(r.home.unit);}}>
       <ResidentFigure figure={r.figure}/>
       {chips&&<Html position={[0,2.05,0]} center zIndexRange={[40,30]}>

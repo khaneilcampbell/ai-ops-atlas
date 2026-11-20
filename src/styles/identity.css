@@ -66,4 +66,5 @@
 /* On a single floor the apartment label carries its resident's portrait (office/CircaUpperFloors.tsx). */
 .skyline-room-label[data-resident] { display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; text-align: left; }
 .skyline-room-label[data-resident] em { font-style: normal; }
+.skyline-room-label[data-out] .agent-avatar { filter: grayscale(1); opacity: .6; }
 .skyline-room-label:not([data-resident]) em { font-style: normal; }
