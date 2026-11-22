@@ -55,7 +55,7 @@ describe("agent tiers", () => {
   const tiers = (t: string) => [...org.records.values()].filter((r) => r.tier.value === t).map((r) => r.id).sort();
 
   it("puts Atlas agents that work across repositories at the center", () => {
-    expect(tiers("central")).toEqual(["atlas-engineering-review", "atlas-merge-pr", "atlas-rerun-failed", "repo-intelligence"]);
+    expect(tiers("central")).toEqual(["atlas-engineering-review", "atlas-executive", "atlas-merge-pr", "atlas-rerun-failed", "repo-intelligence"]);
   });
 
   it("makes orchestrators coordinators", () => {
@@ -115,7 +115,7 @@ describe("automation categories", () => {
           "visual-director",
       ],
       monitoring: ["atlas-health-monitor", "benjaire-ops-monitor", "health-report"],
-      intelligence: ["agent-operations-lead", "atlas-agent-factory", "atlas-engineering-review", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-step-runner", "atlas-task-writer", "development-hub-lead", "github-profile-manager", "repo-intelligence"],
+      intelligence: ["agent-operations-lead", "atlas-agent-factory", "atlas-engineering-review", "atlas-executive", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-step-runner", "atlas-task-writer", "development-hub-lead", "github-profile-manager", "repo-intelligence"],
       maintenance: ["agent-registry-sync", "db-backup", "docs-builder", "documentation-lead", "github-design-consistency", "site-audit", "site-builder"],
     });
   });
