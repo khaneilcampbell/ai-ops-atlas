@@ -636,7 +636,7 @@ button.tile { display: flex; flex-direction: column; justify-content: flex-start
 .findings .grow { flex: 1; min-width: 0; }
 .sev.critical { background: var(--bad); }
 .obs, .recs { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
-.ref { display: inline-block; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); background: rgba(29, 43, 34, 0.06); border-radius: 4px; padding: 0 4px; margin-left: 3px; }
+.ref { display: inline-block; max-width: 100%; overflow-wrap: anywhere; font-family: var(--sans); font-size: 11.5px; color: var(--ink-3); background: rgba(29, 43, 34, 0.06); border-radius: 4px; padding: 0 4px; margin-left: 3px; }
 .ref.ungrounded { font-family: var(--sans); font-style: italic; background: none; }
 /* A citation that links to the agent, repository or GitHub page it names. */
 button.ref.ref-link { border: 0; cursor: pointer; line-height: inherit; }
