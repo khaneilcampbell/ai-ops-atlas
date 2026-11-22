@@ -17,13 +17,14 @@
     "atlas-engineering-review",
     "atlas-rerun-failed",
     "atlas-merge-pr",
+    "atlas-executive",
     "atlas-production-coordinator",
     "atlas-release-coordinator",
     "atlas-release-manager",
     "atlas-health-monitor"
    ],
    "ai_agents": 6,
-   "automations": 3
+   "automations": 4
   },
   {
    "id": "project:benjaire-site",
@@ -825,6 +826,20 @@
    "runtime": "Inside the desktop app (Rust side)",
    "trigger": "Manual Merge button in a repository's PRs tab; off by default",
    "source": "src-tauri/src/actions/merge.rs"
+  },
+  {
+   "id": "atlas-executive",
+   "name": "Central AI Orchestrator",
+   "kind": "Automation",
+   "status": "paused",
+   "building_id": "project:ai-ops-atlas",
+   "building_name": "Atlas Command Center",
+   "placement": "Runs from its project building",
+   "owned_by": "agent-operations-lead",
+   "project": "ai-ops-atlas",
+   "runtime": "Atlas web site functions; n8n Cloud for dispatched tasks",
+   "trigger": "Goal from Khaneil in Mission Control, once its n8n workflows are published; both are drafts today (Atlas · Executive Dispatch, Atlas · Executive Schedule every 30 minutes)",
+   "source": "server/executive/engine.ts"
   },
   {
    "id": "atlas-production-coordinator",
@@ -2118,6 +2133,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-20T14:51:11.647Z",
- "commit": "71597590ffe6a56ff39c4dd84ea3870ee265e726"
+ "generated_at": "2026-11-22T23:03:57.991Z",
+ "commit": "2dac23b3baaa883b52866c59f125ddd777445156"
 }
