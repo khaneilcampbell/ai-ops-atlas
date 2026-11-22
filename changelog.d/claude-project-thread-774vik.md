@@ -1,0 +1,1 @@
+- 2026-11-22 · New Atlas Executive in Mission Control: give it a goal and it plans it, picks the agents, runs the research through n8n and only marks it done after Atlas checks the result. Off until its n8n workflows are published (#PR)

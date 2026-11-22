@@ -49,6 +49,15 @@ How to check, run, fix and stop each agent in this repository. Facts here come f
 - **When it fails:** `409` means the branch moved after approval and nothing merged; re-check and try again. `405` means GitHub refused (for example squash merges off). A pull request that isn't ready is refused before anything is sent, with the reason.
 - **Stop it:** untick **Merge pull requests** or the repository, remove its token, or revoke it on GitHub.
 
+## Atlas Executive
+
+`server/executive/engine.ts`, state in the `atlas.exec_*` tables. Turns a goal from Mission Control into a checked plan, assigns registered agents, sends outside work to n8n **Atlas · Executive Dispatch** and completes a goal only after Atlas verifies the result. Details in [docs/executive-agent.md](../executive-agent.md).
+
+- **Healthy:** Mission Control → Atlas Executive shows each goal's state, and n8n **Atlas · Executive Schedule** runs every 30 minutes with a 200 answer.
+- **Turn it on:** apply `db/migrations/0002_executive.sql`, publish both n8n workflows, then set the catalog entry to `active`.
+- **When it fails:** a goal says why in its state reason and history. `BLOCKED` with "No eligible agent" means the agent it needs is paused or missing in the catalog; `FAILED` after 3 attempts means n8n or the checks kept failing; a `503` from the panel means migration 0002 isn't applied.
+- **Stop it:** the emergency stop holds every dispatch; pausing or cancelling a goal stops new work for it; unpublishing the dispatch workflow stops all outside work.
+
 ## Production Coordinator
 
 An owning agent with no model of its own. Its main step is Merge Flow (`ops/merge-flow/README.md`); on request Khaneil asks the Release Coordinator in n8n chat or Claude Code for a review. It never merges, deploys or bypasses a check.
