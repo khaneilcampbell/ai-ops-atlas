@@ -18,7 +18,7 @@ for(const width of [1512,390]) test(`Separated agents and automations ${width}`,
  await page.screenshot({path:`docs/agent-organization/agents-${width}.png`});
  await goTo(page,'Automations');
  await expect(page.getByRole('heading',{name:'Automations',exact:true})).toBeVisible();
- await expect(page.locator('.reg-row')).toHaveCount(37); // 37 (with the Career Execution Agent, live since 2026-11-19) since Marketplace Steward and Signal Watch were deleted (2026-11-18)
+ await expect(page.locator('.reg-row')).toHaveCount(39); // 39: Atlas Task Writer (draft, #506) and Atlas Executive (paused, #508) joined the 37 of 2026-11-19
  for(const id of ['github-merge-flow','atlas-ci','benjaire-flow-intake'])await expect(page.locator(`.reg-row[data-id="${id}"]`)).toHaveCount(1);
  await expect(page.locator('.reg-row[data-id="repo-intelligence"]')).toHaveCount(0);
  await page.locator('.reg-row[data-id="github-merge-flow"]').click();await settle(page,1);
