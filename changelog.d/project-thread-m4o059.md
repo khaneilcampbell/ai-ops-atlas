@@ -1,0 +1,1 @@
+- 2026-11-22 · Upgraded a Rust library (url 2.5.9) to close a security advisory, so the dependency audit check passes again
