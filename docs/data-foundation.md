@@ -32,6 +32,8 @@ No live connection has been made or verified. Treat the database as off until th
 
 ## Data model
 
+Agent memory, task memory, run feedback and stale-run detection (migration 0003) are described in [agent-memory.md](agent-memory.md).
+
 All tables live in the `atlas` schema. Every row has a UUID `id`, `created_at`, `updated_at` and a
 `version` that a trigger bumps on each update (used for optimistic locking).
 

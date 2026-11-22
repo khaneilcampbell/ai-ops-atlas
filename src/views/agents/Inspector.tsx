@@ -24,6 +24,7 @@ import { AgentAvatar, AgentStatusPill, AiAgentLabel } from "../../components/Age
 import { identityFor } from "../../registry/identity";
 import type { IdentityStatus } from "../../registry/agentStatus";
 import { hasIntelligence, IntelligenceTab } from "./IntelligenceTab";
+import { AgentMemoryPanel } from "../tasks/MemoryPanels";
 
 type Tab = "report" | "output" | "overview" | "workday" | "goals" | "workflow" | "intelligence" | "operations" | "governance" | "docs";
 const ALL_TABS: { id: Tab; label: string }[] = [
@@ -293,7 +294,12 @@ export function Inspector({ entry, status }: { entry: RegistryEntry; status?: { 
           </div>
         )}
 
-        {tab === "operations" && <OperationsTab entry={entry} flags={flags.map((f) => ({ id: f.id, severity: f.severity, detail: f.detail }))} history={agent.history} manifestLastRun={agent.lastRun} />}
+        {tab === "operations" && (
+          <>
+            <OperationsTab entry={entry} flags={flags.map((f) => ({ id: f.id, severity: f.severity, detail: f.detail }))} history={agent.history} manifestLastRun={agent.lastRun} />
+            <AgentMemoryPanel agentId={p.id} />
+          </>
+        )}
 
         {tab === "intelligence" && <IntelligenceTab agentId={p.id} />}
         {tab === "governance" && (

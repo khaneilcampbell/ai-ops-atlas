@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { CopyValue } from "../../components/bits";
-import { canDecide, decide, useDataOverview, type OverviewState } from "../../data/client";
+import { canDecide, decide, reviewMemory, useDataOverview, type OverviewState } from "../../data/client";
 import { APPROVAL_KIND_LABEL, AREA_LABEL, type ApprovalRow, type DataOverview, type FactTable, type LinkRow, type RunRow } from "../../data/records";
 import { relative } from "../../lib/time";
 import { formatDateTime } from "../../lib/timezone";
+import { MemorySection } from "./MemoryPanels";
 
 // The Atlas database in the Task Center: is it connected, what agents did lately, what waits for
 // Khaneil, and the goals, projects and tasks those point at. Read from the site's /api/data; no
 // connection string or key is ever shown or sent to the page.
 
-const RUN_CLASS: Record<RunRow["status"], string> = { queued: "idle", running: "active", succeeded: "done", failed: "failed", cancelled: "retired" };
-const RUN_LABEL: Record<RunRow["status"], string> = { queued: "Queued", running: "Running", succeeded: "Succeeded", failed: "Failed", cancelled: "Cancelled" };
+const RUN_CLASS: Record<RunRow["status"], string> = { queued: "idle", running: "active", succeeded: "done", failed: "failed", cancelled: "retired", timed_out: "failed" };
+const RUN_LABEL: Record<RunRow["status"], string> = { queued: "Queued", running: "Running", succeeded: "Succeeded", failed: "Failed", cancelled: "Cancelled", timed_out: "Stopped reporting" };
 const TABLE_LABEL: Record<FactTable, string> = { goals: "Goal", projects: "Project", tasks: "Task", decisions: "Decision", documents: "Document" };
 
 export function DatabaseCard() {
@@ -19,7 +20,7 @@ export function DatabaseCard() {
 }
 
 /** Split out so the visual checks can show each state without a server. */
-export function DatabaseCardView({ data, refresh, onDecide = decide, readOnly = false }: { data: OverviewState; refresh: () => void; onDecide?: typeof decide; readOnly?: boolean }) {
+export function DatabaseCardView({ data, refresh, onDecide = decide, onReview = reviewMemory, readOnly = false }: { data: OverviewState; refresh: () => void; onDecide?: typeof decide; onReview?: typeof reviewMemory; readOnly?: boolean }) {
   return (
     <section className="card db-card" aria-label="Atlas database">
       <div className="card-head">
@@ -31,7 +32,7 @@ export function DatabaseCardView({ data, refresh, onDecide = decide, readOnly = 
           </button>
         )}
       </div>
-      <Body data={data} refresh={refresh} onDecide={readOnly ? null : onDecide} />
+      <Body data={data} refresh={refresh} onDecide={readOnly ? null : onDecide} onReview={readOnly ? null : onReview} />
     </section>
   );
 }
@@ -57,7 +58,7 @@ function Connection({ data }: { data: OverviewState }) {
 /** `onDecide` is null in the Mac app: it reads the database but approvals are decided on the web page. */
 type Decide = typeof decide | null;
 
-function Body({ data, refresh, onDecide }: { data: OverviewState; refresh: () => void; onDecide: Decide }) {
+function Body({ data, refresh, onDecide, onReview }: { data: OverviewState; refresh: () => void; onDecide: Decide; onReview: typeof reviewMemory | null }) {
   if (data.state === "loading") return <p className="muted small db-pad">Reading the database…</p>;
   if (data.state === "off") return <p className="muted small db-pad">{data.message}</p>;
   if (data.state === "not-configured")
@@ -73,10 +74,10 @@ function Body({ data, refresh, onDecide }: { data: OverviewState; refresh: () =>
         {data.message}
       </p>
     );
-  return <Ready value={data.value} refresh={refresh} onDecide={onDecide} />;
+  return <Ready value={data.value} refresh={refresh} onDecide={onDecide} onReview={onReview} />;
 }
 
-function Ready({ value, refresh, onDecide }: { value: DataOverview; refresh: () => void; onDecide: Decide }) {
+function Ready({ value, refresh, onDecide, onReview }: { value: DataOverview; refresh: () => void; onDecide: Decide; onReview: typeof reviewMemory | null }) {
   const [focus, setFocus] = useState<string | null>(null);
   const names = new Map(value.records.map((r) => [r.id, r]));
   const link = (id: string | null, table: FactTable) => {
@@ -127,8 +128,12 @@ function Ready({ value, refresh, onDecide }: { value: DataOverview; refresh: () 
                   <span className="grow">
                     <span className="title">{r.agent_id}</span> <span className={`status task-status ${RUN_CLASS[r.status]}`}>{RUN_LABEL[r.status]}</span>
                     <div className="meta" title={formatDateTime(r.started_at)}>
+                      {/* The execution number tells two runs of the same workflow apart. */}
+                      {r.external_run_id ? `Run #${r.external_run_id} · ` : ""}
                       {relative(r.started_at)}
-                      {r.workflow_id ? ` · ${r.workflow_id}` : ""}
+                      {r.status === "running" || r.status === "timed_out" ? "" : r.finished_at && Date.parse(r.finished_at) > Date.parse(r.started_at) ? ` · took ${Math.max(1, Math.round((Date.parse(r.finished_at) - Date.parse(r.started_at)) / 1000))} s` : ""}
+                      {r.attempt && r.attempt > 1 ? ` · attempt ${r.attempt}` : ""}
+                      {r.workflow_id ? ` · workflow ${r.workflow_id}` : ""}
                       {r.cost_usd ? ` · $${Number(r.cost_usd).toFixed(4)}` : ""}
                     </div>
                     {(r.error || r.result_summary) && <div className={`db-text ${r.error ? "task-error" : "muted"}`}>{r.error ?? r.result_summary}</div>}
@@ -154,6 +159,7 @@ function Ready({ value, refresh, onDecide }: { value: DataOverview; refresh: () 
           )}
         </div>
       </div>
+      {value.memory && <MemorySection memory={value.memory} refresh={refresh} onReview={onReview} />}
     </>
   );
 }
