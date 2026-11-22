@@ -5,6 +5,7 @@
 // checked here for required fields, allowed values, lengths and ids, and unknown fields are refused.
 
 import { TASK_PRIORITIES, TASK_SOURCES, TASK_STATUSES } from "../tasks/types";
+import type { MemoryOverview } from "./memory";
 
 export const AREAS = ["business", "projects", "career", "life", "finance"] as const;
 export type Area = (typeof AREAS)[number];
@@ -16,7 +17,8 @@ export const DOC_TYPES = ["note", "report", "contract", "resume", "plan", "spec"
 /** Who may see a document. Agent keys never see "restricted", whatever their policy says. */
 export const ACCESS_CATEGORIES = ["shared", "internal", "private", "restricted"] as const;
 export type AccessCategory = (typeof ACCESS_CATEGORIES)[number];
-export const RUN_STATUSES = ["queued", "running", "succeeded", "failed", "cancelled"] as const;
+/** timed_out: Atlas stopped hearing from the run (migration 0003); a late finish still lands. Only Atlas sets it. */
+export const RUN_STATUSES = ["queued", "running", "succeeded", "failed", "cancelled", "timed_out"] as const;
 export type RunStatus = (typeof RUN_STATUSES)[number];
 export const FINAL_RUN_STATUSES: readonly RunStatus[] = ["succeeded", "failed", "cancelled"];
 export const APPROVAL_STATUSES = ["pending", "approved", "rejected", "cancelled", "expired"] as const;
@@ -44,7 +46,8 @@ type Field =
   | { kind: "enum"; values: readonly string[] }
   | { kind: "date" }
   | { kind: "uuid"; ref?: FactTable }
-  | { kind: "url"; max: number };
+  | { kind: "url"; max: number }
+  | { kind: "key" };
 
 interface TableSpec {
   /** Column → check. Only these columns can be written. */
@@ -67,7 +70,8 @@ export const TABLES: Record<FactTable, TableSpec> = {
   tasks: {
     label: "title",
     required: ["title", "area"],
-    fields: { title: T(200, 1), description: T(4000), area, status: E(TASK_STATUSES), priority: E(TASK_PRIORITIES), due_date: { kind: "date" }, project_id: projectRef, goal_id: goalRef, source: E(TASK_SOURCES) },
+    // dedupe_key (migration 0003): a stable name for recurring work. Only one open task may hold it.
+    fields: { title: T(200, 1), description: T(4000), area, status: E(TASK_STATUSES), priority: E(TASK_PRIORITIES), due_date: { kind: "date" }, project_id: projectRef, goal_id: goalRef, source: E(TASK_SOURCES), dedupe_key: { kind: "key" } },
   },
   decisions: { label: "decision", required: ["decision", "area"], fields: { decision: T(500, 1), rationale: T(4000), area, decided_on: { kind: "date" }, project_id: projectRef, goal_id: goalRef } },
   documents: {
@@ -111,6 +115,8 @@ function checkField(name: string, f: Field, v: unknown): Checked<string | null> 
       return isDate(v) ? { ok: true, value: v } : { ok: false, error: `${name} must be a date like 2026-12-31.` };
     case "uuid":
       return isUuid(v) ? { ok: true, value: v.toLowerCase() } : { ok: false, error: `${name} must be a UUID.` };
+    case "key":
+      return typeof v === "string" && /^[A-Za-z0-9._:-]{3,160}$/.test(v) ? { ok: true, value: v } : { ok: false, error: `${name} must be 3–160 letters, digits or . _ : -` };
     case "url":
       if (typeof v !== "string" || v.length > f.max || CONTROL.test(v)) return { ok: false, error: `${name} must be an https link up to ${f.max} characters.` };
       try {
@@ -194,9 +200,15 @@ export interface RunWrite {
   inputTokens?: number | null;
   outputTokens?: number | null;
   costUsd?: number | null;
+  /** Migration 0003. The job's stable name, the same every time it recurs; one live run per agent and key. */
+  taskKey?: string | null;
+  /** Which try this is (1 for the first). */
+  attempt?: number;
+  /** "I'm still working for this many minutes." Past it, Atlas marks the run timed out. */
+  leaseMinutes?: number;
 }
 
-const RUN_KEYS = ["idempotencyKey", "agentId", "status", "workflowId", "externalRunId", "inputRef", "resultSummary", "error", "goalId", "projectId", "taskId", "model", "inputTokens", "outputTokens", "costUsd"];
+const RUN_KEYS = ["idempotencyKey", "agentId", "status", "workflowId", "externalRunId", "inputRef", "resultSummary", "error", "goalId", "projectId", "taskId", "model", "inputTokens", "outputTokens", "costUsd", "taskKey", "attempt", "leaseMinutes"];
 
 function optText(body: Record<string, unknown>, k: string, max: number): Checked<string | null | undefined> {
   const v = body[k];
@@ -234,6 +246,19 @@ export function parseRunWrite(body: unknown): Checked<RunWrite> {
   if (body.costUsd !== undefined) {
     if (body.costUsd !== null && !(typeof body.costUsd === "number" && Number.isFinite(body.costUsd) && body.costUsd >= 0 && body.costUsd < 1_000_000)) return { ok: false, error: "costUsd must be a number from 0." };
     out.costUsd = body.costUsd as number | null;
+  }
+  if (out.status === "timed_out") return { ok: false, error: "Only Atlas marks a run timed out. Send failed with an error, or a heartbeat (running)." };
+  if (body.taskKey !== undefined && body.taskKey !== null) {
+    if (typeof body.taskKey !== "string" || !/^[A-Za-z0-9._:-]{3,160}$/.test(body.taskKey)) return { ok: false, error: "taskKey must be 3–160 letters, digits or . _ : -" };
+    out.taskKey = body.taskKey;
+  }
+  if (body.attempt !== undefined) {
+    if (!(Number.isInteger(body.attempt) && (body.attempt as number) >= 1 && (body.attempt as number) <= 100)) return { ok: false, error: "attempt must be a whole number from 1 to 100." };
+    out.attempt = body.attempt as number;
+  }
+  if (body.leaseMinutes !== undefined) {
+    if (!(Number.isInteger(body.leaseMinutes) && (body.leaseMinutes as number) >= 1 && (body.leaseMinutes as number) <= 24 * 60)) return { ok: false, error: "leaseMinutes must be a whole number from 1 to 1440." };
+    out.leaseMinutes = body.leaseMinutes as number;
   }
   if (out.status === "failed" && !out.error) return { ok: false, error: "A failed run needs an error." };
   return { ok: true, value: out };
@@ -314,6 +339,10 @@ export interface RunRow {
   id: string;
   agent_id: string;
   workflow_id: string | null;
+  /** The n8n execution or GitHub run number: what tells two runs of one workflow apart. */
+  external_run_id?: string | null;
+  task_key?: string | null;
+  attempt?: number | null;
   status: RunStatus;
   result_summary: string | null;
   error: string | null;
@@ -366,4 +395,6 @@ export interface DataOverview {
   /** Goals, projects and recent tasks, for names and links. */
   records: LinkRow[];
   counts: { runsFailed24h: number; runs24h: number; approvalsPending: number; tasksOpen: number };
+  /** Agent memory (migration 0003); null until that migration is applied. */
+  memory?: MemoryOverview | null;
 }
