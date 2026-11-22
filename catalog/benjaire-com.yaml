@@ -442,6 +442,9 @@ agents:
     status: active
     trigger: Runs inside the Benjaire Product Lab agent (monthly task, or when Khaneil asks it in chat)
     last_run: null
+    links:
+      - label: 'n8n workflow: Atlas · Executive Dispatch (draft, opportunity reports for the Atlas Executive)'
+        url: https://khancam15.app.n8n.cloud/workflow/uNF4qBQDwVb37ygb
     permissions:
       - 'Anthropic web search, shared with the Product Lab agent (at most 5 per run)'
     registry:
