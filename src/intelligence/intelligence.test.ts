@@ -181,7 +181,7 @@ describe("tool permissions", () => {
   });
 
   it("matches capabilities deterministically within a side-effect limit", () => {
-    expect(matchCapabilities(RESEARCH, ["research"]).map((c) => c.id)).toEqual(["model.advanced", "research.web_search"]);
+    expect(matchCapabilities(RESEARCH, ["research"]).map((c) => c.id)).toEqual(["model.advanced", "research.opportunity_report", "research.web_search"]);
     expect(matchCapabilities(RESEARCH, ["research"], "none")).toEqual([]);
     expect(matchCapabilities(OPS, ["delegate"]).map((c) => c.id)).toEqual(["tasks.delegate"]);
   });

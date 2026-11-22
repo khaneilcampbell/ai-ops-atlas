@@ -48,11 +48,11 @@ describe("n8n runs as a live source", () => {
 });
 
 describe("owning agents run through their automations", () => {
-  it("connects Agent Operations Lead to Registry Sync, Agent Factory, Step Runner and Task Writer", () => {
+  it("connects Agent Operations Lead to Atlas Executive, Registry Sync, Agent Factory, Step Runner and Task Writer", () => {
     const t = agentTelemetry(catalog, agent("agent-operations-lead"), {}, intel(ok));
     expect(t.source).toBe("automations");
     expect(t.loaded).toBe(true);
-    expect(t.via).toEqual(["agent-registry-sync", "atlas-agent-factory", "atlas-step-runner", "atlas-task-writer"].map((id) => agent(id).name));
+    expect(t.via).toEqual(["atlas-executive", "agent-registry-sync", "atlas-agent-factory", "atlas-step-runner", "atlas-task-writer"].map((id) => agent(id).name));
     expect(t.executions[0].label.startsWith(agent("agent-registry-sync").name)).toBe(true);
     const r = runtimeFor(agent("agent-operations-lead"), t, undefined, 0, NOW);
     expect(r.state).toBe("idle");
