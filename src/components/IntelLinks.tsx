@@ -1,6 +1,6 @@
 import { useAtlas } from "../state";
 import type { RefTarget } from "../intel/links";
-import { openIssueUrl } from "../intel/links";
+import { openIssueUrl, refLabel } from "../intel/links";
 import { codexPrompt, type FixRequest } from "../lib/fixWithClaude";
 import { CopyButton, ExternalLink } from "./bits";
 import { FixWithClaude } from "./FixWithClaude";
@@ -26,19 +26,19 @@ export function RefLinks({ refs, grounded, resolve }: { refs: string[]; grounded
           );
         if (t.kind === "repo")
           return (
-            <button key={r} type="button" className="ref ref-link" title={`Open repository ${t.repo}`} onClick={() => select({ kind: "repo", id: t.repo })}>
-              {r}
+            <button key={r} type="button" className="ref ref-link" title={`Open repository ${t.repo} (${r})`} onClick={() => select({ kind: "repo", id: t.repo })}>
+              {refLabel(r)}
             </button>
           );
         if (t.kind === "external")
           return (
-            <ExternalLink key={r} href={t.href} className="ref ref-link">
-              {r}
+            <ExternalLink key={r} href={t.href} className="ref ref-link" title={r}>
+              {refLabel(r)}
             </ExternalLink>
           );
         return (
-          <span key={r} className="ref">
-            {r}
+          <span key={r} className="ref" title={r}>
+            {refLabel(r)}
           </span>
         );
       })}

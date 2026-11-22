@@ -1,0 +1,1 @@
+- 2026-11-22 · The Engineering review now shows its references in plain words ("benjaire.com Dependabot alert #22", "khaneilcampbell branch rules") instead of raw ids that looked like test data, and the merge and signing actions now list their kill switches, with a stop-and-rollback section for both (#PR)

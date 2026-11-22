@@ -58,6 +58,24 @@ All commerce workflows live in the "Commerce" folder on n8n Cloud. Per-workflow 
 
 **Contact Form Worker (Cloudflare).** Stop or roll back in Cloudflare → Workers & Pages → `benjaire-com` → Deployments: pick the last good deployment and roll back to it. To stop all sends, remove the Worker's mail secrets there; the form then answers 503.
 
+## Merging and signing in Atlas
+
+The two Atlas actions that can't be taken back: merging a pull request from the Mac app, and signing
+and publishing a Mac update. Each has a stop that works in under a minute.
+
+| Action | Fastest stop | What still happens | Roll back |
+| --- | --- | --- | --- |
+| Merge Pull Request (Mac app) | Settings → Actions: untick **Merge pull requests**. It ships off. | Nothing merges; the PRs tab stays read-only | Revert the merged pull request on GitHub |
+| Merge one repository only | Settings → Actions: untick the repository, or remove its merge token | Other ticked repositories can still merge | Same as above |
+| Merge token leaked | Revoke it at https://github.com/settings/personal-access-tokens | Atlas refuses until a new token is saved | Same as above |
+| Sign and publish a Mac update (CI) | In the Actions run, press **Review deployments** and **Reject** the waiting `Sign validated main build` job. Nothing is signed without Khaneil's approval of the `macos-signing` environment | Tests and the unsigned build still run; installed copies stay on their current version | Revert the pull request. Versions only go up, so the revert ships as a newer build and every Mac moves back |
+| Stop every build | Actions → CI → **Disable workflow** (https://github.com/khaneilcampbell/ai-ops-atlas/actions/workflows/ci.yml) | Branch protection requires its checks, so merges block until it is back on | Enable the workflow again |
+
+Never edit or delete `latest.json` on the `main-build` release by hand, and never change the updater
+public key: installed copies would stop updating. The signing keys live only in the protected
+`macos-signing` environment (https://github.com/khaneilcampbell/ai-ops-atlas/settings/environments);
+see [CI signing security](../ci-signing-security.md) before touching them.
+
 ## After any stop
 
 Write down what happened, what was rolled back and what was sent, in the agent's section of its runbook under "When it fails", so the next stop is faster.
