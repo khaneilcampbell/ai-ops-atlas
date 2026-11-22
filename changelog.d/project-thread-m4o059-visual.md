@@ -1,0 +1,1 @@
+- 2026-11-22 · Screenshot checks match the new sidebar and the Atlas Task Writer again, so they stop failing on every pull request
