@@ -38,10 +38,10 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 7 projects and 71 agents discoverable with no manifest problems", () => {
+  it("keeps all 7 projects and 72 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
     expect(catalog.projects).toHaveLength(7);
-    expect(entries).toHaveLength(71);
+    expect(entries).toHaveLength(72);
   });
 
 
@@ -55,7 +55,7 @@ describe("bundled registry", () => {
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 28, B: 11, C: 22, D: 9, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 28, B: 12, C: 22, D: 9, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -276,7 +276,7 @@ describe("directory", () => {
 
   it("filters by function, type, project and search", () => {
     expect(filterEntries(entries, { ...EMPTY_FILTER, category: "security" }).map((e) => e.profile.id).sort()).toEqual(
-      ["bruteforce-detection", "security-check", "soc-case-notes", "soc-detection-lead"].sort(),
+      ["bruteforce-detection", "connor-security-sheet", "security-check", "soc-case-notes", "soc-detection-lead"].sort(),
     );
     expect(filterEntries(entries, { ...EMPTY_FILTER, classification: "A", project: "commerce-pipeline" })).toHaveLength(7);
     expect(filterEntries(entries, { ...EMPTY_FILTER, query: "site ci" }).map((e) => e.profile.id).sort()).toEqual(["benjaire-site-ci", "site-ci"]);
@@ -287,7 +287,7 @@ describe("directory", () => {
   it("groups by agent type in type order and by project", () => {
     const g = groupEntries(entries, "classification");
     expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E"]);
-    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(71);
+    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(72);
   });
 
   it("sorts verified runs first and keeps the rest stable by title", () => {
@@ -304,10 +304,10 @@ describe("directory", () => {
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    // 36 with a source of their own, 10 with n8n workflow links (9 automations, including the Career
-    // Execution Agent and Task Writer drafts, and Benjaire Product Lab, which links its hand-off workflow), and 11 owning
-    // agents through their automations.
-    expect(s.observable).toBe(57);
+    // 36 with a source of their own, 11 with n8n workflow links (10 automations, including the Career
+    // Execution Agent, Task Writer and Atlas Security Sheet drafts, and Benjaire Product Lab, which links its hand-off
+    // workflow), and 11 owning agents through their automations.
+    expect(s.observable).toBe(58);
   });
 });
 

@@ -1,0 +1,1 @@
+- 2026-11-22 · Connor Walsh has a new Atlas Security Sheet: a Google Sheet of open GitHub security alerts, branch protection and CI for every Atlas repo, which also appears in the Library. It is an unpublished n8n draft for now, run by hand (#PR)
