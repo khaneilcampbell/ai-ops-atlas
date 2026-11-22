@@ -61,7 +61,7 @@ export function trafficFlow(plans:VehiclePlan[],junctions:[number,number][]=[],c
    // Stand-off (both would meet): the one already further in (the other barely ahead of it) goes; ties by index.
    if(target===0&&j>=0&&blocker[j]===i&&level[j]===0){const mine=(x[j]-x[i])*dx[i]+(z[j]-z[i])*dz[i],theirs=(x[i]-x[j])*dx[j]+(z[i]-z[j])*dz[j];if(mine<theirs-1e-6||(Math.abs(mine-theirs)<=1e-6&&i<j))target=1;}
    if(free[i]>0){free[i]-=dt;target=hard[i]?0:1;}   // a released car still never drives into one it touches
-   if(plans[i].scheduled){const lag=now-times[i];if(Math.abs(lag)>TRAFFIC.rejoin){times[i]=now;speed[i]=1;continue;}if(target>0)target=Math.max(0,Math.min(TRAFFIC.catchUp,1+lag));}
+   if(plans[i].scheduled){const lag=now-times[i];if(Math.abs(lag)>TRAFFIC.rejoin){times[i]=now;speed[i]=1;continue;}if(target>=1)target=Math.max(0,Math.min(TRAFFIC.catchUp,1+lag));}   // only catches up on a clear road, never into the car ahead
    speed[i]=target===0?0:speed[i]+(target-speed[i])*Math.min(1,dt*TRAFFIC.accel);
    held[i]=speed[i]<.05?held[i]+dt:0;if(held[i]>TRAFFIC.stuck){held[i]=0;free[i]=TRAFFIC.release;}
    times[i]+=dt*speed[i];

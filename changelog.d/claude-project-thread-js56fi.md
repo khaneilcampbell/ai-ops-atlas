@@ -1,0 +1,3 @@
+- 2026-11-19 · Free time can now send agents by Atlas car (picked up at the kerb) or by train, or let Atlas choose (Auto) (#496)
+- 2026-11-19 · Free time now works before 7 AM and late at night too: the agent goes where you sent it, then heads home (#496)
+- 2026-11-19 · From 7 AM agents with nothing running sit at their own desks (shown as At desk) and go out now and then, so buildings look lived-in (#496)

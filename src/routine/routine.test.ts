@@ -6,7 +6,7 @@ import { fromZoned, nextCron, parseCron, previousCron, zoned } from "./cron";
 import { HISTORY_MS, observe, type Ledger } from "./ledger";
 import { agentOps, ownedEntries, sightingsOf, type AgentOps, type OpsInput } from "./operations";
 import { FREE_TIME_KEEP_MS, freeTimeAvailability, freshRequests } from "./freeTime";
-import { planRoutine, segmentAt, type Anchor, type LeisureKind, type LeisureOption, type RoutineEnv, type Segment } from "./routine";
+import { activityText, idleAtDesk, inFreeTime, planRoutine, segmentAt, type Anchor, type LeisureKind, type LeisureOption, type RoutineEnv, type Segment } from "./routine";
 
 const NY = "America/New_York";
 const MIN = 60_000;
@@ -142,7 +142,7 @@ describe("one scheduled task, end to end", () => {
   const run = Date.parse("2026-11-18T20:00:00Z");
   it("commutes ahead, is seated before the run, works only while it runs, then goes back to free time", () => {
     const before = run - 30 * MIN;
-    const r = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(before, []), env: env(), now: before });
+    const r = planRoutine({ personaId: "benjaire-shop-manager", deskShare: 0, ops: opsWith(before, []), env: env(), now: before });
     const desk = r.segments.find((s) => s.phase === "to_desk")!;
     const head = r.segments.find((s) => s.phase === "heading")!;
     expect(head.t0).toBeLessThan(run);
@@ -152,7 +152,7 @@ describe("one scheduled task, end to end", () => {
     const after = run + 3 * MIN;
     const runs = [{ id: "900", status: "success" as const, mode: "trigger", startedAt: "2026-11-18T20:00:00Z", stoppedAt: "2026-11-18T20:00:02Z" }];
     observe(l, sightingsOf(opsWith(run + MIN, runs).runs), run + MIN);
-    const done = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(after, runs, l), env: env(), now: after });
+    const done = planRoutine({ personaId: "benjaire-shop-manager", deskShare: 0, ops: opsWith(after, runs, l), env: env(), now: after });
     expect(phases(done.segments, run - 20 * MIN, run + 10 * MIN)).toEqual(expect.arrayContaining(["heading", "entering", "to_desk", "working", "completed", "leaving"]));
     const working = done.segments.filter((s) => s.phase === "working").pop()!;
     expect(working.t1).toBe(run + MIN); // until Atlas saw the result, never longer
@@ -160,18 +160,18 @@ describe("one scheduled task, end to end", () => {
     const free = segmentAt(done, run + MIN + 40_000)!;
     expect(free.phase).toBeNull();
     // The same inputs give the same day: a reload draws the same picture.
-    const again = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(after, runs, l), env: env(), now: after });
+    const again = planRoutine({ personaId: "benjaire-shop-manager", deskShare: 0, ops: opsWith(after, runs, l), env: env(), now: after });
     expect(again.segments).toEqual(done.segments);
   });
 
   it("waits at the desk while n8n reports a due run, without claiming a result", () => {
     const now = run + 4 * MIN;
-    const r = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(now, []), env: env(), now });
+    const r = planRoutine({ personaId: "benjaire-shop-manager", deskShare: 0, ops: opsWith(now, []), env: env(), now });
     const seg = segmentAt(r, now)!;
     expect(seg.phase).toBe("working");
     expect(seg.note).toContain("waiting for n8n to report");
     const later = run + 20 * MIN;
-    const r2 = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(later, []), env: env(), now: later });
+    const r2 = planRoutine({ personaId: "benjaire-shop-manager", deskShare: 0, ops: opsWith(later, []), env: env(), now: later });
     expect(r2.segments.find((s) => s.phase === "completed")!.note).toContain("no run reported");
   });
 });
@@ -182,7 +182,7 @@ describe("unexpected work, short work and rides", () => {
     const l: Ledger = new Map();
     const runs = [{ id: "50", status: "running" as const, mode: "webhook", startedAt: "2026-11-18T18:59:00Z", stoppedAt: null }];
     observe(l, sightingsOf(opsWith(now0, runs, l, []).runs), now0);
-    const r = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(now0 + 30_000, runs, l, []), env: env(), now: now0 + 30_000 });
+    const r = planRoutine({ personaId: "benjaire-shop-manager", deskShare: 0, ops: opsWith(now0 + 30_000, runs, l, []), env: env(), now: now0 + 30_000 });
     const seg = segmentAt(r, now0 + 30_000)!;
     expect(seg.phase).toBe("heading");
     expect(seg.note).toContain("already started");
@@ -197,7 +197,7 @@ describe("unexpected work, short work and rides", () => {
     observe(l, sightingsOf(opsWith(start, running, l, []).runs), start);
     const done = [{ id: "60", status: "success" as const, mode: "webhook", startedAt: new Date(start).toISOString(), stoppedAt: new Date(start + 2000).toISOString() }];
     observe(l, sightingsOf(opsWith(start + 40_000, done, l, []).runs), start + 40_000);
-    const r = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(start + 60_000, done, l, []), env: env(), now: start + 60_000 });
+    const r = planRoutine({ personaId: "benjaire-shop-manager", deskShare: 0, ops: opsWith(start + 60_000, done, l, []), env: env(), now: start + 60_000 });
     const around = r.segments.filter((s) => s.t1 > start && s.t0 < start + 120_000);
     expect(around.some((s) => s.phase === "working")).toBe(false);
     expect(around.find((s) => s.phase === "completed")!.note).toContain("finished before arrival");
@@ -210,7 +210,7 @@ describe("unexpected work, short work and rides", () => {
       { id: "70", status: "running" as const, mode: "manual", startedAt: "2026-11-18T18:49:00Z", stoppedAt: null },
     ];
     observe(l, sightingsOf(opsWith(now0 - 10 * MIN, runs, l, []).runs), now0 - 10 * MIN);
-    const r = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(now0, runs, l, []), env: env(), now: now0 });
+    const r = planRoutine({ personaId: "benjaire-shop-manager", deskShare: 0, ops: opsWith(now0, runs, l, []), env: env(), now: now0 });
     expect(r.episodes.filter((e) => e.runs.length).length).toBe(1);
     expect(segmentAt(r, now0)!.note).toContain("2 runs at once");
   });
@@ -220,12 +220,12 @@ describe("unexpected work, short work and rides", () => {
     const failed = [{ id: "80", status: "error" as const, mode: "webhook", startedAt: "2026-11-18T18:40:00Z", stoppedAt: "2026-11-18T18:45:00Z" }];
     observe(l, sightingsOf(opsWith(now0 - 25 * MIN, [{ ...failed[0], status: "running", stoppedAt: null }], l, []).runs), now0 - 25 * MIN);
     observe(l, sightingsOf(opsWith(now0 - 14 * MIN, failed, l, []).runs), now0 - 14 * MIN);
-    const r = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(now0, failed, l, []), env: env(), now: now0 });
+    const r = planRoutine({ personaId: "benjaire-shop-manager", deskShare: 0, ops: opsWith(now0, failed, l, []), env: env(), now: now0 });
     expect(r.segments.find((s) => s.phase === "completed")!.note).toContain("failed");
     const w = [{ id: "90", status: "waiting" as const, mode: "webhook", startedAt: "2026-11-18T18:30:00Z", stoppedAt: null }];
     const l2: Ledger = new Map();
     observe(l2, sightingsOf(opsWith(now0 - 30 * MIN, w, l2, []).runs), now0 - 30 * MIN);
-    const r2 = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(now0, w, l2, []), env: env(), now: now0 });
+    const r2 = planRoutine({ personaId: "benjaire-shop-manager", deskShare: 0, ops: opsWith(now0, w, l2, []), env: env(), now: now0 });
     expect(segmentAt(r2, now0)!.phase).toBeNull();
   });
 
@@ -234,7 +234,7 @@ describe("unexpected work, short work and rides", () => {
     let found: { r: ReturnType<typeof planRoutine>; ride: Segment } | null = null;
     for (let h = 0; h < 48 && !found; h++) {
       const now = now0 - 6 * 3_600_000 + h * 15 * MIN;
-      const r = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(now, [], new Map(), []), env: env(), now });
+      const r = planRoutine({ personaId: "benjaire-shop-manager", deskShare: 0, ops: opsWith(now, [], new Map(), []), env: env(), now });
       const ride = r.segments.find((s) => s.kind === "ride" && s.t0 < now && s.t1 > now);
       if (ride) found = { r, ride };
     }
@@ -246,7 +246,7 @@ describe("unexpected work, short work and rides", () => {
     const l: Ledger = new Map();
     const runs = [{ id: "99", status: "running" as const, mode: "webhook", startedAt: new Date(callAt).toISOString(), stoppedAt: null }];
     observe(l, sightingsOf(opsWith(callAt, runs, l, []).runs), callAt);
-    const r = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(callAt + 1000, runs, l, []), env: env(), now: callAt + 1000 });
+    const r = planRoutine({ personaId: "benjaire-shop-manager", deskShare: 0, ops: opsWith(callAt + 1000, runs, l, []), env: env(), now: callAt + 1000 });
     const cut = r.segments.find((s) => s.kind === "ride" && s.t0 === ride.t0)!;
     expect(cut.t1).toBe(callAt + 30_000); // the next safe exit, not instantly off a moving ride
     expect(cut.note).toContain("getting off");
@@ -255,13 +255,13 @@ describe("unexpected work, short work and rides", () => {
 
   it("agents with different ids keep different routines", () => {
     const now = Date.parse("2026-11-18T17:00:00Z");
-    const a = planRoutine({ personaId: "a", ops: opsWith(now, [], new Map(), []), env: env(), now });
-    const b = planRoutine({ personaId: "b", ops: opsWith(now, [], new Map(), []), env: env(), now });
+    const a = planRoutine({ personaId: "a", deskShare: 0, ops: opsWith(now, [], new Map(), []), env: env(), now });
+    const b = planRoutine({ personaId: "b", deskShare: 0, ops: opsWith(now, [], new Map(), []), env: env(), now });
     expect(a.segments.map((s) => s.note)).not.toEqual(b.segments.map((s) => s.note));
   });
 
   it("a paused routine keeps the character home and says the work is unaffected", () => {
-    const r = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(now0, [], new Map(), []), env: env(), now: now0, held: true });
+    const r = planRoutine({ personaId: "benjaire-shop-manager", deskShare: 0, ops: opsWith(now0, [], new Map(), []), env: env(), now: now0, held: true });
     expect(segmentAt(r, now0)).toMatchObject({ activity: "at_home" });
     expect(segmentAt(r, now0)!.note).toContain("unaffected");
   });
@@ -270,7 +270,7 @@ describe("unexpected work, short work and rides", () => {
 describe("free time sent from Atlas", () => {
   const now0 = Date.parse("2026-11-18T19:00:00Z"); // 2pm New York, no schedule
   const plan = (now: number, outing: { kind: LeisureKind | "any"; at: number } | null, schedules: { label: string; cron: string }[] = []) =>
-    planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(now, [], new Map(), schedules), env: env(), now, outing });
+    planRoutine({ personaId: "benjaire-shop-manager", deskShare: 0, ops: opsWith(now, [], new Map(), schedules), env: env(), now, outing });
 
   it("sends a free agent to the chosen outing from that moment, leaving the day before it unchanged", () => {
     const at = now0;
@@ -312,10 +312,19 @@ describe("free time sent from Atlas", () => {
     expect(r.segments.find((s) => s.phase === "to_desk")!.t1).toBeLessThanOrEqual(run);
   });
 
-  it("is ignored while the agent works or at night", () => {
-    const night = Date.parse("2026-11-19T05:00:00Z"); // midnight New York
-    const r = plan(night + MIN, { kind: "wheel", at: night });
-    expect(segmentAt(r, night + MIN)).toMatchObject({ activity: "at_home" });
+  it("is followed at night too, then the agent walks home for the night", () => {
+    const night = Date.parse("2026-11-19T11:30:00Z"); // 6:30 AM New York, before the 7 AM morning
+    const r = plan(night + MIN, { kind: "park", at: night });
+    const walk = r.segments.find((s): s is Extract<Segment, { kind: "walk" }> => s.t0 >= night && s.kind === "walk")!;
+    expect(walk.t0).toBe(night);
+    expect(walk.option?.kind).toBe("park");
+    expect(walk.note).toContain("free time from Atlas");
+    const after = r.segments.filter((s) => s.t0 > walk.t1);
+    expect(after.some((s) => s.kind === "stay" && s.option?.kind === "park")).toBe(true);
+    // From home at midnight as well.
+    const midnight = Date.parse("2026-11-19T05:00:00Z");
+    const m = plan(midnight + MIN, { kind: "wheel", at: midnight });
+    expect(segmentAt(m, midnight + 1000)).toMatchObject({ kind: "walk", activity: "walking" });
   });
 
   it("only offers free time to an agent in its free time", () => {
@@ -325,11 +334,62 @@ describe("free time sent from Atlas", () => {
     expect(freeTimeAvailability(null, false).ok).toBe(false);
     const work = { kind: "inside", t0: 0, t1: 1, at: "office", activity: "at_desk", phase: "working", note: "", work: { label: "", runs: [], scheduledAt: null, alreadyStarted: false, outcome: null } } as Segment;
     expect(freeTimeAvailability(work, false)).toMatchObject({ ok: false, reason: expect.stringContaining("Busy") });
+    const home = { kind: "stay", t0: 0, t1: 1, at: "home", activity: "at_home", phase: null, note: "At home for the night" } as Segment;
+    expect(freeTimeAvailability(home, false)).toEqual({ ok: true });
   });
 
   it("keeps only today's valid requests", () => {
     const now = now0;
     const kept = freshRequests({ a: { kind: "wheel", at: now - MIN }, b: { kind: "wheel", at: now - FREE_TIME_KEEP_MS - 1 }, c: { kind: "rocket", at: now }, d: null }, now);
     expect([...kept.keys()]).toEqual(["a"]);
+  });
+
+  it("keeps how the agent travels, and older requests without it", () => {
+    const now = now0;
+    const kept = freshRequests({ a: { kind: "wheel", at: now, travel: "car" }, b: { kind: "park", at: now }, c: { kind: "park", at: now, travel: "rocket" } }, now);
+    expect([...kept.keys()]).toEqual(["a", "b"]);
+    expect(kept.get("a")?.travel).toBe("car");
+  });
+});
+
+describe("free time at the desk in the daytime", () => {
+  const day = Date.parse("2026-11-18T19:00:00Z"); // 2pm New York, no schedule
+  const plan = (now: number) => planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(now, [], new Map(), []), env: env(), now });
+
+  it("spends most daytime free time seated at its own desk, shown as At desk and still free", () => {
+    let desk = 0, total = 0;
+    for (let m = 0; m < 8 * 60; m += 5) {
+      const t = day - 5 * 3_600_000 + m * 60_000; // 9am to 5pm
+      const seg = segmentAt(plan(t), t);
+      total++;
+      if (seg && idleAtDesk(seg) && seg.phase === "working") {
+        desk++;
+        expect(activityText(seg)).toBe("At desk");
+        expect(inFreeTime(seg)).toBe(true);
+        expect(freeTimeAvailability(seg, false)).toEqual({ ok: true });
+      }
+    }
+    expect(desk / total).toBeGreaterThan(0.5);
+  });
+
+  it("never sits at the desk idle at night", () => {
+    const night = Date.parse("2026-11-19T05:00:00Z"); // midnight New York
+    const r = plan(night);
+    expect(r.segments.some((s) => idleAtDesk(s) && s.t1 > night && s.t0 < night + 6 * 3_600_000)).toBe(false);
+  });
+
+  it("plans the same day whenever it's recomputed", () => {
+    const a = plan(day), b = plan(day + 20 * 60_000);
+    expect(b.segments.filter((s) => s.t1 <= day + 60 * 60_000)).toEqual(a.segments.filter((s) => s.t1 <= day + 60 * 60_000));
+  });
+
+  it("goes off on free time from its desk when sent", () => {
+    const r0 = plan(day);
+    const spell = r0.segments.find((s) => idleAtDesk(s) && s.phase === "working" && s.t1 - s.t0 > 10 * 60_000)!;
+    const at = spell.t0 + 5 * 60_000;
+    const r = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(at + 1000, [], new Map(), []), env: env(), now: at + 1000, outing: { kind: "park", at } });
+    const walk = r.segments.find((s): s is Extract<Segment, { kind: "walk" }> => s.t0 >= at && s.kind === "walk")!;
+    expect(walk.t0).toBe(at);
+    expect(walk.option?.kind).toBe("park");
   });
 });

@@ -10,6 +10,7 @@ import { riderPoint, type CityPlaces, type CityRoutes } from "./routinePlaces";
 import { TERRACE_H } from "./scene";
 import { AGENT_BODY, passWidth, seatedOrigin } from "./agentBody";
 import { YACHT_SCALE } from "./yachtPlan";
+import { carRiderPoint } from "./agentRides";
 
 /**
  * Where and how one agent is drawn at a moment, from its routine segment (routine/routine.ts).
@@ -174,11 +175,17 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
       const where = seg.times.seat === GOLD_JET_NAME ? (c.wall < seg.times.board ? `Atlas airport terminal, waiting to board the ${GOLD_JET_NAME}` : `Atlas airport terminal, off the ${GOLD_JET_NAME}`) : spot.label;
       return { x: stand[0], y: stand[1], z: stand[2], yaw: spot.yaw, figure: false, badge: [stand[0], stand[1] + 0.55, stand[2]], sit: 0, typing: false, walking: false, officeScale: null, place: where };
     }
+    if (kind === "car") {
+      // In an Atlas car between getting in and getting out: its badge rides on the car's roof.
+      const q = c.wall >= seg.times.board - 1000 ? carRiderPoint(c.personaId, c.wall) : null;
+      if (!q) return at(stand[0], stand[1], stand[2], spot.yaw, { place: spot.label });
+      return { x: q[0], y: q[1], z: q[2], yaw: 0, figure: false, badge: [q[0], q[1] + 0.3, q[2]], sit: 1, typing: false, walking: false, officeScale: null, place: seg.note };
+    }
     const p = riderPoint(c.places, kind, c.personaId, c.wall, c.yacht);
     if (!p) return at(stand[0], stand[1], stand[2], spot.yaw, { place: spot.label });
     // Seated in its cabin: hips on the bench (p is the seat surface), facing out of the wheel.
     if (kind === "wheel") return at(p[0], seatedOrigin(p[1], c.scale), p[2], 0, { sit: 1, place: `${spot.label}, ${seg.times.seat ?? "a cabin"}` });
-    if (kind === "train") return { x: p[0], y: p[1], z: p[2], yaw: 0, figure: false, badge: [p[0], p[1] + 0.35, p[2]], sit: 1, typing: false, walking: false, officeScale: null, place: `On the train, ${seg.times.seat ?? "a carriage"}` };
+    if (kind === "train") return { x: p[0], y: p[1], z: p[2], yaw: 0, figure: false, badge: [p[0], p[1] + 0.35, p[2]], sit: 1, typing: false, walking: false, officeScale: null, place: seg.option.id.startsWith("trip:") ? `${seg.note}, ${seg.times.seat ?? "a carriage"}` : `On the train, ${seg.times.seat ?? "a carriage"}` };
     // The yacht: on her aft deck wherever she is (never on the water), on the sofa or at the stern rail.
     const yaw = c.yacht?.yaw ?? spot.yaw, cos = Math.cos(yaw), sin = Math.sin(yaw);
     const seat = YACHT_PLACES[c.slot % YACHT_PLACES.length], lx = seat.x * YACHT_SCALE, lz = seat.z * YACHT_SCALE;

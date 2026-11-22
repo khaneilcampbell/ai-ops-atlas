@@ -3,7 +3,7 @@ import { isAiAgent } from "../../catalog/roles";
 import { identityFor, type ResolvedIdentity } from "../../registry/identity";
 import { DEFAULT_TIME_ZONE } from "../../routine/cron";
 import { OPERATIONAL_LABEL, type AgentOps } from "../../routine/operations";
-import { clock, runWorking, type Segment } from "../../routine/routine";
+import { clock, inFreeTime, runWorking, type Segment } from "../../routine/routine";
 
 /**
  * The map's "City agents" roster (CityAgentsPanel.tsx): one row per active named agent, built from
@@ -158,7 +158,7 @@ export function rosterRow(i: RowInput): RosterRow {
     activity,
     location: i.place || null,
     // Free time is a city picture: out of the office between work, not at home asleep.
-    free: !!seg && seg.phase === null && seg.activity !== "at_home",
+    free: inFreeTime(seg),
     working: work.tone === "running" || (!!seg && runWorking(seg)),
     attention: work.tone === "attention" || i.identityStatus === "failed",
   };
@@ -172,7 +172,7 @@ function activityOf(seg: Segment): string {
   if (seg.phase === "to_desk") return "Going to desk";
   if (seg.phase === "leaving") return "Leaving office";
   if (seg.phase === "completed") return "Task completed";
-  return seg.activity === "at_home" ? "At home" : seg.activity === "commuting" ? "Commuting" : seg.activity === "walking" ? "Walking" : seg.activity === "visiting" ? "Visiting" : "Relaxing";
+  return seg.activity === "at_home" ? "At home" : seg.activity === "commuting" ? "Commuting" : seg.activity === "walking" ? "Walking" : seg.activity === "visiting" ? "Visiting" : seg.activity === "waiting" ? "Waiting for a ride" : "Relaxing";
 }
 
 function leisureText(kind: string): string {
@@ -183,6 +183,8 @@ function leisureText(kind: string): string {
       return "Visiting another district";
     case "train":
       return "Riding the train";
+    case "car":
+      return "Riding in an Atlas car";
     case "flight":
       return "Aboard the Atlas Gold Jet";
     case "yacht":

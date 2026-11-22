@@ -135,3 +135,10 @@
 .ca-freechoices { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 .ca-freechoices button { min-height: 32px; padding: 0 var(--space-5); border: 1px solid var(--sage-300); border-radius: var(--radius-pill); background: var(--sage-50); color: var(--ink); font: 600 var(--text-sm) var(--sans); cursor: pointer; }
 .ca-freechoices button:hover { border-color: var(--gold); background: var(--gold-soft); }
+/* Travel by: one segmented row (Auto, Walk, Car, Train); the hint under it says what the choice does. */
+.ca-travel { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--sage-300); border-radius: var(--radius-pill); overflow: hidden; background: var(--sage-50); }
+.ca-travel button { min-height: 32px; padding: 0 var(--space-3); border: 0; border-left: 1px solid var(--sage-300); background: transparent; color: var(--ink); font: 600 var(--text-sm) var(--sans); cursor: pointer; }
+.ca-travel button:first-child { border-left: 0; }
+.ca-travel button:hover { background: var(--gold-soft); }
+.ca-travel button.on { background: var(--forest-800); color: var(--on-dark); }
+.ca-travel + .hint { margin: var(--space-2) 0 var(--space-5); }
