@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { isHostedWeb, isTauri } from "../lib/env";
+import type { AgentMemory } from "./memory";
 import type { DataOverview } from "./records";
 
 // The Task Center's view of the Atlas database. The web page asks its own site (/api/data, behind
@@ -79,4 +80,45 @@ export async function decide(id: string, decision: "approve" | "reject", fetcher
   const body = await answerOf(r);
   if (!r.ok) return { ok: false, message: body.message ?? `The site answered ${r.status}.` };
   return { ok: true, message: decision === "approve" ? "Approved." : "Rejected." };
+}
+
+export type AgentMemoryState = { state: "loading" } | { state: "off"; message: string } | { state: "error"; message: string } | { state: "ready"; value: AgentMemory };
+
+/** One agent's database memory, runs and performance. The web page only: the Mac app's route reads the overview alone. */
+export async function fetchAgentMemory(agentId: string, fetcher: typeof fetch = fetch): Promise<AgentMemoryState> {
+  if (!isHostedWeb()) return { state: "off", message: isTauri() ? "Database memory for one agent shows on the Atlas web page." : "Database memory shows on the hosted Atlas page." };
+  const r = await fetcher(`/api/data/memory/agents/${encodeURIComponent(agentId)}`, { credentials: "same-origin", cache: "no-store", signal: AbortSignal.timeout(15_000) });
+  const body = await answerOf(r);
+  if (r.status === 503) return { state: "off", message: body.message ?? "The database isn't reachable." };
+  if (!r.ok) return { state: "error", message: body.message ?? `The site answered ${r.status}.` };
+  return { state: "ready", value: body as unknown as AgentMemory };
+}
+
+export function useAgentMemory(agentId: string): AgentMemoryState {
+  const [data, setData] = useState<AgentMemoryState>({ state: "loading" });
+  useEffect(() => {
+    let live = true;
+    setData({ state: "loading" });
+    fetchAgentMemory(agentId)
+      .then((d) => live && setData(d))
+      .catch((e: unknown) => live && setData({ state: "error", message: e instanceof Error ? e.message : String(e) }));
+    return () => {
+      live = false;
+    };
+  }, [agentId]);
+  return data;
+}
+
+/** Khaneil verifies, disputes or retires one memory. The key makes a double click count once. */
+export async function reviewMemory(id: string, action: "verify" | "dispute" | "retire", fetcher: typeof fetch = fetch): Promise<{ ok: boolean; message: string }> {
+  const r = await fetcher(`/api/data/memory/${encodeURIComponent(id)}/review`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "content-type": "application/json", "idempotency-key": `review-${id}-${action}` },
+    body: JSON.stringify(action === "retire" ? { action, note: "Retired from the Task Center" } : { action }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  const body = await answerOf(r);
+  if (!r.ok) return { ok: false, message: body.message ?? `The site answered ${r.status}.` };
+  return { ok: true, message: action === "verify" ? "Verified." : action === "dispute" ? "Marked wrong." : "Retired." };
 }
