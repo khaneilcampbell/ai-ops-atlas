@@ -1,0 +1,17 @@
+/* Agent profile text editor (Agents tab inspector). Web page only. */
+.profile-edit-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); margin-top: var(--space-4); }
+.profile-editor { display: flex; flex-direction: column; gap: var(--space-5); margin-top: var(--space-5); padding: var(--space-6); border: 1px solid var(--sage-200); border-radius: var(--radius-sm); background: var(--sage-50); max-width: 720px; }
+.profile-editor .task-field textarea { resize: vertical; min-height: 64px; }
+.profile-field small { display: block; line-height: 1.45; overflow-wrap: anywhere; }
+.profile-field-edited { font-style: normal; text-transform: none; letter-spacing: 0; color: var(--gold); }
+.profile-repo-text { color: var(--ink-3); }
+.profile-edit-actions { display: flex; flex-wrap: wrap; gap: var(--space-4); }
+.profile-edit-error { color: var(--danger, #b42318); }
+.profile-edited { border-color: var(--gold); }
+.profile-history ul { margin: var(--space-3) 0 0; padding-left: var(--space-6); }
+.profile-editor .linkish { border: 0; background: none; padding: 0; color: var(--forest-700); text-decoration: underline; cursor: pointer; font: inherit; }
+.profile-editor .linkish:disabled { opacity: 0.5; cursor: default; }
+@media (max-width: 640px) {
+  .profile-editor { padding: var(--space-5); }
+  .profile-edit-actions .btn { flex: 1 1 auto; }
+}

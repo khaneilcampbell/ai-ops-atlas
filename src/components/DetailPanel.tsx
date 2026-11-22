@@ -18,6 +18,7 @@ import {AGENCY_BUILDING,agencyRoom} from "../views/office/agencyWorkplaces";
 import {AIRPORT_BUILDINGS,airportBuilding} from "../views/map3d/airportBuildings";
 import {landmarkModuleStatus} from "../modules/lookup";
 import { AgentOutput } from "./AgentOutput";
+import { EditedTag, ProfileEditor } from "../views/agents/ProfileEditor";
 import { hasIntelligence, IntelligenceTab } from "../views/agents/IntelligenceTab";
 import { AgentPresence } from "../views/agents/PresenceEditor";
 import { BenjaireFinance } from "./BenjaireFinance";
@@ -268,7 +269,9 @@ export function AgentDetail({ id, onClose }: { id: string; onClose?:()=>void }) 
         <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <StatusPill status={agent.status} />
           <span className="chip">{agent.framework}</span>
+          <EditedTag agentId={agent.id} />
         </div>
+        <ProfileEditor key={agent.id} agent={agent} />
       </Head>
       <div className="panel-tabs" role="tablist" aria-label={`${itemLabel} sections`}>
         {tabs.map((name, i) => <button key={name} id={`agent-${id}-${name}-tab`} role="tab" aria-selected={tab === name} aria-controls={`agent-${id}-panel`} tabIndex={tab === name ? 0 : -1} className={tab === name ? "on" : ""} onClick={() => setTab(name)} onKeyDown={event => {

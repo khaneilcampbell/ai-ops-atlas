@@ -2,7 +2,7 @@
 -- migrations. Set the password yourself (psql: \password atlas_app); never commit it.
 --
 -- atlas_app can read and write rows in the atlas schema but cannot create, alter or drop tables,
--- cannot delete fact rows, and cannot touch any other schema. Migrations run as the owner role.
+-- cannot delete fact rows or edit-log lines, and cannot touch any other schema. Migrations run as the owner role.
 
 CREATE ROLE atlas_app LOGIN;
 GRANT USAGE ON SCHEMA atlas TO atlas_app;
@@ -14,6 +14,9 @@ GRANT INSERT, UPDATE ON atlas.exec_goals, atlas.exec_plans, atlas.exec_tasks, at
 GRANT INSERT ON atlas.exec_events TO atlas_app;
 GRANT USAGE ON SEQUENCE atlas.exec_events_id_seq TO atlas_app;
 GRANT INSERT, UPDATE, DELETE ON atlas.idempotency_keys TO atlas_app;
+-- Profile edits (migration 0002): edits can be removed (undo); the edit log is append-only.
+GRANT INSERT, UPDATE, DELETE ON atlas.profile_edits TO atlas_app;
+GRANT INSERT ON atlas.profile_edit_log TO atlas_app;
 REVOKE CREATE ON SCHEMA atlas FROM atlas_app;
 REVOKE ALL ON SCHEMA public FROM atlas_app;
 

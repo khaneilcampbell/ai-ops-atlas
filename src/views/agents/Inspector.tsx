@@ -24,6 +24,7 @@ import { AgentAvatar, AgentStatusPill, AiAgentLabel } from "../../components/Age
 import { identityFor } from "../../registry/identity";
 import type { IdentityStatus } from "../../registry/agentStatus";
 import { hasIntelligence, IntelligenceTab } from "./IntelligenceTab";
+import { EditedTag, ProfileEditor } from "./ProfileEditor";
 
 type Tab = "report" | "output" | "overview" | "workday" | "goals" | "workflow" | "intelligence" | "operations" | "governance" | "docs";
 const ALL_TABS: { id: Tab; label: string }[] = [
@@ -118,7 +119,9 @@ export function Inspector({ entry, status }: { entry: RegistryEntry; status?: { 
             <StatusPill status={entry.status} />
             <RiskPill risk={p.governance.risk} />
             <span className="chip">{p.framework}</span>
+            <EditedTag agentId={p.id} />
           </div>
+          <ProfileEditor key={p.id} agent={agent} />
         </div>
       </header>
 

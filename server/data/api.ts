@@ -14,6 +14,8 @@
 //   POST approvals                    ask Khaneil before something consequential
 //   GET  approvals/<id>               has Khaneil decided (agents: only their own requests)
 //   POST approvals/<id>/decision      approve or reject (Khaneil only)
+//   GET  profile-edits                agent profile text changed in Atlas, and the recent log (Khaneil only)
+//   POST profile-edits                save one field, or null to go back to the repository text (Khaneil only)
 //
 // Every write runs in one transaction. Agents never change a record Khaneil created or confirmed:
 // the change is filed as a pending "fact_change" approval and applied only when he approves it.
@@ -38,6 +40,7 @@ import {
   type FactTable,
   type Values,
 } from "../../src/data/records";
+import { parseProfileEditWrite, type ProfileEdit, type ProfileEditLogRow } from "../../src/data/profileEdits";
 import { reply } from "../http";
 import { bearerOk } from "../live";
 import { logEvent, type Sink } from "../log";
@@ -258,6 +261,10 @@ function routeOf(method: string, p: string[]): Route | null {
     if (method === "POST" && !b) return { name: "approval.request", idempotent: true, run: requestApproval };
     if (method === "GET" && b && !c) return { name: "approval.read", run: readApproval };
     if (method === "POST" && b && c === "decision" && !d) return { name: "approval.decide", ownerOnly: true, idempotent: true, run: decideApproval };
+  }
+  if (a === "profile-edits" && !b) {
+    if (method === "GET") return { name: "profile_edits.read", ownerOnly: true, run: readProfileEdits };
+    if (method === "POST") return { name: "profile_edits.write", ownerOnly: true, run: writeProfileEdit };
   }
   return null;
 }
@@ -633,3 +640,46 @@ async function overview({ db, env }: Ctx): Promise<Answer> {
   return ok(answer);
 }
 
+
+// ---- Profile edits ----------------------------------------------------------------------------------
+
+export const PROFILE_LOG_LIMIT = 50;
+const EDIT_COLUMNS = "entity_id, field, value, updated_by, updated_at, version";
+
+/** Every saved edit (there is at most one per agent and field) and the newest log lines. */
+async function readProfileEdits({ db }: Ctx): Promise<Answer> {
+  const edits = await db.query<ProfileEdit>(`SELECT ${EDIT_COLUMNS} FROM atlas.profile_edits WHERE entity_type = 'agent' ORDER BY entity_id, field`);
+  const log = await db.query<ProfileEditLogRow>(`SELECT entity_id, field, before, after, actor, at FROM atlas.profile_edit_log WHERE entity_type = 'agent' ORDER BY at DESC LIMIT ${PROFILE_LOG_LIMIT}`);
+  return ok({ edits, log });
+}
+
+/**
+ * Saves one field of one agent's profile text, or removes the edit (value null) so the repository
+ * text shows again. Logs the text before and after in the same transaction. Owner only: agent keys
+ * never reach this (routeOf marks it ownerOnly), so no agent can rename itself.
+ */
+async function writeProfileEdit({ db, actor, body }: Ctx): Promise<Answer> {
+  const w = parseProfileEditWrite(body);
+  if (!w.ok) return no(422, w.error);
+  const { entityId, field, value, expectedVersion } = w.value;
+  const who = actor.kind === "owner" ? actor.name : `agent:${actor.id}`;
+  const [existing] = await db.query<{ value: string; version: number }>("SELECT value, version FROM atlas.profile_edits WHERE entity_type = 'agent' AND entity_id = $1 AND field = $2 FOR UPDATE", [entityId, field]);
+  if (expectedVersion !== undefined && existing && existing.version !== expectedVersion) return { status: 409, body: { message: "This was changed somewhere else since you opened it. Reload and try again.", version: existing.version } };
+  if (expectedVersion !== undefined && !existing && expectedVersion !== 1) return { status: 409, body: { message: "This edit was removed somewhere else since you opened it. Reload and try again." } };
+
+  if (value === null) {
+    if (!existing) return ok({ edit: null, changed: false });
+    await db.query("DELETE FROM atlas.profile_edits WHERE entity_type = 'agent' AND entity_id = $1 AND field = $2", [entityId, field]);
+    await db.query("INSERT INTO atlas.profile_edit_log (entity_id, field, before, after, actor) VALUES ($1, $2, $3, NULL, $4)", [entityId, field, existing.value, who]);
+    return ok({ edit: null, changed: true });
+  }
+  if (existing?.value === value) {
+    const [same] = await db.query<ProfileEdit>(`SELECT ${EDIT_COLUMNS} FROM atlas.profile_edits WHERE entity_type = 'agent' AND entity_id = $1 AND field = $2`, [entityId, field]);
+    return ok({ edit: same, changed: false });
+  }
+  const [edit] = existing
+    ? await db.query<ProfileEdit>(`UPDATE atlas.profile_edits SET value = $3, updated_by = $4 WHERE entity_type = 'agent' AND entity_id = $1 AND field = $2 RETURNING ${EDIT_COLUMNS}`, [entityId, field, value, who])
+    : await db.query<ProfileEdit>(`INSERT INTO atlas.profile_edits (entity_id, field, value, updated_by) VALUES ($1, $2, $3, $4) RETURNING ${EDIT_COLUMNS}`, [entityId, field, value, who]);
+  await db.query("INSERT INTO atlas.profile_edit_log (entity_id, field, before, after, actor) VALUES ($1, $2, $3, $4, $5)", [entityId, field, existing?.value ?? null, value, who]);
+  return ok({ edit, changed: true }, existing ? 200 : 201);
+}

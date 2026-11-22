@@ -253,6 +253,27 @@ Khaneil's approval"`. Before an action listed under approvals below, the workflo
 
 The API checks everything again (step 6 is a courtesy, not the guard): model output is untrusted.
 
+## Profile edits (agent text edited in Atlas)
+
+Migration `0002_profile_edits.sql` adds `atlas.profile_edits` (one row per agent and field) and the
+append-only `atlas.profile_edit_log` (text before and after, who, when). On the web page, the
+**Edit profile text** button on an agent's profile (Agents tab inspector, or the Details sheet on a
+phone and on the map) saves an agent's name, job title, description, intro and communication style
+here instead of needing a pull request.
+
+- The catalog YAML stays the default. `src/catalog/profileEdits.ts` lays saved edits onto the same
+  agent objects every tab reads, so every tab shows them; "Use repository text" removes an edit.
+- Only these five display fields. Status, trigger, last run, history, tools, permissions, links and
+  spend caps are never editable here: they keep following n8n and the repository.
+- `GET`/`POST /api/data/profile-edits` are owner only (Cloudflare Access). Agent keys get 403, so
+  no agent or n8n workflow can rename itself, and nothing that runs agents reads these rows.
+- The Mac app shows the repository text for now and says editing is on the web page.
+- To make an edit permanent in the repository, copy it into the YAML in a normal pull request,
+  then use "Use repository text" so the row goes away.
+- Apply the migration once: `ATLAS_MIGRATE_DATABASE_URL=… node scripts/db-migrate.mjs`. It also
+  grants `atlas_app` what it needs. Until it runs, the editor says editing is unavailable and
+  nothing else changes. Undo with `--down` (deletes every edit and the log).
+
 ## Approval flow
 
 1. An agent wants to do something consequential (send an external message, spend or move money,
