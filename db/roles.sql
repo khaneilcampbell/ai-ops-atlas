@@ -9,6 +9,10 @@ GRANT USAGE ON SCHEMA atlas TO atlas_app;
 GRANT SELECT ON ALL TABLES IN SCHEMA atlas TO atlas_app;
 GRANT INSERT, UPDATE ON atlas.goals, atlas.projects, atlas.tasks, atlas.decisions, atlas.documents, atlas.agent_runs, atlas.approvals TO atlas_app;
 GRANT INSERT ON atlas.ai_notes TO atlas_app;
+-- 0002_executive (also granted by that migration when the role already exists).
+GRANT INSERT, UPDATE ON atlas.exec_goals, atlas.exec_plans, atlas.exec_tasks, atlas.exec_artifacts TO atlas_app;
+GRANT INSERT ON atlas.exec_events TO atlas_app;
+GRANT USAGE ON SEQUENCE atlas.exec_events_id_seq TO atlas_app;
 GRANT INSERT, UPDATE, DELETE ON atlas.idempotency_keys TO atlas_app;
 REVOKE CREATE ON SCHEMA atlas FROM atlas_app;
 REVOKE ALL ON SCHEMA public FROM atlas_app;
