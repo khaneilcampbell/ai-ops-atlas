@@ -455,6 +455,7 @@ agents:
         url: https://khancam15.app.n8n.cloud/workflow/aYk4xDGoE4HgAi2G
     permissions:
       - 'Atlas data API key "task-writer" (ATLAS_DATA_KEYS): reads goals, projects, tasks, decisions and shared or internal documents; writes tasks only, in the business, projects and career areas'
+      - 'Atlas agent memory (same key, once database migration 0003 is applied): may run the pre-run check, read shared or its own memory in those areas, and record run feedback and working or operational memory, always unverified; it cannot verify, revise or retire memory'
       - 'Google Sheets: clears and rewrites the Workflows by Agent tab of the Atlas Agent Registry sheet'
       - 'n8n API: reads the workflow list'
     registry:

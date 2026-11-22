@@ -1,4 +1,5 @@
 import {GALLERIA_FLOORS,GALLERIA_ID,GALLERIA_KEY,GALLERIA_NAME} from "../views/map3d/galleriaPlan";
+import { AgentMemoryPanel } from "../views/tasks/MemoryPanels";
 import { RoutinePanel } from "../views/agents/RoutinePanel";
 import { BuildingInside } from "./BuildingInside";
 import { AutomationPlazaPanel } from "./AutomationPlazaPanel";
@@ -361,6 +362,7 @@ export function AgentDetail({ id, onClose }: { id: string; onClose?:()=>void }) 
             </ul>
           )}
         </div>
+        <AgentMemoryPanel agentId={agent.id} />
         </>}
       </div>
     </>

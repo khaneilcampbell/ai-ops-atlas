@@ -18,3 +18,9 @@ REVOKE ALL ON SCHEMA public FROM atlas_app;
 --   REVOKE ALL ON SCHEMA atlas FROM anon, authenticated;
 --   REVOKE ALL ON ALL TABLES IN SCHEMA atlas FROM anon, authenticated;
 --   ALTER DEFAULT PRIVILEGES IN SCHEMA atlas REVOKE ALL ON TABLES FROM anon, authenticated;
+
+-- After migration 0003 (agent memory). GRANT ... ON ALL TABLES above only covers tables that
+-- existed when it ran, so new tables are listed here. Memory is never deleted by the app: it is
+-- retired, superseded or expired in place.
+GRANT SELECT, INSERT, UPDATE ON atlas.memory_items TO atlas_app;
+GRANT SELECT, INSERT ON atlas.run_feedback, atlas.memory_events TO atlas_app;
