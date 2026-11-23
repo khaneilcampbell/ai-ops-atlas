@@ -32,7 +32,11 @@ pub fn read_snapshot(path: &Path) -> Result<SnapshotFile, String> {
     let meta = match std::fs::symlink_metadata(path) {
         Ok(m) => m,
         Err(e) if e.kind() == ErrorKind::NotFound => {
-            return Ok(SnapshotFile { path: shown, contents: None, modified_ms: None })
+            return Ok(SnapshotFile {
+                path: shown,
+                contents: None,
+                modified_ms: None,
+            })
         }
         Err(e) => return Err(format!("Couldn't read the snapshot: {e}")),
     };
@@ -42,13 +46,18 @@ pub fn read_snapshot(path: &Path) -> Result<SnapshotFile, String> {
     if meta.len() > MAX_BYTES {
         return Err("The snapshot is too large to be a summary, so Atlas left it unread".into());
     }
-    let contents = std::fs::read_to_string(path).map_err(|e| format!("Couldn't read the snapshot: {e}"))?;
+    let contents =
+        std::fs::read_to_string(path).map_err(|e| format!("Couldn't read the snapshot: {e}"))?;
     let modified_ms = meta
         .modified()
         .ok()
         .and_then(|m| m.duration_since(UNIX_EPOCH).ok())
         .map(|d| d.as_millis() as u64);
-    Ok(SnapshotFile { path: shown, contents: Some(contents), modified_ms })
+    Ok(SnapshotFile {
+        path: shown,
+        contents: Some(contents),
+        modified_ms,
+    })
 }
 
 pub fn delete_snapshot(path: &Path) -> Result<(), String> {
