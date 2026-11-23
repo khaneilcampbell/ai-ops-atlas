@@ -57,6 +57,9 @@ export function syncPlan(prev: RepoSnapshot | undefined, meta: J, opts: SyncOpti
   return { details, runs };
 }
 
+/** Same test as lib/derive isDependabotJob, on GitHub's raw run object. */
+const isDependabotJob = (r: J) => r.event === "dynamic" && / - Update #\d+$/.test(String(r.name ?? ""));
+
 const workflowPath = (w: string) => (r: J) => r.path === `.github/workflows/${w}` || String(r.path ?? "").endsWith(`/${w}`);
 
 function withMainline(runs: J[], branch: string): J[] {
@@ -72,9 +75,13 @@ function withMainline(runs: J[], branch: string): J[] {
 async function fetchRuns(base: string, branch: string, workflows: string[]) {
   const PAGE = 30;
   const all = ((await optional(githubGet(`${base}/actions/runs?per_page=${PAGE}`) as Promise<J>, { workflow_runs: [] })).workflow_runs ?? []) as J[];
-  let onBranch = all.filter((r) => r.head_branch === branch);
-  if (!onBranch.length && all.length === PAGE) {
-    onBranch = ((await optional(githubGet(`${base}/actions/runs?per_page=10&branch=${encodeURIComponent(branch)}`) as Promise<J>, { workflow_runs: [] })).workflow_runs ?? []) as J[];
+  // Dependabot's update jobs run on the default branch too, but they aren't the repository's CI.
+  // In a quiet repository they can fill the whole list, which used to read as "No workflows".
+  let onBranch = all.filter((r) => r.head_branch === branch && !isDependabotJob(r));
+  if (onBranch.length < 10 && all.length === PAGE) {
+    const res = await optional(githubGet(`${base}/actions/runs?per_page=${PAGE}&branch=${encodeURIComponent(branch)}`) as Promise<J>, { workflow_runs: [] });
+    const own = ((res.workflow_runs ?? []) as J[]).filter((r) => !isDependabotJob(r));
+    if (own.length > onBranch.length) onBranch = own;
   }
   const observed = await Promise.all(
     workflows.map(async (w) => {

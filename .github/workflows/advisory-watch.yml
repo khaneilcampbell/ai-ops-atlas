@@ -1,0 +1,31 @@
+name: Advisory watch
+
+# The same dependency audit as CI's "Dependency audit" job, once a day on main. A new RustSec or
+# npm advisory used to stay invisible until the next pull request failed on it (the url crate,
+# Nov 22). Now it shows up as a failed run on main the morning it is published, so a fix PR can
+# land first. Dependabot (weekly) still opens the version bumps; this only reports.
+on:
+  schedule:
+    - cron: "17 11 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Dependency audit (daily)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: npm audit --omit=dev --audit-level=high
+      - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
+        with:
+          tool: cargo-audit
+      - run: cargo audit --file src-tauri/Cargo.lock
