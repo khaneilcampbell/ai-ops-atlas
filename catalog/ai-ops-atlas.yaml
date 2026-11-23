@@ -872,20 +872,22 @@ agents:
   - id: investment-operations
     name: Investment Operations
     purpose: >-
-      Read-only operations assistant for the Investment Operations Center. Checks each brokerage snapshot against a fixed allowlist (symbol, asset class, value, cash, time), refuses anything that looks like an account number, credential or order, and describes in plain words what changed and which data looks wrong. Not connected: there is no supported read-only brokerage source yet, so it shows only invented preview data. Operational summaries, not investment advice; it never places, changes or cancels orders and never moves money.
+      Read-only operations assistant for the Investment Operations Center. In the Mac app it reads one snapshot file that Claude Code writes on Khaneil's "sync my investments" (Robinhood connector with every trading tool denied), checks it against a fixed allowlist (account label, kind, last four characters, cash, symbol, asset class, value, time), refuses anything that looks like a full account number, credential or order, and shows each account with plain-words data checks. Disconnect deletes the file. The website shows only invented preview data. Operational summaries, not investment advice; it never places, changes or cancels orders and never moves money.
     framework: Atlas web app (fixed rules, no model)
     owned_by: atlas-health-monitor            # reports data health, like the other automations it owns
     model: None
-    runtime: In the Atlas app, when the building is opened
+    runtime: In the Atlas Mac app, when the building is opened or Refresh is pressed
     status: paused
-    trigger: 'Not connected: waits for a supported read-only brokerage source; synthetic preview only'
+    trigger: 'Manual: Khaneil asks Claude on the Mac to sync; Mac app only, synthetic preview on the website'
     source: src/finance/investments.ts
     last_run: null
     permissions:
-      - None. It reads only the snapshot it is handed and writes nothing
+      - Reads one local snapshot file; Disconnect deletes it. No brokerage access of its own
     history:
       - at: 2026-11-23
         event: Built as a connector boundary with a synthetic preview. Robinhood's only agent connection also allows trading and shares account numbers, so nothing is connected
+      - at: 2026-11-23
+        event: Per-account read-only view in the Mac app from a local snapshot synced by Claude Code with Robinhood trading tools denied; account numbers kept to the last four; Disconnect deletes the file
     registry:
       title: Investment Operations Assistant
       tier: specialized
@@ -895,7 +897,7 @@ agents:
       classification:
         type: B
         confidence: verified
-        evidence: Fixed allowlist, data checks and change summary in src/finance/investments.ts with tests in investments.test.ts. No model call and no data source yet.
+        evidence: Fixed allowlist, data checks and summary in src/finance/investments.ts, local file read/delete in src-tauri/src/investments.rs, tests in investments.test.ts and investmentsLocal.test.ts. No model call of its own.
       mission:
         problem: Brokerage data would reach Atlas without a check on what it carries, and nobody would see when it is stale or wrong.
         outcomes:
@@ -908,13 +910,13 @@ agents:
         tools: [Atlas finance data]
         outputs: [Connection status, Change summary, Data checks in the Investment Operations Center]
         inputs:
-          - A sanitized snapshot from a supported read-only source (none yet)
+          - A local snapshot file written by Claude Code on the Mac (Robinhood, read tools only)
         dependencies:
-          - A supported read-only brokerage source (none exists yet)
+          - The Robinhood connector in Claude on the Mac, with its trading tools denied in ~/.claude/settings.json
         limitations:
           - Never recommends buying, selling or holding anything
           - Never places, changes or cancels orders or transfers
-          - Stores nothing; the snapshot is gone when the app reloads
+          - Keeps one summary file on the Mac, replaced each sync; no history, nothing in git or on the website
       goals:
         objective: Show what the authorized account data says, safely and plainly.
         review_frequency: Monthly

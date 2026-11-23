@@ -1,1 +1,1 @@
-- 2026-11-23 · Investment Operations Center shows a read-only connection status and an invented-data preview; nothing is connected, stored or traded, and Atlas gives no investment advice (#518)
+- 2026-11-23 · Investment Operations Center shows your brokerage accounts read-only in the Mac app (value, cash and largest holdings, account numbers as the last four only), synced by Claude on your Mac with trading switched off; Disconnect deletes the data, and Atlas gives no investment advice and never trades (#518)

@@ -11,7 +11,7 @@ test('Investment Operations Center panel, desktop and phone',async({page})=>{
   const section=page.locator('.investment-ops');
   if(await section.count()){
    await expect(section).toContainText('Not connected');await expect(section).toContainText('Invented data');await expect(section).not.toContainText('Synced');
-   await expect(section.getByRole('button',{name:'Connect a read-only source'})).toBeDisabled();
+   await expect(section).toContainText('only in the Atlas Mac app');
    await section.scrollIntoViewIfNeeded();await settle(page,1);
   }else{await page.locator('.panel-body').first().evaluate(e=>{e.scrollTop=e.scrollHeight;});await settle(page,1);}
   await page.screenshot({path:`${out}/section-${label}.png`});

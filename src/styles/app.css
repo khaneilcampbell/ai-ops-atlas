@@ -1050,3 +1050,9 @@ button.chip-link { cursor: pointer; font: inherit; font-size: 11.5px; }
 .projects-table .chip.more { background: transparent; color: var(--ink-3); }
 .projects-table tbody tr:hover td { background: var(--sage-50); }
 @media (max-width: 760px) { .projects-table { table-layout: auto; min-width: 640px; } }
+.investment-portfolios { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.investment-portfolio { padding: 8px 10px; border: 1px solid var(--sage-300); border-radius: 10px; }
+.investment-portfolio ul { margin: 4px 0 0; padding-left: 18px; }
+.chip.agent-tradable { color: var(--gold-deep); border-color: rgba(201, 163, 90, 0.5); }
+.investment-ops .finance-row { flex-wrap: wrap; gap: 6px; }
+.investment-ops > .finance-row { justify-content: flex-start; margin: 6px 0; }
