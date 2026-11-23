@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Catalog } from "../catalog/types";
 import type { RepoSnapshot } from "../github/types";
-import { attentionItems, ciHealth, ciSummary, effectiveLastRun, verifiedState } from "./derive";
+import { attentionItems, ciHealth, ciSuccess, ciSummary, overallHealth, repoHealth, effectiveLastRun, verifiedState } from "./derive";
 
 const snap = (over: Partial<RepoSnapshot> = {}): RepoSnapshot => ({
   fullName: "me/demo", description: null, url: "", homepage: null, language: "Python", languages: {}, visibility: "public",
@@ -32,6 +32,31 @@ describe("ciHealth", () => {
   it("ignores Dependabot's own update jobs", () => {
     const dependabot = { ...run("cargo in /src-tauri for glib - Update #1658074936", "failure"), event: "dynamic" };
     expect(ciHealth(snap({ runs: [dependabot, run("CI", "success")] })).value).toBe("Passing");
+  });
+});
+
+describe("repoHealth", () => {
+  it("doesn't flag a repository for many open pull requests or no license", () => {
+    const s = snap({ openIssues: 23, license: null, runs: [run("CI", "success")] });
+    expect(overallHealth(repoHealth(s, 2))).toBe("good");
+  });
+  it("still flags failing CI and a stale repository", () => {
+    expect(overallHealth(repoHealth(snap({ runs: [run("CI", "failure")] }), 1))).toBe("bad");
+    expect(overallHealth(repoHealth(snap({ pushedAt: new Date(Date.now() - 30 * 86_400_000).toISOString(), runs: [run("CI", "success")] }), 1))).toBe("warn");
+  });
+});
+
+describe("ciSuccess", () => {
+  it("leaves skipped and cancelled runs out of the rate", () => {
+    const runs = [run("CI", "success"), run("Merge flow", "skipped"), run("Merge flow", "cancelled"), run("Visual", "failure"), run("CodeQL", "success")];
+    expect(ciSuccess(runs)).toEqual({ ok: 2, counted: 3, ignored: 2 });
+  });
+  it("counts timed out runs as failures and ignores Dependabot's update jobs", () => {
+    const dependabot = { ...run("npm in /site - Update #1722134673", "failure"), event: "dynamic" };
+    expect(ciSuccess([run("Tests", "timed_out"), run("Tests", "success"), dependabot])).toEqual({ ok: 1, counted: 2, ignored: 0 });
+  });
+  it("skips runs still in progress", () => {
+    expect(ciSuccess([{ ...run("CI", null), status: "in_progress" }])).toEqual({ ok: 0, counted: 0, ignored: 0 });
   });
 });
 
