@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Catalog } from "../catalog/types";
 import type { RepoSnapshot } from "../github/types";
-import { attentionItems, ciHealth, ciSummary, effectiveLastRun, verifiedState } from "./derive";
+import { attentionItems, ciHealth, ciSuccess, ciSummary, effectiveLastRun, verifiedState } from "./derive";
 
 const snap = (over: Partial<RepoSnapshot> = {}): RepoSnapshot => ({
   fullName: "me/demo", description: null, url: "", homepage: null, language: "Python", languages: {}, visibility: "public",
@@ -32,6 +32,20 @@ describe("ciHealth", () => {
   it("ignores Dependabot's own update jobs", () => {
     const dependabot = { ...run("cargo in /src-tauri for glib - Update #1658074936", "failure"), event: "dynamic" };
     expect(ciHealth(snap({ runs: [dependabot, run("CI", "success")] })).value).toBe("Passing");
+  });
+});
+
+describe("ciSuccess", () => {
+  it("leaves skipped and cancelled runs out of the rate", () => {
+    const runs = [run("CI", "success"), run("Merge flow", "skipped"), run("Merge flow", "cancelled"), run("Visual", "failure"), run("CodeQL", "success")];
+    expect(ciSuccess(runs)).toEqual({ ok: 2, counted: 3, ignored: 2 });
+  });
+  it("counts timed out runs as failures and ignores Dependabot's update jobs", () => {
+    const dependabot = { ...run("npm in /site - Update #1722134673", "failure"), event: "dynamic" };
+    expect(ciSuccess([run("Tests", "timed_out"), run("Tests", "success"), dependabot])).toEqual({ ok: 1, counted: 2, ignored: 0 });
+  });
+  it("skips runs still in progress", () => {
+    expect(ciSuccess([{ ...run("CI", null), status: "in_progress" }])).toEqual({ ok: 0, counted: 0, ignored: 0 });
   });
 });
 

@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
 import { DEFAULT_SECONDS, filtersFor, planShards } from "./shards.mjs";
 
+/** Must match the matrix in .github/workflows/visual.yml. */
+const SHARDS = 12;
+const dir = new URL(".", import.meta.url);
+const specFiles = () => readdirSync(dir).filter((f) => f.endsWith(".visual.ts"));
+const shardTimes = () => JSON.parse(readFileSync(new URL("shard-times.json", dir), "utf8"));
+
 describe("visual CI shards", () => {
   it("puts every file in exactly one shard", () => {
     const files = ["a.visual.ts", "b.visual.ts", "c.visual.ts", "d.visual.ts", "e.visual.ts"];
@@ -27,11 +33,25 @@ describe("visual CI shards", () => {
     expect(re.test("/repo/visual/interior-trackpad.visual.ts")).toBe(false);
   });
 
+  it("has a measured time for every spec file and none for deleted ones", () => {
+    // 23 spec files once counted as 90 seconds each while some took 18 minutes, so a shard planned
+    // at 24 minutes ran past the 35 minute limit and was cancelled. Add the file's CI time here.
+    const times = shardTimes();
+    expect(specFiles().filter((f) => !(f in times))).toEqual([]);
+    expect(Object.keys(times).filter((f) => !specFiles().includes(f))).toEqual([]);
+  });
+
+  it("plans for the same number of shards the CI workflow runs", () => {
+    const workflow = readFileSync(new URL("../.github/workflows/visual.yml", dir), "utf8");
+    const matrix = workflow.match(/\|\| '\[([\d, ]+)\]'/)?.[1].split(",") ?? [];
+    expect(matrix).toHaveLength(SHARDS);
+    expect(workflow).toContain(`shards.mjs \${{ matrix.shard }} ${SHARDS})`);
+  });
+
   it("keeps the real suite's shards under the 35 minute CI limit", () => {
-    const dir = new URL(".", import.meta.url);
-    const files = readdirSync(dir).filter((f) => f.endsWith(".visual.ts"));
-    const times = JSON.parse(readFileSync(new URL("shard-times.json", dir), "utf8"));
-    const longest = Math.max(...planShards(files, times, 10).map((s) => s.seconds));
+    const files = specFiles();
+    const times = shardTimes();
+    const longest = Math.max(...planShards(files, times, SHARDS).map((s) => s.seconds));
     // Runners vary by about 15% between runs; leave that plus install time inside the 35 minute limit.
     expect(longest).toBeLessThan(24 * 60);
   });

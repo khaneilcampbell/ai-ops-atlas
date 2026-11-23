@@ -1,0 +1,1 @@
+- 2026-11-23 · CI success on each repository now counts only real results: skipped or cancelled runs no longer show as failures, the Security lab finds its own CI runs again, screenshot checks run as 12 shards so none is cut off, and a daily check spots new dependency advisories (#PR)
