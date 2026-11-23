@@ -395,6 +395,9 @@ table.table { width: 100%; border-collapse: collapse; }
 .finance-datasets li[data-status="live"] { border-left-color: var(--good); }
 .finance-datasets li[data-status="imported"] { border-left-color: var(--gold-deep); }
 .finance-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--ink); }
+.investment-ops .btn:disabled { opacity: .6; cursor: not-allowed; }
+.investment-preview { margin-top: 10px; padding: 8px 10px; border: 1px dashed var(--sage-300); border-radius: 10px; }
+.investment-preview ul { margin: 4px 0 6px; padding-left: 18px; }
 .chip.finance-status.not-connected { background: transparent; color: var(--ink-3); }
 .chip.finance-status.imported { color: var(--gold-deep); border-color: rgba(201, 163, 90, 0.5); }
 .chip.finance-status.live { background: rgba(74, 122, 84, 0.12); border-color: rgba(74, 122, 84, 0.3); color: var(--good, #3f6b48); }

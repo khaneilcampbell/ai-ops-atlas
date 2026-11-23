@@ -866,6 +866,74 @@ agents:
 
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: investment-operations
+    name: Investment Operations
+    purpose: >-
+      Read-only operations assistant for the Investment Operations Center. Checks each brokerage snapshot against a fixed allowlist (symbol, asset class, value, cash, time), refuses anything that looks like an account number, credential or order, and describes in plain words what changed and which data looks wrong. Not connected: there is no supported read-only brokerage source yet, so it shows only invented preview data. Operational summaries, not investment advice; it never places, changes or cancels orders and never moves money.
+    framework: Atlas web app (fixed rules, no model)
+    owned_by: atlas-health-monitor            # reports data health, like the other automations it owns
+    model: None
+    runtime: In the Atlas app, when the building is opened
+    status: paused
+    trigger: 'Not connected: waits for a supported read-only brokerage source; synthetic preview only'
+    source: src/finance/investments.ts
+    last_run: null
+    permissions:
+      - None. It reads only the snapshot it is handed and writes nothing
+    history:
+      - at: 2026-11-23
+        event: Built as a connector boundary with a synthetic preview. Robinhood's only agent connection also allows trading and shares account numbers, so nothing is connected
+    registry:
+      title: Investment Operations Assistant
+      tier: specialized
+      category: business
+      subcategory: Investment operations
+      automation_category: monitoring
+      classification:
+        type: B
+        confidence: verified
+        evidence: Fixed allowlist, data checks and change summary in src/finance/investments.ts with tests in investments.test.ts. No model call and no data source yet.
+      mission:
+        problem: Brokerage data would reach Atlas without a check on what it carries, and nobody would see when it is stale or wrong.
+        outcomes:
+          - Only the allowlisted, minimized shape reaches Atlas
+          - Changes and data problems described in plain words
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks: [Check snapshots against the allowlist, Summarize what changed, Flag stale or inconsistent data]
+        tools: [Atlas finance data]
+        outputs: [Connection status, Change summary, Data checks in the Investment Operations Center]
+        inputs:
+          - A sanitized snapshot from a supported read-only source (none yet)
+        dependencies:
+          - A supported read-only brokerage source (none exists yet)
+        limitations:
+          - Never recommends buying, selling or holding anything
+          - Never places, changes or cancels orders or transfers
+          - Stores nothing; the snapshot is gone when the app reloads
+      goals:
+        objective: Show what the authorized account data says, safely and plainly.
+        review_frequency: Monthly
+        kpis:
+          - name: Refused payloads logged without figures
+            kind: quality
+            target: Every rejection names fields, never values
+            basis: Checked by investments.test.ts
+      execution:
+        trigger_type: manual
+        environment: Atlas web app and Mac app
+      governance:
+        autonomy: 0
+        autonomy_note: Reads and describes only. Connecting a source needs Khaneil's action and a supported read-only method.
+        risk: low
+        credential_owner: Not documented; no credential exists
+      cost:
+        budget: No model calls.
+      docs:
+        technical: docs/benjaire-finance.md#investment-operations-center
+        runbook: docs/runbooks/ai-ops-atlas.md#investment-operations
+        last_review: 2026-11-23
   - id: atlas-release-manager
     name: Atlas Release Manager
     purpose: >-
@@ -971,6 +1039,8 @@ agents:
         event: Supervises autonomous operations (Phase 9) in Mission Control. Turns verified events into incidents with fixed rules, and runs only approved read-only recovery playbooks, automatically only under a policy Khaneil enabled at autonomy level 3
       - at: 2026-11-18
         event: Signal Watch deleted at Khaneil's request; it now owns Dataset Census and Atlas Data Inventory
+      - at: 2026-11-23
+        event: Also owns Investment Operations (paused, synthetic preview only) for the Investment Operations Center's data checks
     permissions:
       - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
@@ -1011,6 +1081,7 @@ agents:
         dependencies:
           - dataset-census
           - atlas-data-inventory
+          - investment-operations
         limitations:
           - Acts only through the automations it owns; it has no model, schedule or credentials of its own
           - Reports health; it does not repair anything

@@ -1,0 +1,1 @@
+- 2026-11-23 · Investment Operations Center shows a read-only connection status and an invented-data preview; nothing is connected, stored or traded, and Atlas gives no investment advice (#PR)

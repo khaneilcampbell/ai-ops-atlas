@@ -97,4 +97,12 @@ An owning agent with no model of its own. Its automations are Atlas CI, Re-run F
 
 ## Health Monitor
 
-An owning agent with no model of its own. Its automations are Dataset Census ([Building operators](#building-operators)) and [Atlas Data Inventory](#atlas-data-inventory). Incident playbooks are off by default; see [docs/autonomous-operations.md](../autonomous-operations.md).
+An owning agent with no model of its own. Its automations are Dataset Census ([Building operators](#building-operators)), [Atlas Data Inventory](#atlas-data-inventory) and [Investment Operations](#investment-operations). Incident playbooks are off by default; see [docs/autonomous-operations.md](../autonomous-operations.md).
+
+## Investment Operations
+
+Paused. Fixed rules in `src/finance/investments.ts`, shown in the Investment Operations Center panel. No model, no data source, no credential and nothing stored: the panel shows only an invented preview, labelled as such. Details and why nothing is connected: [docs/benjaire-finance.md](../benjaire-finance.md#investment-operations-center).
+
+- **Healthy:** the panel reads "Not connected" and "Last sync: Never" until a supported read-only source exists. It must never show Synced for the synthetic preview.
+- **When it fails:** a refused snapshot lists field names only; never copy a payload into an issue, log or chat.
+- **Stop it:** nothing runs on its own. Remove the section from `DetailPanel.tsx` or revert the pull request.
