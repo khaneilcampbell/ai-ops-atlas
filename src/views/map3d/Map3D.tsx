@@ -88,7 +88,11 @@ import { planAgentCommutes } from "./agentCommutes";
 import { planNamedAgents, type NamedAgentPlan } from "./namedAgentPlan";
 import { NamedAgents } from "./NamedAgents";
 import { CityRoutes, planCityPlaces, type CityPlaces } from "./routinePlaces";
-import { agentPositions, followedAgent, setFollowedAgent } from "./agentFollow";
+import { agentPositions, followedAgent, setFollowedAgent, viewOffice } from "./agentFollow";
+import { busiestFloor, insideNow, occupancySignature, officeBuildingOf, type InsideAgent } from "./occupancy";
+import { occupancyMarker, useTick, type MarkerFace } from "./OccupancyMarker";
+import { routineOverride, useRoutines } from "../../routine/useRoutineOps";
+import { buildingDisplayName } from "../../modules/names";
 import { catalog as fullCatalog } from "../../catalog";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
@@ -266,6 +270,35 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   }, [scene, jobs, namedAgents]);
   const anchors = useMemo(() => anchorsOf(scene, layout), [scene, layout]);
   const [hover, setHover] = useState<string | null>(null);
+  // "Agents inside": which buildings have named agents inside right now, from their routines
+  // (occupancy.ts explains the source of truth). Re-read every 10 seconds and whenever the routines change.
+  const routines = useRoutines();
+  const tick = useTick(10_000);
+  const officeKeys = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const a of namedAgents?.agents ?? []) {
+      const job = jobs?.find((j) => j.agentId === a.personaId);
+      const key = job && officeBuildingOf(job.work, scene.towers, scene.agency ? { key: AGENCY_KEY, name: AGENCY_NAME } : null);
+      if (key) m.set(a.personaId, key);
+    }
+    return m;
+  }, [namedAgents, jobs, scene]);
+  const faces = useMemo(() => new Map<string, MarkerFace>((namedAgents?.agents ?? []).map((a) => [a.personaId, { name: a.identity.name, initials: a.identity.initials, accent: a.identity.accent, portrait: a.identity.portrait }])), [namedAgents]);
+  const occupiedNow = useMemo(
+    () => insideNow(routines, Date.now(), (id) => officeKeys.get(id) ?? null, namedAgents?.agents.map((a) => a.personaId) ?? [], routineOverride),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tick re-reads the clock
+    [routines, officeKeys, namedAgents, tick],
+  );
+  const occupiedSig = occupancySignature(occupiedNow);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only a real change in who is inside rebuilds the labels
+  const occupied = useMemo<ReadonlyMap<string, InsideAgent[]>>(() => occupiedNow, [occupiedSig]);
+  // A first tap on a marker on a touch screen shows who is inside; it closes on its own after a few seconds.
+  const [peek, setPeek] = useState<string | null>(null);
+  useEffect(() => {
+    if (!peek) return;
+    const id = window.setTimeout(() => setPeek(null), 5000);
+    return () => window.clearTimeout(id);
+  }, [peek]);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; sub: string } | null>(null);
   const [near, setNear] = useState<"far" | "mid" | "near">("far");
   // Headquarters open in the Inside view: their nameplates sit on the open floor, not the old roof.
@@ -461,9 +494,43 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.stadium)plaque({id:STADIUM_KEY,select:STADIUM_KEY,name:STADIUM_NAME,x:scene.stadium.x+scene.stadium.w/2,roof:TERRACE_H+stadiumCrown(),z:scene.stadium.z+scene.stadium.d/2,priority:2,mark:PLANNED,title:`${STADIUM_NAME} · Planned venue`});
     if(scene.airport)for(const b of AIRPORT_BUILDINGS.filter(b=>mapLabelVisible("detail",near,selKey===airportBuildingKey(b.id),hover===airportBuildingKey(b.id),selKey===AIRPORT_KEY)))plaque({id:airportBuildingKey(b.id),select:airportBuildingKey(b.id),name:b.name,x:airportPoint(scene.airport,b.x,b.z)[0],roof:TERRACE_H+b.h,z:scene.airport.z+b.z,priority:7,mark:PLANNED,title:`${b.name} · Planned workspace`});
     if(scene.airport)plaque({id:AIRPORT_KEY,select:AIRPORT_KEY,name:"Atlas Airport",x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],roof:TERRACE_H+3.4,z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,priority:2,mark:PLANNED,title:"Atlas Airport · Planned visual district"});
+    // "Agents inside" markers: one over each building with named agents inside right now, floating
+    // just above its nameplate (occupancy.ts, OccupancyMarker.tsx). A building open in the Inside view
+    // already shows them at their desks, so it has none.
+    for (const [key, inside] of occupied) {
+      if (openSet.has(key)) continue;
+      const t = scene.towers.find((x) => x.key === key);
+      const b = t
+        ? { key, name: buildingDisplayName(key, t.name), x: t.x, roof: roofOf(t), z: t.z }
+        : key === AGENCY_KEY && scene.agency
+          ? { key, name: buildingDisplayName(key, AGENCY_NAME), x: scene.agency.cx, roof: TERRACE_H + AGENCY.eastHigh + 0.25, z: scene.agency.cz }
+          : null;
+      if (!b) continue;
+      const plate = out.find((l) => l.key === key && l.className.includes("m3-plaque"));
+      out.push(
+        occupancyMarker({
+          building: b,
+          ...(plate ? { plaqueId: plate.id } : {}),
+          agents: inside,
+          faces,
+          plaqueH: plate?.h ?? PLAQUE.height,
+          priority: plate?.priority ?? 2,
+          peeking: peek === key,
+          onPeek: () => setPeek(key),
+          onEnter: () => {
+            setPeek(null);
+            // A headquarters opens in the Inside view on its busiest floor, the way "View office" does;
+            // with one agent inside, Atlas also locates and follows it. Other buildings are selected.
+            if (!t) return select(key);
+            const floor = busiestFloor(inside.map((a) => city?.places.agents.get(a.personaId)?.desk?.floor));
+            viewOffice({ towerKey: key, projectId: t.projectId, ...(inside.length === 1 ? { personaId: inside[0].personaId } : {}), ...(floor !== undefined ? { floor } : {}) });
+          },
+        }),
+      );
+    }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
-  }, [scene, layout, props.displayNeighborhoods, props.landmarkMarks, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf]);
+  }, [scene, layout, props.displayNeighborhoods, props.landmarkMarks, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf, occupied, faces, peek, openSet, city]);
 
   const pick: PickHandlerSet = {
     of: (keys) => ({
@@ -616,9 +683,10 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
             title={l.title}
             style={{ width: l.w }}
             role={l.onClick?"button":undefined}
+            aria-label={l.ariaLabel}
             tabIndex={l.onClick?0:undefined}
             onKeyDown={e=>{if(l.onClick&&(e.key==="Enter"||e.key===" ")){e.preventDefault();e.stopPropagation();l.onClick();}}}
-            onClick={l.onClick}
+            onClick={l.onClick ? (e) => l.onClick!(e) : undefined}
             onMouseEnter={l.onClick ? () => setHover(l.key) : undefined}
             onMouseLeave={l.onClick ? () => setHover(null) : undefined}
           >
@@ -1278,9 +1346,9 @@ function World({
       v.copy(l.pos).project(camera);
       if (v.z > 1 || v.x < -1.1 || v.x > 1.1 || v.y < -1.1 || v.y > 1.1) continue;
       const x = ((v.x + 1) / 2) * size.width;
-      const y = ((1 - v.y) / 2) * size.height;
+      const y = ((1 - v.y) / 2) * size.height - (l.lift ?? 0);
       screen.set(l.id, { x, y });
-      boxes.push({ id: l.id, x, top: y - l.h, bottom: y, w: l.w, priority: l.priority, alts: [-(l.h * 0.55), -(l.h + 6)] });
+      boxes.push({ id: l.id, x, top: y - l.h, bottom: y, w: l.w, priority: l.priority, alts: [-(l.h * 0.55), -(l.h + 6)], ...(l.over ? { over: { id: l.over, drop: l.lift ?? 0 } } : {}) });
     }
     const shown = placeLabels(boxes, 10, lastShown.current);
     lastShown.current = shown;
@@ -1296,6 +1364,13 @@ function World({
       el.style.visibility = "visible";
       el.style.transform = `translate(${Math.round(s.x - l.w / 2)}px, ${Math.round(s.y + dy - l.h)}px)`;
       el.style.setProperty("--stem", `${Math.max(0, -dy)}px`);
+      // A label with a tooltip (the "agents inside" marker) keeps it inside the map: below the label
+      // near the top edge, and nudged in from the sides.
+      if (l.lift !== undefined) {
+        const top = s.y + dy - l.h, half = Math.min(130, size.width / 2 - 8);
+        el.toggleAttribute("data-tip-below", top < 190);
+        el.style.setProperty("--tip-x", `${Math.round(THREE.MathUtils.clamp(s.x, half + 8, size.width - half - 8) - s.x)}px`);
+      }
     }
   });
 

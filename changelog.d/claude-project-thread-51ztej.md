@@ -1,0 +1,1 @@
+- 2026-11-23 · The map shows a small "agents inside" marker above any building where agents are working right now, with their faces and a count; hover or tap it to see who and what they're doing, click to look inside
