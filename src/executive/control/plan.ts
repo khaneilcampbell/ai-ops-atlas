@@ -201,3 +201,47 @@ export function checkPlan(raw: unknown, goal: { budgetUsd: number }): Check<Exec
   if (total > goal.budgetUsd) problems.push(`The plan may cost up to $${total.toFixed(2)}, more than the goal's $${goal.budgetUsd.toFixed(2)} budget.`);
   return problems.length ? { ok: false, problems } : { ok: true, value: plan };
 }
+
+// ---- Explicit templates (Phase 2) -------------------------------------------------------------------
+// Goals Atlas opens itself (an engineering incident) name their template and inputs instead of being
+// matched by words. The plan still goes through checkPlan like any other.
+
+const CI_REPAIR_ACCEPTANCE = [
+  "The approved checks pass in a clean runner with no secrets, as GitHub itself reports",
+  "Atlas QA passes the real diff: small, no protected file, no silenced check, no deleted test",
+  "A review-ready pull request exists for the branch QA checked; nobody merged it",
+];
+
+export const ENGINEERING_TEMPLATE = "engineering-ci-repair";
+
+/** The fixed engineering plan: implement -> QA -> deliver -> report. Repairs add tasks later (engine). */
+export function engineeringPlan(inputs: Record<string, string>, implementCapUsd: number): ExecutivePlan {
+  const tasks: PlanTask[] = [
+    {
+      key: "implement",
+      title: `Investigate and fix the failing ${inputs.category ?? "check"} in ${inputs.repo ?? "the repository"}`,
+      capability: "engineering.implement_fix",
+      dependsOn: [],
+      acceptance: ["A change on this task's atlas-eng/ branch, inside the size limit, touching no protected file"],
+      maxCostUsd: implementCapUsd,
+      inputs: { ...inputs, repair_iteration: "0", feedback: "" },
+    },
+    { key: "qa", title: "Independently verify the change", capability: "qa.verify_change", dependsOn: ["implement"], acceptance: ["QA outcome PASS from GitHub's own results"], maxCostUsd: 0, inputs: { repo: inputs.repo ?? "", base_sha: inputs.base_sha ?? "" } },
+    { key: "deliver", title: "Open a review-ready pull request", capability: "engineering.deliver_pr", dependsOn: ["qa"], acceptance: ["The pull request is for the exact commit QA checked"], maxCostUsd: 0, inputs: { repo: inputs.repo ?? "" } },
+    { key: "report", title: "Record the outcome and the remaining risks", capability: "executive.verify", dependsOn: ["deliver"], acceptance: ["A completion summary with the pull request link is on the goal"], maxCostUsd: 0, inputs: {} },
+  ];
+  return {
+    schema: "atlas-executive-plan/1",
+    template: ENGINEERING_TEMPLATE,
+    deliverables: ["A review-ready pull request with test and risk evidence", "A QA report read from GitHub", "A completion summary"],
+    acceptance: CI_REPAIR_ACCEPTANCE,
+    tasks,
+    estimatedCostUsd: tasks.reduce((s, t) => s + t.maxCostUsd, 0),
+    risk: "medium",
+  };
+}
+
+export function draftTemplatePlan(template: string, inputs: Record<string, string>, implementCapUsd: number): { ok: true; plan: ExecutivePlan } | { ok: false; reason: string } {
+  if (template === ENGINEERING_TEMPLATE) return { ok: true, plan: engineeringPlan(inputs, implementCapUsd) };
+  return { ok: false, reason: `Unknown plan template ${template}.` };
+}
