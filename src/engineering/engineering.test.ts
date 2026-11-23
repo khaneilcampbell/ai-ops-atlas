@@ -176,6 +176,7 @@ describe("contracts", () => {
 describe("QA evaluator", () => {
   const evidence = (over: Partial<QaEvidence> = {}, files?: NonNullable<QaEvidence["compare"]>["files"]): QaEvidence => ({
     run: { id: 555, path: ".github/workflows/atlas-engineer.yml", event: "workflow_dispatch", status: "completed", conclusion: "success", headSha: "c".repeat(40), htmlUrl: null },
+    validation: { id: 556, path: ".github/workflows/atlas-engineer-validate.yml", event: "workflow_dispatch", status: "completed", conclusion: "success", headSha: HEAD, htmlUrl: null, branch: branchFor(TASK, 1) },
     jobs: [{ name: "validate", conclusion: "success", url: null, steps: REPO.checks.map((c) => ({ name: c.name, conclusion: "success" })) }],
     compare: { mergeBaseSha: SHA, status: "ahead", aheadBy: 1, behindBy: 0, headSha: HEAD, files: files ?? [{ filename: "src/lib/format.ts", status: "modified", additions: 3, deletions: 1, patch: "+  return n === 0 ? '0' : String(n);" }] },
     ...over,
@@ -195,7 +196,7 @@ describe("QA evaluator", () => {
     expect(evaluateQa(REPO, change(), evidence({}, [{ filename: "src/a.ts", status: "modified", additions: 1, deletions: 0, patch: "+// eslint-disable-next-line" }]), "now").outcome).toBe("FAIL");
     expect(evaluateQa(REPO, change(), evidence({}, [{ filename: "src/a.test.ts", status: "removed", additions: 0, deletions: 20, patch: null }]), "now").outcome).toBe("FAIL");
     expect(evaluateQa(REPO, change(), evidence({}, [{ filename: ".github/workflows/ci.yml", status: "modified", additions: 1, deletions: 0, patch: "+x" }]), "now").outcome).toBe("FAIL");
-    expect(evaluateQa(REPO, change({ headSha: "d".repeat(40) }), evidence(), "now").outcome).toBe("FAIL");
+    expect(evaluateQa(REPO, change({ headSha: "d".repeat(40) }), evidence({ validation: { ...evidence().validation!, headSha: "d".repeat(40) } }), "now").outcome).toBe("FAIL");
     expect(evaluateQa(REPO, change(), evidence({ compare: { ...evidence().compare!, behindBy: 2 } }), "now").outcome).toBe("FAIL");
   });
   it("sends dependency and security-relevant changes to Khaneil", () => {
@@ -207,11 +208,23 @@ describe("QA evaluator", () => {
     expect(evaluateQa(REPO, change(), evidence({ run: { ...evidence().run!, path: ".github/workflows/ci.yml" } }), "now").outcome).toBe("BLOCKED");
     expect(evaluateQa(REPO, change(), evidence({ run: { ...evidence().run!, status: "in_progress" } }), "now").outcome).toBe("BLOCKED");
   });
+  it("only trusts checks that ran on the pushed branch, for the reported commit, in the validate workflow", () => {
+    const v = evidence().validation!;
+    // Not started yet, or still running: wait and look again.
+    expect(evaluateQa(REPO, change(), evidence({ validation: null, jobs: [] }), "now").outcome).toBe("BLOCKED");
+    expect(evaluateQa(REPO, change(), evidence({ validation: { ...v, status: "in_progress" } }), "now").outcome).toBe("BLOCKED");
+    // Checks from somewhere else never count, even when every step passed.
+    for (const bad of [{ path: ".github/workflows/ci.yml" }, { event: "push" }, { branch: "main" }, { headSha: "e".repeat(40) }]) {
+      const r = evaluateQa(REPO, change(), evidence({ validation: { ...v, ...bad } }), "now");
+      expect(r.outcome).toBe("BLOCKED");
+      expect(r.checks.find((c) => c.name === "The checks ran on the pushed branch")?.passed).toBe(false);
+    }
+  });
 });
 
 describe("pull request text", () => {
   it("follows the template headings and stays under GitHub's limit", () => {
-    const qa = evaluateQa(REPO, change(), { run: { id: 555, path: ".github/workflows/atlas-engineer.yml", event: "workflow_dispatch", status: "completed", conclusion: "success", headSha: SHA, htmlUrl: null }, jobs: [{ name: "validate", conclusion: "success", url: null, steps: REPO.checks.map((c) => ({ name: c.name, conclusion: "success" })) }], compare: { mergeBaseSha: SHA, status: "ahead", aheadBy: 1, behindBy: 0, headSha: HEAD, files: [{ filename: "src/a.ts", status: "modified", additions: 1, deletions: 0, patch: "+x" }] } }, "now");
+    const qa = evaluateQa(REPO, change(), { run: { id: 555, path: ".github/workflows/atlas-engineer.yml", event: "workflow_dispatch", status: "completed", conclusion: "success", headSha: SHA, htmlUrl: null }, validation: { id: 556, path: ".github/workflows/atlas-engineer-validate.yml", event: "workflow_dispatch", status: "completed", conclusion: "success", headSha: HEAD, htmlUrl: null, branch: branchFor(TASK, 1) }, jobs: [{ name: "validate", conclusion: "success", url: null, steps: REPO.checks.map((c) => ({ name: c.name, conclusion: "success" })) }], compare: { mergeBaseSha: SHA, status: "ahead", aheadBy: 1, behindBy: 0, headSha: HEAD, files: [{ filename: "src/a.ts", status: "modified", additions: 1, deletions: 0, patch: "+x" }] } }, "now");
     const t = pullRequestText({ repo: REPO, category: "test", workflowName: "CI", failedRunUrl: null, baseSha: SHA, branch: branchFor(TASK, 1), qa, runUrl: null, plan: "x".repeat(5000), goalId: TASK, taskRecordId: null, today: "2026-11-23" });
     expect(t.title).toMatch(/^Fix failing/);
     for (const h of ["## What changes for Khaneil", "## Changelog line", "## Risk", "## Checks", "## Rollback"]) expect(t.body).toContain(h);

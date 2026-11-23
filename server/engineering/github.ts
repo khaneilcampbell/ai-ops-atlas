@@ -18,6 +18,8 @@ export interface GithubReader {
   /** Recent runs on a branch, newest first (completed only). */
   recentRuns(repo: string, branch: string, status?: "failure" | "success"): Promise<RunFacts[]>;
   compare(repo: string, base: string, head: string): Promise<QaEvidence["compare"]>;
+  /** Dispatched runs of a workflow file on one branch, newest first (any status). */
+  dispatchedRuns(repo: string, workflowFile: string, branch: string): Promise<RunFacts[]>;
 }
 
 const TIMEOUT_MS = 10_000;
@@ -63,6 +65,12 @@ export function githubReader(env: GithubReadEnv, fetcher: typeof fetch = fetch):
       if (!BRANCH.test(branch)) throw new GithubReadError("Bad branch.");
       const q = `?branch=${encodeURIComponent(branch)}&per_page=20${status ? `&status=${status}` : "&status=completed"}`;
       const body = (await get(repo, `/actions/runs${q}`)) as { workflow_runs?: unknown[] };
+      return (Array.isArray(body?.workflow_runs) ? body.workflow_runs : []).map((w) => runFacts(repo, w)).filter((x): x is RunFacts => !!x);
+    },
+    async dispatchedRuns(repo, workflowFile, branch) {
+      if (!/^[a-z0-9_.-]+\.ya?ml$/i.test(workflowFile) || !/^atlas-eng\/[0-9a-f]{8}-a[0-9]{1,2}$/.test(branch)) throw new GithubReadError("Bad workflow or branch.");
+      const q = `?branch=${encodeURIComponent(branch)}&event=workflow_dispatch&per_page=10`;
+      const body = (await get(repo, `/actions/workflows/${workflowFile}/runs${q}`)) as { workflow_runs?: unknown[] };
       return (Array.isArray(body?.workflow_runs) ? body.workflow_runs : []).map((w) => runFacts(repo, w)).filter((x): x is RunFacts => !!x);
     },
     async compare(repo, base, head) {

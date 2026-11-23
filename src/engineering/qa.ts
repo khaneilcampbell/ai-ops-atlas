@@ -6,11 +6,27 @@ import type { ChangeArtifact } from "./contracts";
 // Atlas Quality Assurance (atlas-qa): the independent check of an engineering change. It never takes
 // the Engineering agent's word: the runner's own report is only used to know which run and branch to
 // look at. The evidence is what GitHub itself says (the runner run's job and step results, and the
-// real diff between the base commit and the pushed branch), read by the Atlas site with its own
+// real diff between the base commit and the pushed branch, and the checks run on that branch), read by the Atlas site with its own
 // read-only token. No model is called; the same evidence always gives the same outcome.
 
+export interface RunEvidence {
+  id: number;
+  path: string | null;
+  event: string;
+  status: string;
+  conclusion: string | null;
+  headSha: string;
+  htmlUrl: string | null;
+  /** The ref the run ran on (head_branch). */
+  branch?: string;
+}
+
 export interface QaEvidence {
-  run: { id: number; path: string | null; event: string; status: string; conclusion: string | null; headSha: string; htmlUrl: string | null } | null;
+  /** The runner run Engineering reported. */
+  run: RunEvidence | null;
+  /** The validate run on the pushed branch, for the reported commit (null when it hasn't started). */
+  validation: RunEvidence | null;
+  /** The validate run's jobs. */
   jobs: JobFacts[];
   compare: {
     mergeBaseSha: string | null;
@@ -70,10 +86,25 @@ export function evaluateQa(repo: EngineeringRepo, claimed: ChangeArtifact, evide
     return report("BLOCKED");
   }
 
-  // 2. Each approved check ran and passed, according to GitHub's own step results.
+  // 2. The checks ran in the validate workflow, on the pushed branch, for exactly the reported commit.
+  const v = evidence.validation;
+  if (!v) {
+    add({ name: "The checks ran on the pushed branch", passed: false, source: "github", detail: "No validate run for this commit yet." });
+    return report("BLOCKED");
+  }
+  const validPath = `.github/workflows/${repo.validateWorkflow}`;
+  const validGenuine = v.path === validPath && v.event === "workflow_dispatch" && v.branch === claimed.branch && v.headSha === claimed.headSha;
+  add({ name: "The checks ran on the pushed branch", passed: validGenuine, source: "github", detail: validGenuine ? undefined : `path ${v.path ?? "?"}, event ${v.event}, branch ${v.branch ?? "?"}, commit ${v.headSha.slice(0, 7)}` });
+  if (!validGenuine) return report("BLOCKED");
+  if (v.status !== "completed") {
+    add({ name: "The checks finished", passed: false, source: "github", detail: `GitHub says the checks are ${v.status}.` });
+    return report("BLOCKED");
+  }
+
+  // 3. Each approved check ran and passed, according to GitHub's own step results.
   const validate = evidence.jobs.find((j) => /^validate\b/i.test(j.name));
   if (!validate) {
-    add({ name: "Validation job found", passed: false, source: "github", detail: "The runner run has no validate job." });
+    add({ name: "Validation job found", passed: false, source: "github", detail: "The validate run has no validate job." });
     feedback.push("The validation job didn't run, so nothing proves the fix works.");
   }
   for (const c of repo.checks) {
@@ -85,7 +116,7 @@ export function evaluateQa(repo: EngineeringRepo, claimed: ChangeArtifact, evide
     if (said && said.passed !== ok) add({ name: `Engineering's report matches GitHub for ${c.name}`, passed: false, source: "github", detail: `reported ${said.passed ? "passed" : "failed"}, GitHub says ${step?.conclusion ?? "didn't run"}` });
   }
 
-  // 3. The diff is the change Engineering reported, on the base Atlas asked for.
+  // 4. The diff is the change Engineering reported, on the base Atlas asked for.
   const onBase = compare.mergeBaseSha === claimed.baseSha && compare.behindBy === 0;
   add({ name: "The branch starts from the failing commit", passed: onBase, source: "github", detail: onBase ? undefined : `merge base ${compare.mergeBaseSha?.slice(0, 7) ?? "?"}, ${compare.behindBy} behind` });
   const sameHead = !!compare.headSha && compare.headSha === claimed.headSha;

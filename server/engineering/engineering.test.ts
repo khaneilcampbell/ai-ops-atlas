@@ -31,6 +31,7 @@ const REPO = "khaneilcampbell/ai-ops-atlas";
 const BASE = "a".repeat(40);
 const HEAD = "b".repeat(40);
 const RUNNER_RUN = 555;
+const VALIDATE_RUN = 556;
 const TOKEN = "t".repeat(40);
 const catalogDir = new URL("../../catalog/", import.meta.url).pathname;
 const files = Object.fromEntries(
@@ -63,6 +64,7 @@ afterAll(async () => {
 interface FakeGithub extends GithubReader {
   failedJobs: JobFacts[];
   validateSteps: Record<string, string>;
+  validateStatus: "completed" | "in_progress" | "not_started";
   compareFiles: NonNullable<QaEvidence["compare"]>["files"];
   compareHead: string;
   laterSuccess: RunFacts[];
@@ -89,6 +91,7 @@ function fakeGithub(): FakeGithub {
     configured: true,
     failedJobs: [{ name: "Frontend (types, tests, build)", conclusion: "failure", url: `https://github.com/${REPO}/actions/runs/101/job/1`, steps: [{ name: "Run npm run lint", conclusion: "failure" }] }],
     validateSteps: { Lint: "success", Typecheck: "success", "Unit tests": "success" },
+    validateStatus: "completed",
     compareFiles: [
       { filename: "src/lib/format.ts", status: "modified", additions: 2, deletions: 1, patch: "+  return String(n);" },
       { filename: "changelog.d/atlas-eng-fix.md", status: "added", additions: 1, deletions: 0, patch: "+- 2026-11-23 · Fixed the lint check" },
@@ -102,9 +105,14 @@ function fakeGithub(): FakeGithub {
       if (runId === RUNNER_RUN) return { ...failedRun(), runId, workflowName: "Atlas Engineer", workflowPath: ".github/workflows/atlas-engineer.yml", event: "workflow_dispatch", conclusion: "success", headSha: "c".repeat(40), url: null };
       return failedRun({ runId });
     },
+    async dispatchedRuns(_repo, workflowFile, branch) {
+      if (g.down) throw new Error("GitHub 502");
+      if (workflowFile !== "atlas-engineer-validate.yml" || g.validateStatus === "not_started") return [];
+      return [{ ...failedRun(), runId: VALIDATE_RUN, workflowName: "Atlas Engineer validate", workflowPath: ".github/workflows/atlas-engineer-validate.yml", event: "workflow_dispatch", status: g.validateStatus, conclusion: g.validateStatus === "completed" ? "success" : null, headSha: g.compareHead, branch, url: null }];
+    },
     async jobs(_repo, runId) {
       if (g.down) throw new Error("GitHub 502");
-      if (runId === RUNNER_RUN) return [{ name: "validate", conclusion: Object.values(g.validateSteps).every((s) => s === "success") ? "success" : "failure", url: null, steps: Object.entries(g.validateSteps).map(([name, conclusion]) => ({ name, conclusion })) }];
+      if (runId === VALIDATE_RUN) return [{ name: "validate", conclusion: Object.values(g.validateSteps).every((s) => s === "success") ? "success" : "failure", url: null, steps: Object.entries(g.validateSteps).map(([name, conclusion]) => ({ name, conclusion })) }];
       return g.failedJobs;
     },
     async recentRuns(_repo, _branch, status) {
@@ -408,6 +416,24 @@ describe("QA: independent, bounded repair loop", () => {
     await tick(deps(), "test");
     // After GitHub answers again, QA's retry passes it and delivery goes ahead.
     expect(sentFor("pr-delivery")).toHaveLength(1);
+  });
+
+  it("waits for the checks on the pushed branch, then passes on their results", async () => {
+    const { goalId } = await startFixture();
+    github.validateStatus = "not_started";
+    await postRunner(runnerResult(lastSent("engineering-repair")));
+    expect(sentFor("pr-delivery")).toHaveLength(0);
+    github.validateStatus = "in_progress";
+    await db.query("UPDATE atlas.exec_tasks SET lease_until = now() - interval '1 second' WHERE plan_key = 'qa'");
+    await tick(deps(), "test");
+    expect(sentFor("pr-delivery")).toHaveLength(0);
+    const [qa] = await db.query<{ state: string; attempts: number }>("SELECT state, attempts FROM atlas.exec_tasks WHERE exec_goal_id = $1 AND plan_key = 'qa'", [goalId]);
+    expect(qa).toMatchObject({ state: "ready", attempts: 2 });
+    github.validateStatus = "completed";
+    await db.query("UPDATE atlas.exec_tasks SET lease_until = now() - interval '1 second' WHERE plan_key = 'qa'");
+    await tick(deps(), "test");
+    expect(sentFor("pr-delivery")).toHaveLength(1);
+    expect((await exec(goalId)).some((x) => x.qa_outcome === "PASS")).toBe(true);
   });
 
   it("an honest no-change ends the goal without a pull request", async () => {

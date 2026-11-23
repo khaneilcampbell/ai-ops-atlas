@@ -58,7 +58,9 @@ export const WORKFLOW_ROUTES: Readonly<Record<string, WorkflowRoute>> = {
     workflowId: null,
     webhookPath: "",
     timeoutSeconds: 120,
-    maxAttempts: 3,
+    // QA looks again about every 5 minutes while the checks run on the branch: about 20 minutes in all.
+    // (5 is the database's limit on attempts.)
+    maxAttempts: 5,
     maxSearches: 0,
     resultSchema: "qa-report/1",
     local: true,

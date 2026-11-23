@@ -27,14 +27,21 @@ describe("runner helper stays in step with Atlas's policy", () => {
   });
   it("names the validate steps exactly as QA looks them up", () => {
     const wf = readFileSync(new URL("../../.github/workflows/atlas-engineer.yml", import.meta.url), "utf8");
-    for (const name of ["Lint", "Typecheck", "Unit tests"]) expect(wf).toMatch(new RegExp(`- name: ${name}\\n`));
-    // Only the implement step sees the model key; validate has no secrets at all.
+    const checks = readFileSync(new URL("../../.github/workflows/atlas-engineer-validate.yml", import.meta.url), "utf8");
+    for (const name of ["Lint", "Typecheck", "Unit tests"]) expect(checks).toMatch(new RegExp(`- name: ${name}\\n`));
+    // Only the implement step sees the model key; the checks have no secrets at all.
     expect(wf.match(/secrets\.ANTHROPIC_API_KEY/g)).toHaveLength(1);
-    const validate = wf.slice(wf.indexOf("\n  validate:"), wf.indexOf("\n  report:"));
-    expect(validate).not.toMatch(/secrets\./);
-    // The validate job runs a model-written change: nothing it does may reach main's dependency cache.
-    expect(wf).not.toMatch(/^\s+cache:|actions\/cache@/m);
-    expect(wf).not.toMatch(/gh pr merge|\/merge"|git merge|gh pr create|HEAD:refs\/heads\/main|--force/i);
+    expect(checks).not.toMatch(/secrets\./);
+    // The model-written change is never installed or run in the runner (main's context): the checks
+    // run on the atlas-eng branch as their own ref, with no dependency cache anywhere.
+    expect(wf).not.toMatch(/npm (ci|install|test|run)/);
+    expect(wf).toMatch(/gh workflow run atlas-engineer-validate\.yml --ref "\$BRANCH"/);
+    expect(checks).toMatch(/startsWith\(github\.ref, 'refs\/heads\/atlas-eng\/'\)/);
+    expect(checks).not.toMatch(/^\s+ref:/m);
+    for (const f of [wf, checks]) {
+      expect(f).not.toMatch(/^\s+cache:|actions\/cache@/m);
+      expect(f).not.toMatch(/gh pr merge|\/merge"|git merge|gh pr create|HEAD:refs\/heads\/main|--force/i);
+    }
   });
 });
 

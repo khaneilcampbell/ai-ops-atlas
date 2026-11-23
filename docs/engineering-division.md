@@ -30,9 +30,13 @@ CI fails on main ──► webhook (signature checked) or 30-minute sweep ──
 implement: n8n Atlas · Engineering Dispatch ──► .github/workflows/atlas-engineer.yml
    guard      validates the task, confirms the failed run, fetches its log (redacted)
    implement  Claude Code: Read/Edit/Write/Glob/Grep only, no shell, no web, ANTHROPIC_API_KEY in that step only
-   validate   applies the patch in a clean checkout, npm ci, Lint / Typecheck / Unit tests, NO secrets
-   report     pushes atlas-eng/<task>-a<attempt> (never main), POSTs /api/hooks/engineering-result
-qa (inside Atlas): reads the runner run, its validate steps and the base...branch diff from GitHub
+   report     pushes atlas-eng/<task>-a<attempt> (never main), starts the checks on that branch,
+              POSTs /api/hooks/engineering-result
+checks: .github/workflows/atlas-engineer-validate.yml on the atlas-eng branch as its own ref:
+   npm ci, Lint / Typecheck / Unit tests, NO secrets, no dependency cache. The model-written change is
+   only ever installed and run here, in the branch's context, so it can't reach main's Actions cache.
+qa (inside Atlas): reads the runner run, the checks run for exactly the pushed commit, and the
+   base...branch diff from GitHub; it looks again about every 5 minutes while the checks run
    PASS ──► deliver   FAIL ──► repair with QA's feedback (at most 2), then Khaneil
    NEEDS_REVIEW (dependency or security-relevant change) ──► approval for Khaneil   BLOCKED ──► retry later
 deliver: n8n Atlas · GitHub PR Delivery opens the pull request ──► pr-delivery/1 back to Atlas
@@ -103,5 +107,5 @@ Nothing below has been done. Each step is Khaneil's.
 ## Rollback
 
 Revert the pull request. To stop without a revert: set `ATLAS_ENGINEERING_ENABLED` to anything but
-`true`, unpublish the two n8n workflows, or disable the Atlas Engineer workflow on GitHub. Migration
+`true`, unpublish the two n8n workflows, or disable the Atlas Engineer workflows on GitHub. Migration
 `0004_engineering.down.sql` removes the tables (and the append-only trigger) if needed.

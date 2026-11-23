@@ -22,6 +22,11 @@ export interface EngineeringRepo {
   supportedJobs: readonly string[];
   /** The runner workflow file in this repository. */
   runnerWorkflow: string;
+  /**
+   * The workflow that runs the approved checks on the pushed atlas-eng branch. Started by the runner
+   * with the branch as its ref, so it runs (and caches) in that branch's context, never main's.
+   */
+  validateWorkflow: string;
   /** Repairs start without asking (true), or each one waits for Khaneil's approval (false). */
   autoRepair: boolean;
   /** The only commands the runner may run, in order. */
@@ -35,6 +40,7 @@ export const ENGINEERING_REPOS: readonly EngineeringRepo[] = [
     watchedWorkflows: ["CI"],
     supportedJobs: ["Frontend (types, tests, build)"],
     runnerWorkflow: "atlas-engineer.yml",
+    validateWorkflow: "atlas-engineer-validate.yml",
     autoRepair: true,
     checks: [
       { name: "Lint", command: "npm run lint" },

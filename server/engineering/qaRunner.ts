@@ -9,6 +9,9 @@ import { parseChange } from "../../src/engineering/contracts";
 import { evaluateQa, type QaEvidence } from "../../src/engineering/qa";
 import { engineeringRepo } from "../../src/engineering/repos";
 import type { GithubReader } from "./github";
+import type { RunFacts } from "../../src/engineering/classify";
+
+const facts = (r: RunFacts) => ({ id: r.runId, path: r.workflowPath, event: r.event, status: r.status, conclusion: r.conclusion, headSha: r.headSha, htmlUrl: r.url, branch: r.branch });
 
 export function qaRunner(db: Db, github: GithubReader, now: () => number = Date.now) {
   return async (e: DispatchEnvelope): Promise<ResultBody> => {
@@ -25,14 +28,13 @@ export function qaRunner(db: Db, github: GithubReader, now: () => number = Date.
     if (!repo || !change.branch) return { ...base, contract: "ATLAS_EXECUTIVE_ERROR", kind: "failed", error: "The change has no allowlisted repository or branch." };
     let evidence: QaEvidence;
     try {
-      const [run, jobs, compare] = await Promise.all([github.run(repo.repo, change.runId), github.jobs(repo.repo, change.runId), github.compare(repo.repo, change.baseSha, change.branch)]);
-      evidence = {
-        run: run ? { id: run.runId, path: run.workflowPath, event: run.event, status: run.status, conclusion: run.conclusion, headSha: run.headSha, htmlUrl: run.url } : null,
-        jobs,
-        compare,
-      };
+      const [run, validations, compare] = await Promise.all([github.run(repo.repo, change.runId), github.dispatchedRuns(repo.repo, repo.validateWorkflow, change.branch), github.compare(repo.repo, change.baseSha, change.branch)]);
+      // The newest validate run for exactly the reported commit; its jobs hold the check results.
+      const v = validations.find((x) => x.headSha === change.headSha) ?? null;
+      const jobs = v ? await github.jobs(repo.repo, v.runId) : [];
+      evidence = { run: run ? facts(run) : null, validation: v ? facts(v) : null, jobs, compare };
     } catch (err) {
-      evidence = { run: null, jobs: [], compare: null, error: err instanceof Error ? err.message : String(err) };
+      evidence = { run: null, validation: null, jobs: [], compare: null, error: err instanceof Error ? err.message : String(err) };
     }
     const report = evaluateQa(repo, change, evidence, base.at);
     return { ...base, kind: "succeeded", artifact: report };

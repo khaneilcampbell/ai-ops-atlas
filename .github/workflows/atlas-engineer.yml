@@ -8,10 +8,13 @@ name: Atlas Engineer
 #   implement  Claude Code edits a fresh checkout of the failing commit. No shell, no network tools,
 #              no repository secrets except ANTHROPIC_API_KEY in that one step. Nothing is installed or
 #              run from the repository in this job.
-#   validate   applies the change in a clean checkout and runs the approved checks with NO secrets.
-#              Atlas QA reads these steps' results from GitHub, never the runner's word.
-#   report     pushes the atlas-eng/<task>-a<attempt> branch (never main) and posts the result to
-#              Atlas with ATLAS_ENGINEERING_CALLBACK_TOKEN.
+#   report     pushes the atlas-eng/<task>-a<attempt> branch (never main), starts
+#              atlas-engineer-validate.yml on that branch, and posts the result to Atlas with
+#              ATLAS_ENGINEERING_CALLBACK_TOKEN.
+#
+# The model-written change is never installed or run here. atlas-engineer-validate.yml runs the
+# approved checks with NO secrets, on the atlas-eng branch as its ref, so nothing it does can reach
+# main's Actions cache. Atlas QA reads those checks' results from GitHub, never the runner's word.
 #
 # Workflow inputs are visible in this public repository, so the task carries nothing secret; the
 # callback key, the dispatch record and QA's own GitHub reads are what make a result count.
@@ -177,78 +180,15 @@ jobs:
           if-no-files-found: ignore
           retention-days: 3
 
-  validate:
-    # The checks Atlas QA trusts. No secrets here, and the step names must match
-    # src/engineering/repos.ts (Lint, Typecheck, Unit tests): QA looks them up by name.
-    name: validate
-    needs: [guard, implement]
-    if: needs.implement.outputs.outcome == 'changed'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          ref: ${{ needs.guard.outputs.base_sha }}
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: change
-          path: ${{ runner.temp }}/change
-      - name: Apply change
-        id: apply
-        run: git apply --index "$RUNNER_TEMP/change/change.patch"
-      # No dependency cache here: this job runs a model-written change, and anything it could
-      # save to the cache would be shared with main's own CI (CodeQL cache poisoning).
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-      - name: Install
-        id: install
-        run: npm ci
-      - name: Lint
-        id: lint
-        if: always() && steps.install.outcome == 'success'
-        run: npm run lint
-      - name: Typecheck
-        id: typecheck
-        if: always() && steps.install.outcome == 'success'
-        run: npm run typecheck
-      - name: Unit tests
-        id: tests
-        if: always() && steps.install.outcome == 'success'
-        run: npm test
-      - name: Record results
-        if: always()
-        env:
-          LINT: ${{ steps.lint.outcome }}
-          TYPECHECK: ${{ steps.typecheck.outcome }}
-          TESTS: ${{ steps.tests.outcome }}
-        run: |
-          mkdir -p "$RUNNER_TEMP/validation"
-          node -e '
-            const now = () => new Date().toISOString();
-            const e = process.env;
-            const v = [["Lint","npm run lint",e.LINT],["Typecheck","npm run typecheck",e.TYPECHECK],["Unit tests","npm test",e.TESTS]].map(([name, command, o]) => ({ name, command, passed: o === "success" }));
-            const fs = require("fs");
-            fs.writeFileSync(e.RUNNER_TEMP + "/validation/validation.json", JSON.stringify(v));
-            fs.writeFileSync(e.RUNNER_TEMP + "/validation/phases-validate.json", JSON.stringify([{ phase: "VALIDATION_STARTED", at: now() }, { phase: "VALIDATION_COMPLETED", at: now() }]));
-          '
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: always()
-        with:
-          name: validation
-          path: ${{ runner.temp }}/validation/
-          retention-days: 3
-
   report:
     name: report
-    needs: [guard, implement, validate]
+    needs: [guard, implement]
     if: always() && needs.guard.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      # contents: push the atlas-eng branch. actions: start the validate workflow on it.
+      actions: write
       contents: write
     steps:
       - name: Helper from main
@@ -266,11 +206,6 @@ jobs:
         with:
           name: change
           path: out/change
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        continue-on-error: true
-        with:
-          name: validation
-          path: out/validation
       - name: Failing commit
         if: needs.implement.outputs.outcome == 'changed'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -293,24 +228,34 @@ jobs:
             commit -q -m "Atlas Engineering: fix failing check on $(git rev-parse --short HEAD)" -m "Task branch $BRANCH. Opened for Khaneil's review; never merged by Atlas."
           git push origin "HEAD:refs/heads/$BRANCH"
           echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Start the checks on the branch
+        id: checks
+        if: steps.push.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ needs.guard.outputs.branch }}
+        run: |
+          # Pushes made with this job's token don't start workflows, so the checks are dispatched,
+          # with the branch as their ref: they run and cache in that branch's context, not main's.
+          gh workflow run atlas-engineer-validate.yml --ref "$BRANCH"
+          node tools/ops/atlas-engineer/runner.mjs phase VALIDATION_STARTED
       - name: Build result
         if: always()
         env:
           IMPLEMENT: ${{ needs.implement.result }}
           OUTCOME: ${{ needs.implement.outputs.outcome }}
-          VALIDATE: ${{ needs.validate.result }}
           PUSH: ${{ steps.push.outcome }}
+          CHECKS: ${{ steps.checks.outcome }}
           HEAD_SHA: ${{ steps.push.outputs.head_sha }}
         run: |
           FAILED_JOB=""
           if [ "$IMPLEMENT" != success ]; then FAILED_JOB=implement
-          elif [ "$OUTCOME" = changed ] && [ "$VALIDATE" = cancelled ]; then FAILED_JOB=validate
-          elif [ "$OUTCOME" = changed ] && [ "$PUSH" != success ]; then FAILED_JOB=report
+          elif [ "$OUTCOME" = changed ] && { [ "$PUSH" != success ] || [ "$CHECKS" != success ]; }; then FAILED_JOB=report
           fi
           export FAILED_JOB
           cp out/change/outcome.json out/change/usage.json out/ 2>/dev/null || true
-          cp out/validation/validation.json out/ 2>/dev/null || true
-          jq -s 'add | sort_by(.at)' out/phases.json $(ls out/change/phases.json out/validation/phases-validate.json 2>/dev/null) > out/phases.merged.json && mv out/phases.merged.json out/phases.json
+          jq -s 'add | sort_by(.at)' out/phases.json $(ls out/change/phases.json 2>/dev/null) > out/phases.merged.json && mv out/phases.merged.json out/phases.json
           node tools/ops/atlas-engineer/runner.mjs result
       - name: Report to Atlas
         if: always()
