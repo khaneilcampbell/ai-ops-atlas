@@ -283,13 +283,32 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     }
     return m;
   }, [namedAgents, jobs, scene]);
+  // Homes in Team Residence Towers (Financial District buildings), the same ones the routine walks agents into.
+  const homeKeys = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const a of namedAgents?.agents ?? []) {
+      const job = jobs?.find((j) => j.agentId === a.personaId);
+      const b = job && scene.financial?.buildings.find((x) => x.id === job.home.building && x.approach.length > 0);
+      if (b) m.set(a.personaId, financialKey(b.id));
+    }
+    return m;
+  }, [namedAgents, jobs, scene]);
   // An agent whose office has a roof marker gets no facade badge as well while it works there (routinePose.ts).
   const roofMarked = useCallback((id: string) => officeKeys.has(id), [officeKeys]);
   const faces = useMemo(() => new Map<string, MarkerFace>((namedAgents?.agents ?? []).map((a) => [a.personaId, { name: a.identity.name, initials: a.identity.initials, accent: a.identity.accent, portrait: a.identity.portrait }])), [namedAgents]);
   const occupiedNow = useMemo(
-    () => insideNow(routines, Date.now(), (id) => officeKeys.get(id) ?? null, namedAgents?.agents.map((a) => a.personaId) ?? [], routineOverride),
+    () =>
+      insideNow(
+        routines,
+        Date.now(),
+        (id, where) => (where.kind === "office" ? officeKeys.get(id) ?? null : where.kind === "home" ? homeKeys.get(id) ?? null : where.spot === "arena" && scene.stadium ? STADIUM_KEY : where.spot === "flight" && scene.airport ? AIRPORT_KEY : null),
+        namedAgents?.agents.map((a) => a.personaId) ?? [],
+        routineOverride,
+        (spot) => city?.places.spots.get(spot),
+        (id) => city?.places.agents.get(id)?.home.id ?? null,
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tick re-reads the clock
-    [routines, officeKeys, namedAgents, tick],
+    [routines, officeKeys, homeKeys, namedAgents, city, scene, tick],
   );
   const occupiedSig = occupancySignature(occupiedNow);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- only a real change in who is inside rebuilds the labels
@@ -502,11 +521,20 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     for (const [key, inside] of occupied) {
       if (openSet.has(key)) continue;
       const t = scene.towers.find((x) => x.key === key);
+      // The same roof point as each building's own nameplate above.
+      const fin = scene.financial, home = fin?.buildings.find((x) => financialKey(x.id) === key);
+      const at = (name: string, x: number, roof: number, z: number) => ({ key, name: buildingDisplayName(key, name), x, roof, z });
       const b = t
-        ? { key, name: buildingDisplayName(key, t.name), x: t.x, roof: roofOf(t), z: t.z }
+        ? at(t.name, t.x, roofOf(t), t.z)
         : key === AGENCY_KEY && scene.agency
-          ? { key, name: buildingDisplayName(key, AGENCY_NAME), x: scene.agency.cx, roof: TERRACE_H + AGENCY.eastHigh + 0.25, z: scene.agency.cz }
-          : null;
+          ? at(AGENCY_NAME, scene.agency.cx, TERRACE_H + AGENCY.eastHigh + 0.25, scene.agency.cz)
+          : key === STADIUM_KEY && scene.stadium
+            ? at(STADIUM_NAME, scene.stadium.x + scene.stadium.w / 2, TERRACE_H + stadiumCrown(), scene.stadium.z + scene.stadium.d / 2)
+            : key === AIRPORT_KEY && scene.airport
+              ? at("Atlas Airport", airportPoint(scene.airport, AIRPORT_LAYOUT.terminalX, AIRPORT_LAYOUT.terminalZ)[0], TERRACE_H + 3.4, scene.airport.z + AIRPORT_LAYOUT.terminalZ)
+              : home && fin
+                ? at(home.name, fin.x + home.x, TERRACE_H + home.height + 1.2, fin.z + home.z)
+                : null;
       if (!b) continue;
       const plate = out.find((l) => l.key === key && l.className.includes("m3-plaque"));
       out.push(
@@ -515,14 +543,15 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           ...(plate ? { plaqueId: plate.id } : {}),
           agents: inside,
           faces,
-          plaqueH: plate?.h ?? PLAQUE.height,
+          plaqueH: plate?.h ?? 0,
           priority: plate?.priority ?? 2,
           peeking: peek === key,
           onPeek: () => setPeek(key),
           onEnter: () => {
             setPeek(null);
             // A headquarters opens in the Inside view on its busiest floor, the way "View office" does;
-            // with one agent inside, Atlas also locates and follows it. Other buildings are selected.
+            // with one agent inside, Atlas also locates and follows it. Other buildings (homes, the
+            // arena, the airport, the Marketing Agency) are selected, which opens their own panel.
             if (!t) return select(key);
             const floor = busiestFloor(inside.map((a) => city?.places.agents.get(a.personaId)?.desk?.floor));
             viewOffice({ towerKey: key, projectId: t.projectId, ...(inside.length === 1 ? { personaId: inside[0].personaId } : {}), ...(floor !== undefined ? { floor } : {}) });

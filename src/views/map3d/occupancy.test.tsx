@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import * as THREE from "three";
 import type { OpRun } from "../../routine/operations";
 import type { Routine, Segment } from "../../routine/routine";
-import { busiestFloor, insideNow, isInside, markerAnchor, markerWidth, MARKER_GAP, occupancySignature, occupancyText, officeBuildingOf, stackOf } from "./occupancy";
+import { busiestFloor, indoorsAt, insideNow, isInside, markerAnchor, markerWidth, MARKER_GAP, occupancySignature, occupancyText, officeBuildingOf, stackOf } from "./occupancy";
 import { occupancyMarker, type MarkerFace } from "./OccupancyMarker";
 import { buildingPlaque, PLAQUE } from "./plaques";
 
@@ -93,6 +93,38 @@ describe("agents inside: who counts", () => {
   });
 });
 
+describe("agents inside: homes, the arena and the airport terminal too", () => {
+  const spots: Record<string, { inside: boolean }> = { "home:priya": { inside: true }, arena: { inside: true }, flight: { inside: true }, park: { inside: false } };
+  const spot = (id: string) => spots[id];
+  const flight = (seat: string | undefined): Segment => ({ kind: "ride", t0: T - 20 * MIN, t1: T + 40 * MIN, at: "flight", activity: "riding", phase: null, note: "Gold jet", option: { id: "flight", kind: "flight", label: "Flying", spot: "flight", exit: "flight", stay: [0, 0] }, times: { board: T - 5 * MIN, alight: T + 30 * MIN, seat } });
+  it("counts an agent at its own home, at the arena, or in the terminal", () => {
+    expect(indoorsAt(stay(T - MIN, T + MIN, "home:priya"), T, spot, "home:priya")).toEqual({ where: { kind: "home" }, status: "At home" });
+    expect(indoorsAt(stay(T - MIN, T + MIN, "arena"), T, spot, "home:priya")).toEqual({ where: { kind: "venue", spot: "arena" }, status: "At the arena" });
+    expect(indoorsAt(stay(T - MIN, T + MIN, "flight"), T, spot, null)?.status).toBe("At the airport terminal");
+  });
+  it("leaves outdoor places alone: the park is not a building", () => {
+    expect(indoorsAt(stay(T - MIN, T + MIN, "park"), T, spot, "home:priya")).toBeNull();
+    expect(indoorsAt(walk(T - MIN, T + MIN), T, spot, null)).toBeNull();
+  });
+  it("puts a jet passenger in the terminal before boarding and after landing, never while flying", () => {
+    const s = flight("Atlas Gold Jet");
+    expect(indoorsAt(s, T - 10 * MIN, spot, null)?.status).toBe("Waiting to board the Atlas Gold Jet");
+    expect(indoorsAt(s, T, spot, null)).toBeNull();
+    expect(indoorsAt(s, T + 35 * MIN, spot, null)?.status).toBe("Just off the Atlas Gold Jet");
+  });
+  it("groups every indoor agent by its building", () => {
+    const routines = new Map([
+      ["priya", routine("priya", [stay(T - MIN, T + MIN, "home:priya")])],
+      ["omar", routine("omar", [stay(T - MIN, T + MIN, "arena")])],
+      ["sam", routine("sam", [inside(T - MIN, T + MIN)])],
+      ["noor", routine("noor", [stay(T - MIN, T + MIN, "park")])],
+    ]);
+    const keyOf = (id: string, w: { kind: string; spot?: string }) => (w.kind === "office" ? officeOf(id) : w.kind === "home" ? "financial:residences" : w.spot === "arena" ? "stadium" : null);
+    const o = insideNow(routines, T, keyOf, ["priya", "omar", "sam", "noor"], undefined, spot, (id) => `home:${id}`);
+    expect(Object.fromEntries([...o].map(([k, v]) => [k, v.map((a) => a.personaId)]))).toEqual({ "financial:residences": ["priya"], stadium: ["omar"], [HQ]: ["sam"] });
+  });
+});
+
 describe("agents inside: which building", () => {
   const towers = [{ key: HQ, projectId: "ai-ops-atlas" }, { key: SOC, projectId: "soc-lab" }];
   const agency = { key: "service:benjaire-marketing", name: "Benjaire Marketing Agency" };
@@ -128,6 +160,8 @@ describe("agents inside: the marker", () => {
 
   it("floats above the nameplate on screen, never over it, whatever the nameplate's height", () => {
     expect(markerAnchor(b).lift).toBe(PLAQUE.height + MARKER_GAP);
+    // A building with no nameplate showing: the marker sits in the nameplate's own spot over the roof.
+    expect(markerAnchor(b, 0).lift).toBe(0);
     // A selected building's tall card: the marker clears it too.
     const tall = spec(1, { plaqueH: 90 });
     expect(tall.lift).toBe(90 + MARKER_GAP);

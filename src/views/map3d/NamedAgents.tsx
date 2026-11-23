@@ -307,7 +307,8 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
         hideBody();
         badges.current?.setMatrixAt(i, L.hidden);
         L.at[i] = null;
-        agentPositions.set(id, null);
+        // Inside a building its marker shows: no badge, but Locate and Follow still know where it is.
+        agentPositions.set(id, pose?.marked ? [pose.x, pose.y, pose.z] : null);
         return;
       }
       const phase = i * 1.7;

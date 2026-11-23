@@ -39,6 +39,25 @@ async function everyoneAtWork(page: Page) {
   await settle(page, 4);
 }
 
+/** Agents spread over every kind of building: offices, homes, the arena and the airport terminal (review shots only). */
+async function everyoneIndoors(page: Page) {
+  await page.evaluate(async () => {
+    type R = { personaId: string; segments: unknown[]; validUntil: number; episodes: unknown[]; held: boolean };
+    const ops = (await import("/src/routine/useRoutineOps.ts" as string)) as { routinesSnapshot(): ReadonlyMap<string, R>; routineOverride: Map<string, R> };
+    const now = Date.now(), t0 = now - 60_000, t1 = now + 3_600_000;
+    [...ops.routinesSnapshot()].forEach(([id, r], i) => {
+      const k = i % 4;
+      const seg =
+        k === 0
+          ? { kind: "inside", t0, t1, at: `office:${id}`, activity: "at_desk", phase: "working", note: "Review shot", work: { label: "Review shot", runs: [], scheduledAt: now, alreadyStarted: false, outcome: null } }
+          : { kind: "stay", t0, t1, at: k === 1 ? `home:${id}` : k === 2 ? "arena" : "flight", activity: k === 1 ? "at_home" : "visiting", phase: null, note: "Review shot" };
+      ops.routineOverride.set(id, { ...r, segments: [seg], validUntil: t1 });
+    });
+  });
+  await page.clock.fastForward(11_000);
+  await settle(page, 4);
+}
+
 async function open(page: Page, light: "day" | "night", width: number, height: number) {
   await page.setViewportSize({ width, height });
   await openAtlas(page, { time: AT, light, storage: { "routine-n8n-snapshot": snapshot, mapInside: false } });
@@ -65,6 +84,10 @@ for (const light of ["day", "night"] as const)
     await everyoneAtWork(page);
     if (!before) await expect.poll(async () => markers.count(), { timeout: 60_000 }).toBeGreaterThan(2);
     await shot(page, `1512-${light}-2-overview`);
+    await everyoneIndoors(page);
+    if (!before) await expect(page.locator('.m3-occupancy[aria-label^="Team Events Arena:"]')).toHaveCount(1);
+    await shot(page, `1512-${light}-2b-every-building`);
+    await everyoneAtWork(page);
     if (before || light === "night") return;
 
     // Hover: the tooltip names the building, the count and each agent with its status.

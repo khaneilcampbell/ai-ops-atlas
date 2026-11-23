@@ -1,55 +1,89 @@
 import { activityText, segmentAt, type Routine, type Segment } from "../../routine/routine";
 import { PLAQUE } from "./plaques";
+import { GOLD_JET_NAME } from "./goldJetIds";
 
 /**
  * "Agents inside": which buildings have named agents inside them right now, for the small marker
  * that floats above each occupied roof on the exterior map (OccupancyMarker.tsx).
  *
  * Source of truth: each agent's city routine (routine/routine.ts), the same one that draws the
- * characters (NamedAgents.tsx) and fills the City agents panel. An agent counts as inside only while
- * its routine is in an `inside` segment: from stepping through the door of its own workplace,
- * through its desk time, to walking back out. Those segments are planned from real run events
- * (n8n executions, GitHub runs, Task Center tasks) and the wall clock, never from where an agent is
- * assigned: an agent whose building is Atlas HQ but who is in the park, on a ride or at home is not
- * counted. With no run data the routines are empty and no building shows a marker.
- *
- * Not counted: home (agents at home are hidden on purpose), and the arena or airport terminal on an
- * outing (they are landmarks, not workplaces, and keep their own badge by the door).
+ * characters (NamedAgents.tsx) and fills the City agents panel. The routine is planned from real
+ * run events (n8n executions, GitHub runs, Task Center tasks) and the wall clock, never from where
+ * an agent is assigned. An agent counts as inside a building while its routine has it in one of
+ * the places where its figure isn't drawn because it is indoors (routinePose.ts):
+ * - its workplace: an `inside` segment, from stepping through the door, through desk time, to
+ *   walking back out;
+ * - its home in Team Residence Towers: a stay at its own home;
+ * - the arena: a stay there on an outing;
+ * - the airport terminal: queueing for the Atlas Gold Jet or just off it (aboard it is in the sky).
+ * An agent in the park, on the street, on the train, the wheel or the yacht is outdoors and keeps its
+ * own badge. With no run data the routines are empty and no building shows a marker.
  */
 export interface InsideAgent {
   personaId: string;
-  /** What it is doing inside, in the routine's own words ("Working", "At desk", "Entering building"). */
+  /** What it is doing inside, in words ("Working", "At desk", "At home", "At the arena"). */
   status: string;
 }
+
+/** Where an agent is indoors: its workplace, its home, or an indoor outing spot (the arena, the terminal). */
+export type Indoors = { kind: "office" } | { kind: "home" } | { kind: "venue"; spot: string };
 
 /** True while the routine has the agent inside its workplace. */
 export function isInside(seg: Segment | null | undefined): seg is Extract<Segment, { kind: "inside" }> {
   return seg?.kind === "inside";
 }
 
+/** The routine's spots, as much as this needs: whether standing there means being indoors. */
+export type SpotInfo = (spotId: string) => { inside: boolean } | undefined;
+
+const VENUE_STATUS: Record<string, string> = { arena: "At the arena", flight: "At the airport terminal" };
+
+/**
+ * Is the agent indoors at `now`, and where? Only a segment that covers now counts (segmentAt falls
+ * back to the last one before now, which is history, not presence).
+ */
+export function indoorsAt(seg: Segment | null | undefined, now: number, spot: SpotInfo, homeId: string | null): { where: Indoors; status: string } | null {
+  if (!seg || now < seg.t0 || now >= seg.t1) return null;
+  if (seg.kind === "inside") return { where: { kind: "office" }, status: activityText(seg) };
+  if (seg.kind === "stay") {
+    if (!spot(seg.at)?.inside) return null;
+    if (seg.at === homeId) return { where: { kind: "home" }, status: "At home" };
+    return { where: { kind: "venue", spot: seg.at }, status: VENUE_STATUS[seg.at] ?? activityText(seg) };
+  }
+  if (seg.kind === "ride" && seg.option.kind === "flight") {
+    // Aboard the Atlas Gold Jet between stepping on and walking off it is flying, not in a building
+    // (routinePose draws its badge on the jet then).
+    const aboard = seg.times.seat === GOLD_JET_NAME && now >= seg.times.board && now < seg.times.alight - 4000;
+    if (aboard) return null;
+    return { where: { kind: "venue", spot: seg.at }, status: seg.times.seat === GOLD_JET_NAME ? (now < seg.times.board ? `Waiting to board the ${GOLD_JET_NAME}` : `Just off the ${GOLD_JET_NAME}`) : VENUE_STATUS.flight };
+  }
+  return null;
+}
+
 /**
  * Buildings with agents inside at `now`, by building key, each with its agents in team order.
- * `officeOf` names the building an agent's workplace is (null: not a building on this map).
+ * `buildingOf` names the map building for where an agent is indoors (null: not a building on this map).
  * `override` is the review shots' stand-in routines (useRoutineOps routineOverride), as NamedAgents uses.
  */
 export function insideNow(
   routines: ReadonlyMap<string, Routine>,
   now: number,
-  officeOf: (personaId: string) => string | null,
+  buildingOf: (personaId: string, where: Indoors) => string | null,
   order: readonly string[] = [...routines.keys()],
   override?: ReadonlyMap<string, Routine>,
+  spot: SpotInfo = () => undefined,
+  homeOf: (personaId: string) => string | null = () => null,
 ): Map<string, InsideAgent[]> {
   const out = new Map<string, InsideAgent[]>();
   const ids = [...order, ...[...routines.keys(), ...(override?.keys() ?? [])].filter((id) => !order.includes(id))];
   for (const id of new Set(ids)) {
     const r = override?.get(id) ?? routines.get(id);
     if (!r) continue;
-    const seg = segmentAt(r, now);
-    // segmentAt falls back to the last segment before now; only one that covers now counts.
-    if (!isInside(seg) || now < seg.t0 || now >= seg.t1) continue;
-    const key = officeOf(id);
+    const at = indoorsAt(segmentAt(r, now), now, spot, homeOf(id));
+    if (!at) continue;
+    const key = buildingOf(id, at.where);
     if (!key) continue;
-    out.set(key, [...(out.get(key) ?? []), { personaId: id, status: activityText(seg) }]);
+    out.set(key, [...(out.get(key) ?? []), { personaId: id, status: at.status }]);
   }
   return out;
 }
@@ -93,7 +127,8 @@ export function markerWidth(n: number, textW: number): number {
  * space, so it stays on its building while the camera pans, turns or zooms.
  */
 export function markerAnchor(b: { x: number; roof: number; z: number }, plaqueH: number = PLAQUE.height): { pos: [number, number, number]; lift: number } {
-  return { pos: [b.x, b.roof + PLAQUE.roofGap, b.z], lift: plaqueH + MARKER_GAP };
+  // No nameplate showing for this building (one only labelled up close): the marker takes its spot.
+  return { pos: [b.x, b.roof + PLAQUE.roofGap, b.z], lift: plaqueH > 0 ? plaqueH + MARKER_GAP : 0 };
 }
 
 /** The accessible name and tooltip lines: building, how many, and each agent's name and status. */
