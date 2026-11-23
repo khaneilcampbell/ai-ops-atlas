@@ -1,0 +1,13 @@
+// Plan GitHub Reads (repository health): read-only GET calls per repository. Nothing is written to GitHub.
+const L = $('Load Catalog').first().json, out = [];
+const since = new Date(Date.now() - 30 * 86400000).toISOString();
+const add = (repo, kind, path) => out.push({ repo, kind, url: 'https://api.github.com/repos/' + repo + path });
+for (const { repo } of L.repos) {
+  add(repo, 'repo', '');
+  add(repo, 'commits', '/commits?per_page=100&since=' + encodeURIComponent(since));
+  add(repo, 'pulls', '/pulls?state=open&per_page=100');
+  add(repo, 'closed', '/pulls?state=closed&sort=updated&direction=desc&per_page=100');
+  add(repo, 'release', '/releases/latest');
+  add(repo, 'runs', '/actions/runs?per_page=60&exclude_pull_requests=true');
+}
+return out.map((json) => ({ json }));

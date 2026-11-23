@@ -1,0 +1,8 @@
+// Run Summary: what this run produced, which Library uploads worked, and how to retry. Nothing is changed.
+const sent = $('Build Report').all().map((i) => i.json), res = $('Add to Atlas Library').all().map((i) => i.json || {});
+const problems = [];
+const lib = sent.map((s, i) => { const r = res[i] || {}; const x = ((r.body && r.body.results) || [])[0] || {};
+  if (r.statusCode === 202 && !x.message) return s.file + ' ' + (x.duplicate ? 'duplicate' : 'added') + (x.outputId ? ' ' + x.outputId + (x.version ? ' v' + x.version : '') : '');
+  const m = s.file + ' failed (' + (r.statusCode || 'no answer') + (x.message || (r.body && r.body.message) ? ': ' + String(x.message || r.body.message).slice(0, 120) : '') + ')'; problems.push(m); return m; });
+return [{ json: { execution: $execution.id, summary: (sent[0] && sent[0].summary && sent[0].summary.text) || '', library: lib.join('; '), problems: problems.join('; ') || 'None',
+  retry: problems.length ? 'Open https://khancam15.app.n8n.cloud/workflow/' + $workflow.id + ' and press Execute workflow (Run by Hand)' : '' } }];

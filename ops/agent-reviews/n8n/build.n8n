@@ -1,0 +1,49 @@
+// __TITLE__: pairs each planned GitHub read with its answer, turns answers into sources the engine
+// understands ({ ok: true, ... } or { ok: false, error }), runs the engine and builds the Library items.
+const KIND = '__KIND__';
+const L = $('Load Catalog').first().json;
+const plan = $('Plan GitHub Reads').all().map((i) => i.json), res = $('Read GitHub (read only)').all().map((i) => i.json);
+if (plan.length !== res.length) throw new Error('GitHub answers came back out of order');
+const by = new Map();
+plan.forEach((p, i) => { if (!by.has(p.repo)) by.set(p.repo, {}); by.get(p.repo)[p.kind] = res[i] || {}; });
+const fail = (r) => ({ ok: false, error: r && r.statusCode ? 'HTTP ' + r.statusCode + (r.body && r.body.message ? ' ' + String(r.body.message).slice(0, 60) : '') : 'no answer' });
+const good = (r) => r && r.statusCode === 200 && r.body != null;
+const msg = (r) => String((r && r.body && r.body.message) || '');
+const repos = L.repos.map(({ repo, project, status }) => {
+  const g = by.get(repo) || {}, info = good(g.repo) ? g.repo.body : null, branch = info ? info.default_branch : '';
+  const ci = good(g.runs) && info ? { ok: true, runs: (g.runs.body.workflow_runs || []).filter((x) => x.head_branch === branch && x.event !== 'pull_request').map((x) => ({ status: x.status, conclusion: x.conclusion, created_at: x.created_at, name: x.name })) } : fail(info ? g.runs : g.repo);
+  const base = { repo, project, status, defaultBranch: branch, ci };
+  if (KIND === 'scorecard') {
+    const disabled = (r, re) => r && (r.statusCode === 404 || r.statusCode === 403) && re.test(msg(r));
+    return { ...base,
+      dependabot: good(g.dependabot) ? { ok: true, alerts: g.dependabot.body.map((a) => ({ severity: (a.security_advisory && a.security_advisory.severity) || (a.security_vulnerability && a.security_vulnerability.severity) || 'unknown' })) } : disabled(g.dependabot, /disabled|not enabled/i) ? { ok: false, error: 'Dependabot alerts are turned off' } : fail(g.dependabot),
+      codeScanning: good(g.codeScanning) ? { ok: true, enabled: true, alerts: g.codeScanning.body.map((a) => ({ severity: (a.rule && (a.rule.security_severity_level || a.rule.severity)) || 'unknown' })) } : disabled(g.codeScanning, /no analysis|not enabled|must be enabled|advanced security/i) ? { ok: true, enabled: false, alerts: [] } : fail(g.codeScanning),
+      secretScanning: good(g.secretScanning) ? { ok: true, enabled: true, alerts: g.secretScanning.body } : disabled(g.secretScanning, /disabled|not enabled|must be enabled|advanced security/i) ? { ok: true, enabled: false, alerts: [] } : fail(g.secretScanning),
+      protection: good(g.protected) && info ? (() => { const classic = g.protected.body.some((b) => b.name === branch); const rs = good(g.rulesets) ? g.rulesets.body.filter((r) => r.target === 'branch' && r.enforcement === 'active') : [];
+        return { ok: true, protected: classic || rs.length > 0, detail: [classic ? 'Branch protection' : '', rs.length ? plural(rs.length, 'active ruleset') : ''].filter(Boolean).join(' + ') }; })() : fail(info ? g.protected : g.repo),
+      dependencyPrs: good(g.pulls) ? { ok: true, prs: g.pulls.body.filter((p) => p.user && /dependabot/i.test(p.user.login)).map((p) => ({ created_at: p.created_at })) } : fail(g.pulls),
+    };
+  }
+  const since = Date.now() - 30 * 86400000;
+  return { ...base,
+    repoInfo: info ? { ok: true, default_branch: info.default_branch, pushed_at: info.pushed_at, archived: info.archived, open_issues_count: info.open_issues_count } : fail(g.repo),
+    commits: good(g.commits) ? { ok: true, count: g.commits.body.length, truncated: g.commits.body.length >= 100, latest: g.commits.body[0] && g.commits.body[0].commit && g.commits.body[0].commit.committer ? g.commits.body[0].commit.committer.date : null }
+      : g.commits && g.commits.statusCode === 409 ? { ok: true, count: 0, truncated: false, latest: null } : fail(g.commits),
+    pulls: good(g.pulls) ? { ok: true, open: g.pulls.body.map((p) => ({ number: p.number, draft: !!p.draft, created_at: p.created_at, updated_at: p.updated_at })),
+      merged30: good(g.closed) ? g.closed.body.filter((p) => p.merged_at && Date.parse(p.merged_at) >= since).length : null } : fail(g.pulls),
+    release: good(g.release) ? { ok: true, latest: g.release.body.published_at } : g.release && g.release.statusCode === 404 ? { ok: true, latest: null } : fail(g.release),
+  };
+});
+const nowMs = Date.now();
+const stamp = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(nowMs)) + ' New York';
+const meta = { stamp, mode: L.isManual ? 'Run by hand' : 'Weekly run' };
+const set = FILES[KIND === 'scorecard' ? 'scorecard' : 'health'];
+let mdText, csvText, summary;
+if (KIND === 'scorecard') { const c = scorecard(repos, L.agents, nowMs); mdText = scorecardMarkdown(c, meta); csvText = csv(SCORE_COLS, c.rows); summary = c.summary; summary.text = c.summary.scored + ' of ' + c.summary.repos + ' repositories scored, average ' + (c.summary.average == null ? 'not read' : c.summary.average + '/100') + '; ' + c.summary.high + ' high findings. Suggestions only.'; }
+else { const h = repoHealth(repos, nowMs); mdText = healthMarkdown(h, meta); csvText = csv(FACT_COLS, h.facts); summary = h.summary; summary.text = h.summary.repos + ' repositories, ' + h.summary.openPrs + ' open PRs (' + h.summary.stalePrs + ' stale), ' + h.summary.merged30 + ' merged in 30 days; ' + h.summary.high + ' high suggestions. Facts first, suggestions only.'; }
+const runUrl = 'https://khancam15.app.n8n.cloud/workflow/' + $workflow.id + '/executions/' + $execution.id;
+const source = (file) => ({ agent: set.agent, execution: 'n8n-' + $execution.id + '-' + file, workflow: set.agent + '-weekly', runUrl, project: 'ai-ops-atlas', building: '__BUILDING__', producedAt: new Date(nowMs).toISOString(), via: 'n8n' });
+return [
+  { json: { file: 'md', summary, body: { source: source('md'), artifacts: [{ id: set.md.id, outputKey: set.md.outputKey, title: set.md.title, mime: 'text/markdown', summary: summary.text.slice(0, 2000), text: mdText }] } } },
+  { json: { file: 'csv', summary, body: { source: source('csv'), artifacts: [{ id: set.csv.id, outputKey: set.csv.outputKey, title: set.csv.title, mime: 'text/csv', summary: summary.text.slice(0, 2000), text: csvText }] } } },
+];

@@ -1,0 +1,14 @@
+// Plan GitHub Reads (scorecard): read-only GET calls per repository. Nothing is written to GitHub.
+const L = $('Load Catalog').first().json, out = [];
+const add = (repo, kind, path) => out.push({ repo, kind, url: 'https://api.github.com/repos/' + repo + path });
+for (const { repo } of L.repos) {
+  add(repo, 'repo', '');
+  add(repo, 'runs', '/actions/runs?per_page=60&exclude_pull_requests=true');
+  add(repo, 'dependabot', '/dependabot/alerts?state=open&per_page=100');
+  add(repo, 'codeScanning', '/code-scanning/alerts?state=open&per_page=100');
+  add(repo, 'secretScanning', '/secret-scanning/alerts?state=open&per_page=100');
+  add(repo, 'protected', '/branches?protected=true&per_page=100');
+  add(repo, 'rulesets', '/rulesets?per_page=100');
+  add(repo, 'pulls', '/pulls?state=open&per_page=100');
+}
+return out.map((json) => ({ json }));

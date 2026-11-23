@@ -1,0 +1,28 @@
+// Load Catalog: no AI. Reads Atlas's catalog from public raw files on main (the map inventory names each
+// catalog file) and returns every project repository plus each agent's autonomy level.
+const UA = { 'User-Agent': 'atlas-agent-reviews' };
+const raw = async (path, branch = 'main') => { const v = await this.helpers.httpRequest({ method: 'GET', url: 'https://raw.githubusercontent.com/khaneilcampbell/ai-ops-atlas/' + branch + '/' + path, headers: UA, timeout: 20000, json: false }); return typeof v === 'string' ? v : JSON.stringify(v); };
+const inv = JSON.parse(await raw('atlas-inventory.json', 'atlas-inventory'));
+const files = [...new Set((inv.buildings || []).map((b) => b.source).filter((s) => /^catalog\/[\w.-]+\.ya?ml$/.test(s || '')))];
+if (!files.length) throw new Error('Map inventory lists no catalog files');
+const clean = (v) => v == null ? '' : String(v).replace(/\s+#.*$/, '').trim().replace(/^['"]|['"]$/g, '').replace(/''/g, "'");
+const repos = new Map(), agents = [];
+for (const f of files) {
+  const text = await raw(f);
+  const head = text.split(/^agents:\s*$/m)[0];
+  const repo = clean((head.match(/^  repository:\s*(.+)$/m) || [])[1]);
+  const project = clean((head.match(/^project:\s*\n\s+id:\s*(.+)$/m) || [])[1]) || f;
+  const status = clean((head.match(/^  status:\s*(.+)$/m) || [])[1]);
+  if (/^[\w.-]+\/[\w.-]+$/.test(repo) && !repos.has(repo)) repos.set(repo, { repo, project, status });
+  const sec = (text.split(/^agents:\s*$/m)[1] || '').split(/^\S/m)[0];
+  for (const block of sec.split(/^  - id: /m).slice(1)) {
+    const id = clean(block.split('\n')[0]);
+    const field = (k) => clean((block.match(new RegExp('^    ' + k + ':\\s*(.+)$', 'm')) || [])[1]);
+    const gov = (block.match(/^      governance:\s*\n((?:^        .*\n?)*)/m) || [])[1] || '';
+    agents.push({ id, name: field('name') || id, status: field('status'), autonomy: clean((gov.match(/^\s+autonomy:\s*(\d+)/m) || [])[1]),
+      approval: /approv|human_in_loop|human in the loop/i.test(gov) ? 'yes' : '' });
+  }
+}
+if (!repos.size) throw new Error('No project repositories found in the catalog');
+return [{ json: { repos: [...repos.values()], agents: agents.filter((a) => a.status !== 'retired'), files: files.length,
+  isManual: $execution.mode === 'manual' || !!$('Run by Hand').isExecuted } }];
