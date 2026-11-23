@@ -199,10 +199,11 @@ jobs:
       - name: Apply change
         id: apply
         run: git apply --index "$RUNNER_TEMP/change/change.patch"
+      # No dependency cache here: this job runs a model-written change, and anything it could
+      # save to the cache would be shared with main's own CI (CodeQL cache poisoning).
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
-          cache: npm
       - name: Install
         id: install
         run: npm ci

@@ -32,6 +32,8 @@ describe("runner helper stays in step with Atlas's policy", () => {
     expect(wf.match(/secrets\.ANTHROPIC_API_KEY/g)).toHaveLength(1);
     const validate = wf.slice(wf.indexOf("\n  validate:"), wf.indexOf("\n  report:"));
     expect(validate).not.toMatch(/secrets\./);
+    // The validate job runs a model-written change: nothing it does may reach main's dependency cache.
+    expect(wf).not.toMatch(/^\s+cache:|actions\/cache@/m);
     expect(wf).not.toMatch(/gh pr merge|\/merge"|git merge|gh pr create|HEAD:refs\/heads\/main|--force/i);
   });
 });
