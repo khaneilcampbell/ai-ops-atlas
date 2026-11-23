@@ -80,13 +80,17 @@ export function repoHealth(snap: RepoSnapshot | undefined, linkedAgents: number)
       key: "issues",
       label: "Open issues + PRs",
       value: snap ? String(snap.openIssues) : "–",
-      health: !snap ? "unknown" : snap.openIssues > 10 ? "warn" : "good",
+      // Open pull requests are work in progress, not a problem, so the count is shown but never
+      // turns a project to "Needs a look" (Khaneil, 2026-11-23).
+      health: snap ? "good" : "unknown",
     },
     {
       key: "license",
       label: "License",
       value: snap ? snap.license ?? "None" : "–",
-      health: !snap ? "unknown" : snap.license ? "good" : "warn",
+      // Some repositories are deliberately unlicensed (all rights reserved), so a missing license
+      // is neutral, like zero linked agents, rather than a warning (Khaneil, 2026-11-23).
+      health: snap?.license ? "good" : "unknown",
     },
     {
       key: "agents",

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Catalog } from "../catalog/types";
 import type { RepoSnapshot } from "../github/types";
-import { attentionItems, ciHealth, ciSuccess, ciSummary, effectiveLastRun, verifiedState } from "./derive";
+import { attentionItems, ciHealth, ciSuccess, ciSummary, overallHealth, repoHealth, effectiveLastRun, verifiedState } from "./derive";
 
 const snap = (over: Partial<RepoSnapshot> = {}): RepoSnapshot => ({
   fullName: "me/demo", description: null, url: "", homepage: null, language: "Python", languages: {}, visibility: "public",
@@ -32,6 +32,17 @@ describe("ciHealth", () => {
   it("ignores Dependabot's own update jobs", () => {
     const dependabot = { ...run("cargo in /src-tauri for glib - Update #1658074936", "failure"), event: "dynamic" };
     expect(ciHealth(snap({ runs: [dependabot, run("CI", "success")] })).value).toBe("Passing");
+  });
+});
+
+describe("repoHealth", () => {
+  it("doesn't flag a repository for many open pull requests or no license", () => {
+    const s = snap({ openIssues: 23, license: null, runs: [run("CI", "success")] });
+    expect(overallHealth(repoHealth(s, 2))).toBe("good");
+  });
+  it("still flags failing CI and a stale repository", () => {
+    expect(overallHealth(repoHealth(snap({ runs: [run("CI", "failure")] }), 1))).toBe("bad");
+    expect(overallHealth(repoHealth(snap({ pushedAt: new Date(Date.now() - 30 * 86_400_000).toISOString(), runs: [run("CI", "success")] }), 1))).toBe("warn");
   });
 });
 
