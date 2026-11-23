@@ -768,7 +768,7 @@
    "owned_by": "atlas-release-manager",
    "project": "ai-ops-atlas",
    "runtime": "GitHub-hosted runner",
-   "trigger": "Push, pull request or manual",
+   "trigger": "Push, pull request or manual; the dependency audit also runs daily on main",
    "source": ".github/workflows/ci.yml"
   },
   {
@@ -2133,6 +2133,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-23T00:13:52.146Z",
- "commit": "511538ce7fbdd3b9f68d4346731994d85d2b7dcf"
+ "generated_at": "2026-11-23T03:35:59.191Z",
+ "commit": "dc68e7cf70a0419ec085a6dc912b761c8389ba21"
 }
