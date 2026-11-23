@@ -1,1 +1,1 @@
-- 2026-11-23 · Every agent now has a daily time to report on itself at the Data Intelligence Center, with a Sheet and a PDF in the Output Library. The schedule is a draft until you publish it in n8n (#PR)
+- 2026-11-23 · Every agent now has a daily time to report on itself at the Data Intelligence Center, with a Sheet and a PDF in the Output Library. The schedule is a draft until you publish it in n8n (#517)
