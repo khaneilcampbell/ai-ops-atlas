@@ -86,6 +86,13 @@ describe("missing, unconnected and stale data are never zero", () => {
     expect(rowOf(d, "steady-scheduler").stale_flags).toMatch(/over 7 days ago/);
     expect(recsOf(d, "steady-scheduler")).toContain("active-but-quiet");
   });
+  it("a GitHub list cut at one page says so instead of claiming 30 days", () => {
+    const d = cycleOf((agents, ctx) => { ctx.ghTotal = new Map([["demo/app/build.yml", 240]]); });
+    const r = rowOf(d, "flaky-builder");
+    expect(r.window).toContain("newest runs only: build.yml (newest 4 of 240)");
+    expect(r.stale_flags).toContain("less than 30 days");
+    expect(d.sources.find((s) => s.source === "GitHub Actions").note).toContain("1 cut short");
+  });
   it("each source states its window, retention and availability", () => {
     const by = Object.fromEntries(c.sources.map((s) => [s.source, s]));
     expect(by["n8n executions"]).toMatchObject({ coverage: "16 Nov 2026 to 23 Nov 2026", availability: "Partly available (1 of 5 not read)" });

@@ -151,7 +151,7 @@ const ruleOf = (id) => RULES.find((r) => r.id === id);
 /**
  * One agent's report from the reads of one cycle.
  * ctx: { nowMs, tz, wf: Map id->workflow|null, execs: Map id->executions[], n8nErr: Map id->message,
- *        ghRuns: Map key->runs[], ghCron: Map key->cron[], ghErr: Map key->message,
+ *        ghRuns: Map key->runs[], ghTotal: Map key->total runs GitHub has, ghCron: Map key->cron[], ghErr: Map key->message,
  *        atlas: { connected, note, by: Map catalogId->counts }, n8nFrom: iso|null }
  * agent: { id, name, role, project, status, slot, budget, n8n: [ids], gh: [{repo,file}], owned: [{id}] }
  */
@@ -168,9 +168,11 @@ function agentReport(agent, ctx) {
     }
     for (const e of ctx.execs.get(id) || []) if (e.startedAt) runs.push(n8nRun(e, label));
   }
-  const ghFiles = [];
+  const ghFiles = [], ghCut = [];
   for (const g of agent.gh || []) {
     const k = g.repo + '/' + g.file; ghFiles.push(g.file);
+    const total = ctx.ghTotal && ctx.ghTotal.get(k), got = (ctx.ghRuns.get(k) || []).length;
+    if (total && total > got) ghCut.push(g.file + ' (newest ' + got + ' of ' + total + ')');
     if (ctx.ghErr && ctx.ghErr.has(k)) { unreadable.push('GitHub ' + g.file + ' (' + ctx.ghErr.get(k) + ')'); continue; }
     for (const c of ctx.ghCron.get(k) || []) { const t = cronTimes(c, 'UTC', tz); schedules.push(...t); if (t.length) scheduleText.push(scheduleLine(g.file, t, ' (GitHub cron)')); }
     for (const r of ctx.ghRuns.get(k) || []) if (r.run_started_at || r.created_at) runs.push(githubRun(r, g.file));
@@ -194,7 +196,7 @@ function agentReport(agent, ctx) {
   // Windows: n8n keeps what it keeps (back to ctx.n8nFrom); GitHub is read for GITHUB_DAYS.
   const windows = [];
   if ((agent.n8n || []).length) windows.push('n8n ' + (ctx.n8nFrom ? 'since ' + fmtDay(Date.parse(ctx.n8nFrom), tz) + ' (what n8n still keeps)' : 'retention unknown'));
-  if ((agent.gh || []).length) windows.push('GitHub last ' + GITHUB_DAYS + ' days');
+  if ((agent.gh || []).length) windows.push('GitHub last ' + GITHUB_DAYS + ' days' + (ghCut.length ? ', newest runs only: ' + ghCut.join(', ') : ''));
   const nOf = (src) => runs.filter((r) => r.source === src).length;
   const runsSeen = state === 'no-workflow' ? NO_DATA : state === 'not-connected' ? 'Not connected: ' + unreadable.join('; ')
     : [(agent.n8n || []).length ? nOf('n8n') + ' n8n' : '', (agent.gh || []).length ? nOf('GitHub') + ' GitHub' : ''].filter(Boolean).join(' + ') + ' = ' + plural(runs.length, 'run') + (state === 'partial' ? ' (some workflows not read)' : '');
@@ -210,6 +212,7 @@ function agentReport(agent, ctx) {
   if (readable && lastRun && now - Date.parse(lastRun.startedAt) > QUIET_DAYS * 86400000) stale.push('Last run seen ' + fmtLocal(lastRun.startedAt, tz) + ', over ' + QUIET_DAYS + ' days ago');
   if (readable && !runs.length) stale.push('No runs in the window: health unknown, not proven');
   if (drafts.length) stale.push('Draft workflows: ' + drafts.join(', '));
+  if (ghCut.length) stale.push('GitHub runs cut at one page: ' + ghCut.join(', ') + ', so counts cover less than 30 days');
 
   // Recommendations from RULES, each with its evidence.
   const recs = [];
@@ -258,7 +261,7 @@ function sourcesOf(ctx, agents, extra) {
   const rows = [
     { source: 'Atlas catalog', holds: 'Agents, status, owned automations, links, budgets', collected_at: at, coverage: 'Current main branch', retention: 'Git history (permanent)', availability: (extra && extra.catalog) || 'Available', note: plural(agents.length, 'agent') },
     { source: 'n8n executions', holds: 'Runs, durations, modes; workflow published or draft, schedules, saving settings', collected_at: at, coverage: ctx.n8nFrom ? fmtDay(Date.parse(ctx.n8nFrom), tz) + ' to ' + to : 'No executions seen', retention: ctx.n8nFrom ? 'About ' + Math.max(1, Math.round((ctx.nowMs - Date.parse(ctx.n8nFrom)) / 86400000)) + ' days (oldest execution n8n still keeps)' : 'Unknown', availability: avail(n8nIds.length, n8nBad), note: plural(n8nIds.length, 'workflow') + ' read with a read-only key; workflows that do not save successes show only failures' },
-    { source: 'GitHub Actions', holds: 'Workflow runs and cron schedules', collected_at: at, coverage: fmtDay(ctx.nowMs - GITHUB_DAYS * 86400000, tz) + ' to ' + to, retention: 'Last ' + GITHUB_DAYS + ' days read (GitHub keeps longer)', availability: avail(ghKeys.length, ghBad), note: plural(ghKeys.length, 'workflow file') + ', read only' },
+    { source: 'GitHub Actions', holds: 'Workflow runs and cron schedules', collected_at: at, coverage: fmtDay(ctx.nowMs - GITHUB_DAYS * 86400000, tz) + ' to ' + to, retention: 'Last ' + GITHUB_DAYS + ' days read (GitHub keeps longer)', availability: avail(ghKeys.length, ghBad), note: plural(ghKeys.length, 'workflow file') + ', read only, newest 100 runs per file' + (ctx.ghTotal ? ' (' + ghKeys.filter((k) => (ctx.ghTotal.get(k) || 0) > (ctx.ghRuns.get(k) || []).length).length + ' cut short)' : '') },
     { source: 'Atlas records (memory service)', holds: 'Runs, failures, tokens, cost, memory items and feedback per agent (counts only)', collected_at: at, coverage: ctx.atlas.connected ? 'Last ' + (ctx.atlas.windowDays || 30) + ' days' : 'None', retention: ctx.atlas.connected ? 'Database (permanent)' : 'Unknown until connected', availability: ctx.atlas.connected ? 'Available' : 'Not connected', note: ctx.atlas.note },
     { source: 'Report times', holds: 'Each agent\'s daily report time', collected_at: at, coverage: 'Current', retention: 'Git history', availability: 'Available', note: (extra && extra.slotSource) || 'catalog/workspace/self-reports.yaml' },
   ];
