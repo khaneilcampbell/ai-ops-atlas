@@ -1,1 +1,1 @@
-- 2026-11-23 · Every agent now has a daily time to report on itself at the Data Intelligence Center, with a Sheet and a PDF in the Output Library. The schedule is a draft until you publish it in n8n (#517)
+- 2026-11-23 · Every agent now has a daily time to report on itself at the Data Intelligence Center. Each report shows its runs, failures, timings, schedules and what data was missing, with suggestions to improve its workflow that you review (nothing is changed for you). Each cycle makes a PDF, an Excel workbook and a table in the Output Library (#517)
