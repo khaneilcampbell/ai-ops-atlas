@@ -283,6 +283,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     }
     return m;
   }, [namedAgents, jobs, scene]);
+  // An agent whose office has a roof marker gets no facade badge as well while it works there (routinePose.ts).
+  const roofMarked = useCallback((id: string) => officeKeys.has(id), [officeKeys]);
   const faces = useMemo(() => new Map<string, MarkerFace>((namedAgents?.agents ?? []).map((a) => [a.personaId, { name: a.identity.name, initials: a.identity.initials, accent: a.identity.accent, portrait: a.identity.portrait }])), [namedAgents]);
   const occupiedNow = useMemo(
     () => insideNow(routines, Date.now(), (id) => officeKeys.get(id) ?? null, namedAgents?.agents.map((a) => a.personaId) ?? [], routineOverride),
@@ -622,6 +624,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         <World
           drawing={drawing}
           namedAgents={namedAgents}
+          roofMarked={roofMarked}
           city={city}
           power={power}
           light={props.light}
@@ -727,7 +730,7 @@ function FirstMapFrame({ready}:{ready:()=>void}) {
 }
 
 function World({
-  drawing,namedAgents,city,
+  drawing,namedAgents,roofMarked,city,
   power,
   light: lightMode,
   health,
@@ -764,7 +767,7 @@ function World({
   cover,
   surface,
 }: {
-  drawing:boolean;namedAgents?: NamedAgentPlan;city?: { places: CityPlaces; routes: CityRoutes };
+  drawing:boolean;namedAgents?: NamedAgentPlan;roofMarked?: (personaId: string) => boolean;city?: { places: CityPlaces; routes: CityRoutes };
   power: PowerProfile;
   light: LightMode;
   health: Map<string, Health>;
@@ -1465,7 +1468,7 @@ function World({
       {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
       {detailsReady && <CommunityRail plan={scene.communityRail} travel={travel} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} land={scene.land} walks={railWalks} bothSides={harbourStop} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
-      {detailsReady && namedAgents && <NamedAgents plan={namedAgents} places={city?.places} routes={city?.routes} open={insideOpen} moving={!reduced} drawing={drawing} />}
+      {detailsReady && namedAgents && <NamedAgents plan={namedAgents} places={city?.places} routes={city?.routes} open={insideOpen} moving={!reduced} drawing={drawing} roofMarked={roofMarked} />}
       {detailsReady && <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>}
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}

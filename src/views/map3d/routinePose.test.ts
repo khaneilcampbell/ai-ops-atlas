@@ -73,6 +73,13 @@ describe("drawing the routine", () => {
       const closed = poseAt(r, a.personaId, i, t)!;
       expect(closed.figure).toBe(false);
       expect(closed.badge).toEqual(places.agents.get(a.personaId)!.doorBadge);
+      // With the roof's "agents inside" marker standing for it, no second badge on the facade.
+      const seg = segmentAt(r, t)!;
+      expect(routinePose(seg, { routes, places, personaId: a.personaId, slot: i, open: new Set(), wall: t, scale: FIGURE_SCALE, roofMarker: true })).toMatchObject({ figure: false, badge: null });
+      // Open in Inside there is no marker, so the facade badge still shows while it waits off the open floor.
+      pickFloor(desk.towerKey, desk.floor === 1 ? 2 : desk.floor - 1);
+      expect(routinePose(seg, { routes, places, personaId: a.personaId, slot: i, open: new Set([desk.towerKey]), wall: t, scale: FIGURE_SCALE, roofMarker: true })).toMatchObject({ figure: false, badge: desk.marker });
+      pickFloor(desk.towerKey, desk.floor);
       // The walk to the desk starts at the door and ends at the chair.
       const toDesk = r.segments.find((s) => s.kind === "inside" && s.phase === "to_desk")!;
       const end = poseAt(r, a.personaId, i, toDesk.t1 - 1, new Set([desk.towerKey]))!;

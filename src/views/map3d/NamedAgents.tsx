@@ -168,6 +168,8 @@ interface Props {
   moving: boolean;
   /** The map is drawing (not hidden behind another tab). */
   drawing: boolean;
+  /** True when this agent's office has an "agents inside" marker on the map (Map3D.tsx, occupancy.ts). */
+  roofMarked?: (personaId: string) => boolean;
 }
 
 /** Ring colours: working, waiting for approval, failed (needs attention). */
@@ -180,7 +182,7 @@ function openUrl(href: string) {
   else window.open(href, "_blank", "noopener,noreferrer");
 }
 
-export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, moving, drawing }: Props) {
+export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, moving, drawing, roofMarked }: Props) {
   const agents = plan.agents;
   const { camera, gl, size } = useThree();
   const { select, setView } = useAtlas();
@@ -293,7 +295,7 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
       const rt = routineOverride.get(id) ?? routinesRef.current.get(id);
       const seg = rt ? segmentAt(rt, wall) : null;
       L.segs[i] = seg;
-      let pose = seg && places && routes ? routinePose(seg, { routes, places, personaId: id, slot: i, open: openRef.current, wall, yacht, scale: cityScale }) : null;
+      let pose = seg && places && routes ? routinePose(seg, { routes, places, personaId: id, slot: i, open: openRef.current, wall, yacht, scale: cityScale, roofMarker: roofMarked?.(id) ?? false }) : null;
       if (!rt) {
         // No routine (no city places for this layout): stand at the workplace as before.
         const s = namedAgentAt(a, L.t, new Date(wall));
