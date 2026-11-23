@@ -284,7 +284,7 @@ function buildPdf(c) {
   const tz = c.tz || DEFAULT_TZ;
   const W = 612, H = 792, X0 = 44, X1 = W - 44;
   const pages = []; let ops = [], y = 0;
-  const lat = (s) => String(s == null ? '' : s).replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/[\u2013\u2014]/g, '-').replace(/\u2192/g, '->').replace(/[^\x20-\x7E\xA0-\xFF]/g, '?');
+  const lat = (s) => String(s == null ? '' : s).replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, '-').replace(/→/g, '->').replace(/[^\x20-\x7E\xA0-\xFF]/g, '?');
   const esc = (s) => lat(s).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
   const rgb = (hex) => [1, 3, 5].map((i) => (parseInt(hex.slice(i, i + 2), 16) / 255).toFixed(3)).join(' ');
   const widthOf = (s, size, bold) => lat(s).length * size * (bold ? 0.56 : 0.5);
@@ -393,7 +393,9 @@ function zipStored(files) {
   end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(files.length, 8); end.writeUInt16LE(files.length, 10); end.writeUInt32LE(cd.length, 12); end.writeUInt32LE(offset, 16);
   return Buffer.concat([...locals, cd, end]);
 }
-const xmlText = (s) => String(s).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\uFFFE\uFFFF]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// Strips characters XML cannot hold: control characters and U+FFFE / U+FFFF (written as the characters
+// themselves, because the n8n editor API turns \u escapes into characters and the copy must match).
+const xmlText = (s) => String(s).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F￾￿]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const colName = (i) => { let s = ''; i++; while (i) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
 function sheetXml(sheet) {
   const { columns, rows } = sheet;
