@@ -3,15 +3,46 @@ import { describe, expect, it } from "vitest";
 import { atlasReport, ecoReport } from "../../visual/intel-fixtures";
 import { AtlasContext } from "../state";
 import { Assessment } from "../components/IntelPanel";
+import { RefLinks } from "../components/IntelLinks";
 import { Review, VerifiedTable } from "../views/EngineeringReview";
 import { scorecardRows } from "./ecosystem";
-import { alertPageUrl, alertsListUrl, ecoRefTarget, evidenceLinks, openIssueUrl, recFixRequest, recRepos, repoRefTarget } from "./links";
+import { alertPageUrl, alertsListUrl, ecoRefTarget, evidenceLinks, openIssueUrl, recFixRequest, recRepos, refLabel, repoRefTarget } from "./links";
 import { fixIssueUrl } from "../lib/fixWithClaude";
 import type { ReactNode } from "react";
 
 const ATLAS = "khaneilcampbell/ai-ops-atlas";
 const COMMERCE = "khaneilcampbell/multi-agent-commerce-pipeline";
 const BENJAIRE = "khaneilcampbell/benjaire.com";
+
+describe("reference labels", () => {
+  it("shows review ids in plain words, so they don't read like test data", () => {
+    expect(refLabel("alert:benjaire.com:dependabot:22")).toBe("benjaire.com Dependabot alert #22");
+    expect(refLabel("alert:ai-ops-atlas:code_scanning:3")).toBe("ai-ops-atlas code scanning alert #3");
+    expect(refLabel("repo:khaneilcampbell/khaneilcampbell.com")).toBe("khaneilcampbell.com repository");
+    expect(refLabel("protection:khaneilcampbell")).toBe("khaneilcampbell branch rules");
+    expect(refLabel("wf:benjaire.com/site-ci.yml")).toBe("site-ci.yml workflow in benjaire.com");
+    expect(refLabel("ci:ai-ops-atlas")).toBe("ai-ops-atlas CI runs");
+  });
+
+  it("covers Repository Intelligence ids and leaves unknown shapes as written", () => {
+    expect(refLabel("alert:dependabot:4")).toBe("Dependabot alert #4");
+    expect(refLabel("pr:12")).toBe("PR #12");
+    expect(refLabel("commit:abcdef1234")).toBe("commit abcdef1");
+    expect(refLabel("readme")).toBe("README");
+    for (const raw of ["alert:benjaire.com:nope:1", "alert:dependabot:x", "mystery:thing", "plain", "repo:"]) expect(refLabel(raw)).toBe(raw);
+  });
+
+  it("renders the words and keeps the id in the tooltip", () => {
+    const html = renderToStaticMarkup(
+      <AtlasContext.Provider value={{ select: () => {} } as never}>
+        <RefLinks refs={["alert:ai-ops-atlas:dependabot:17", "protection:nowhere"]} grounded resolve={(r) => ecoRefTarget(r, ecoReport)} />
+      </AtlasContext.Provider>,
+    );
+    expect(html).toContain(">ai-ops-atlas Dependabot alert #17<");
+    expect(html).toContain('title="alert:ai-ops-atlas:dependabot:17"');
+    expect(html).toContain(">nowhere branch rules<");
+  });
+});
 
 describe("reference link targets", () => {
   it("links a review's alert reference to GitHub's alert page", () => {
@@ -87,7 +118,7 @@ describe("unknown states", () => {
     expect(html).toContain("Owner unknown: the review didn&#x27;t name one");
     expect(html.match(/class="score unrated"/g)).toHaveLength(5);
     expect(html.match(/Fix with Claude/g)!.length).toBeGreaterThanOrEqual(4);
-    expect(html).toContain('<span class="ref">made-up:ref</span>');
+    expect(html).toContain('<span class="ref" title="made-up:ref">made-up:ref</span>');
   });
   it("shows an unreadable repository's cells as unknown with GitHub's reason", () => {
     const html = wrap(<VerifiedTable report={ecoReport} />);

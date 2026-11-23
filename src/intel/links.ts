@@ -103,6 +103,58 @@ export function ecoRefTarget(ref: string, report: EcoReport): RefTarget {
   }
 }
 
+const ALERT_WORDS: Record<AlertKind, string> = { dependabot: "Dependabot alert", code_scanning: "code scanning alert" };
+
+/**
+ * The words a reference shows on screen. Claude cites facts by id ("alert:benjaire.com:dependabot:22",
+ * "protection:khaneilcampbell"); printed raw those read like test data, so Atlas shows
+ * "benjaire.com Dependabot alert #22" and keeps the id in the tooltip. Unknown shapes stay as written.
+ */
+export function refLabel(ref: string): string {
+  if (ref === "readme") return "README";
+  const i = ref.indexOf(":");
+  if (i < 0) return ref;
+  const kind = ref.slice(0, i);
+  const rest = ref.slice(i + 1);
+  if (!rest) return ref;
+  switch (kind) {
+    case "repo":
+      return `${short(rest)} repository`;
+    case "project":
+      return `${rest} project`;
+    case "protection":
+      return `${short(rest)} branch rules`;
+    case "ci":
+      return `${short(rest)} CI runs`;
+    case "wf": {
+      const slash = rest.indexOf("/");
+      return slash > 0 ? `${rest.slice(slash + 1)} workflow in ${rest.slice(0, slash)}` : ref;
+    }
+    case "alert": {
+      const parts = rest.split(":");
+      // Engineering review: alert:<repo>:<kind>:<n>. Repository Intelligence: alert:<kind>:<n>.
+      const [name, k, n] = parts.length === 3 ? parts : [null, parts[0], parts[1]];
+      const ak = asKind(k ?? "");
+      if (!ak || !/^\d+$/.test(n ?? "")) return ref;
+      return `${name ? `${short(name)} ` : ""}${ALERT_WORDS[ak]} #${n}`;
+    }
+    case "pr":
+      return /^\d+$/.test(rest) ? `PR #${rest}` : ref;
+    case "issue":
+      return /^\d+$/.test(rest) ? `issue #${rest}` : ref;
+    case "commit":
+      return `commit ${rest.slice(0, 7)}`;
+    case "release":
+      return `release ${rest}`;
+    case "run":
+      return `CI run ${rest}`;
+    case "file":
+      return rest;
+    default:
+      return ref;
+  }
+}
+
 /** A reference from a Repository Intelligence assessment (ids from src-tauri/src/intel/prompt.rs). */
 export function repoRefTarget(ref: string, report: Pick<Report, "facts">): RefTarget {
   const f = report.facts;

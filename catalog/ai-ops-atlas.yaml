@@ -82,6 +82,7 @@ agents:
         audit_log: GitHub Actions run history
         approval: Khaneil approves the macos-signing environment for each main build
         credential_owner: Khaneil (protected GitHub macos-signing environment)
+        kill_switch: 'Reject the waiting "Sign validated main build" deployment in the Actions run: nothing is signed or published without that approval. To stop every build, disable the CI workflow in Actions. A bad update is undone by reverting its pull request; never edit latest.json. See docs/runbooks/stop-and-rollback.md#merging-and-signing-in-atlas.'
       docs:
         technical: README.md
         runbook: docs/runbooks/ai-ops-atlas.md#atlas-ci
@@ -401,6 +402,7 @@ agents:
         data_sensitivity: internal
         approval: Native macOS confirmation and Touch ID for every merge
         credential_owner: Khaneil (one fine-grained token per repository in the macOS Keychain)
+        kill_switch: 'Untick Merge pull requests in Atlas Settings → Actions (off by default), or untick the repository or remove its merge token there; revoking the token on GitHub also stops it. See docs/runbooks/stop-and-rollback.md#merging-and-signing-in-atlas.'
         risk: high
         audit_log: audit.jsonl in the app data folder, shown in the Activity Center
       docs:

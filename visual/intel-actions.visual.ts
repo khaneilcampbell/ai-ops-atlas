@@ -91,6 +91,11 @@ async function checkReview(page: Page) {
   await expect(alert).toBeVisible();
   // Agent reference → an in-app button that opens the agent.
   await expect(box.locator('button.ref-link', { hasText: "Commerce Loop" }).first()).toBeVisible();
+  // Ids show as plain words, with the raw id kept in the tooltip, so they don't read like test data.
+  await expect(alert).toHaveText("ai-ops-atlas Dependabot alert #17");
+  await expect(alert).toHaveAttribute("title", "alert:ai-ops-atlas:dependabot:17");
+  await expect(box.locator("a.ref-link", { hasText: "ai-ops-atlas branch rules" })).toHaveAttribute("href", /\/ai-ops-atlas\/(settings\/branches|rules)$/);
+  await expect(box.locator(".ref", { hasText: /^(repo|alert|protection):/ })).toHaveCount(0);
   // An id the facts don't contain stays plain text.
   await expect(box.locator("span.ref", { hasText: "made-up:ref" })).toBeVisible();
   // Every scorecard area shows, missing ones as unknown.
