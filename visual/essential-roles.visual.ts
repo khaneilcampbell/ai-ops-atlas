@@ -34,9 +34,10 @@ for (const width of [1512, 390])
     await expect(page.getByRole("list", { name: "Archived entries" }).getByRole("button")).toHaveCount(11);
     await page.screenshot({ path: `${out}/archived-${width}.png` });
     // Inactive: the Atlas Task Writer (n8n draft, #506) and the Atlas Executive (paused until its
-    // n8n workflows are published, #508).
-    await page.getByRole("tab", { name: /^Inactive 2/ }).click();
+    // n8n workflows are published, #508), and Investment Operations (not connected, #518).
+    await page.getByRole("tab", { name: /^Inactive 3/ }).click();
     await expect(page.getByRole("list", { name: "Inactive entries" }).locator('[data-id="atlas-executive"]')).toHaveCount(1);
+    await expect(page.getByRole("list", { name: "Inactive entries" }).locator('[data-id="investment-operations"]')).toHaveCount(1);
     await page.getByRole("tab", { name: "All entries" }).click();
     await expect(page.locator(".reg-row").first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
