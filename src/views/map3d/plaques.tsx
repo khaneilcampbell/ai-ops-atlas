@@ -13,8 +13,15 @@ export interface LabelSpec {
   priority: number;
   node: React.ReactNode;
   className: string;
-  onClick?: () => void;
+  /** Click, tap or Enter. A pointer click passes its event (a touch tap can act differently); the keyboard passes none. */
+  onClick?: (e?: React.MouseEvent) => void;
   title?: string;
+  /** The accessible name, when the visible text alone doesn't say enough. */
+  ariaLabel?: string;
+  /** CSS pixels to lift the label above where `pos` lands on screen (a marker stacked over a nameplate). */
+  lift?: number;
+  /** The id of the label this one stacks over (with `lift`): it follows that label, or takes its spot when it is hidden. */
+  over?: string;
   /** For something that travels (the yacht): moves `pos` to where it is now, each frame, before the labels are placed. */
   follow?: (pos: THREE.Vector3) => void;
 }
