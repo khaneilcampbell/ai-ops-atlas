@@ -124,7 +124,7 @@ async function readBody(req: Request): Promise<string | null> {
 }
 
 /** POST /api/hooks/github: a webhook delivery from the GitHub App. */
-export async function receiveGithub(req: Request, env: LiveEnv, now = Date.now()): Promise<Response> {
+export async function receiveGithub(req: Request, env: LiveEnv, now = Date.now(), onVerified?: (event: string, payload: J) => void): Promise<Response> {
   if (!env.LIVE || !env.GITHUB_WEBHOOK_SECRET) return reply(503, { message: "Live updates aren't set up on the site yet (LIVE binding or GITHUB_WEBHOOK_SECRET missing)." });
   const text = await readBody(req);
   if (text === null) return reply(413, { message: "Payload too large." });
@@ -136,6 +136,14 @@ export async function receiveGithub(req: Request, env: LiveEnv, now = Date.now()
     payload = JSON.parse(text);
   } catch {
     return reply(400, { message: "Body isn't JSON." });
+  }
+  // Only after the signature check: the Engineering Division's CI intake (it re-reads the run from GitHub).
+  if (onVerified) {
+    try {
+      onVerified(event, payload);
+    } catch {
+      // never let a listener fail the delivery
+    }
   }
   const c = compactGithub(event, payload);
   if (!c) return reply(202, { ignored: event });
