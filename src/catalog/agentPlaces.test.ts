@@ -3,6 +3,9 @@ import { catalog } from "./index";
 import { agentJobs } from "./agentJobs";
 import { agentPlaces, automationHomes } from "./agentPlaces";
 
+// Landmark residents (workspace.yaml `residents`) share their building as a home, not an apartment.
+const RESIDENT_HOMES = new Set(["Investment Operations Center"]);
+
 describe("agent places", () => {
   const places = agentPlaces(catalog);
 
@@ -10,7 +13,7 @@ describe("agent places", () => {
     for (const a of catalog.agents) {
       const p = places.get(a.id)!;
       // Working agents: an apartment drawn inside (301 to 606). Automations: their own numbering. Off duty: none.
-      expect(p.home.label, a.id).toMatch(/apartment ([3-6]0[1-6]|\d+[A-D])$|suite [1-4]0[1-4]$|no apartment while (planned|paused|retired)$/);
+      expect(p.home.label, a.id).toMatch(/apartment ([3-6]0[1-6]|\d+[A-D])$|suite [1-4]0[1-4]$|no apartment while (planned|paused|retired)$|^Investment Operations Center$/);
       expect(p.work.label.length, a.id).toBeGreaterThan(0);
     }
   });
@@ -20,7 +23,7 @@ describe("agent places", () => {
   });
 
   it("never puts two agents in one apartment", () => {
-    const homes = [...places.values()].map((p) => p.home.label).filter((l) => !l.includes("no apartment"));
+    const homes = [...places.values()].map((p) => p.home.label).filter((l) => !l.includes("no apartment") && !RESIDENT_HOMES.has(l));
     expect(new Set(homes).size).toBe(homes.length);
   });
 

@@ -18,7 +18,7 @@ export function Roles({ agents, projects, entries, view, query, current, pick, s
   const entry = useMemo(() => new Map(entries.map((e) => [e.profile.id, e])), [entries]);
   const hits = useMemo(() => new Set(filterEntries(entries, { ...EMPTY_FILTER, query }).map((e) => e.profile.id)), [entries, query]);
   const show = (ids: string[]) => ids.filter((id) => entry.has(id) && hits.has(id));
-  const where = (a: Pick<Agent, "projectId">) => {
+  const where = (a: Pick<Agent, "id" | "projectId">) => {
     const p = placement(a, projects);
     const b = p.building ?? "No building";
     return !p.module ? `${b} · No module` : p.module === b ? `${b} (module)` : `${b} · ${p.module} module`;

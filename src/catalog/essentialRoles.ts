@@ -1,6 +1,8 @@
 import { isAiAgent, worksThroughAutomations } from "./roles";
 import type { Agent, Project } from "./types";
 import { moduleType } from "../modules/catalog";
+import { buildingDisplayName } from "../modules/names";
+import { WORKSPACE } from "../modules/workspace";
 import type { Operational } from "../registry/types";
 
 // The Agents tab groups every entry under one of a few essential roles (Khaneil, 2026-11-17). A role
@@ -106,7 +108,10 @@ export function roleActivity(entries: { operational: Operational; lastVerifiedAt
 
 /** Where an entry works: its project's building and that building's module, both read from the
  *  catalog and never changed by its role. Module is null where the building houses none. */
-export function placement(a: Pick<Agent, "projectId">, projects: Pick<Project, "id" | "name" | "module">[]) {
+export function placement(a: Pick<Agent, "id" | "projectId">, projects: Pick<Project, "id" | "name" | "module">[]) {
+  // An entry a landmark lists in workspace.yaml works in that building, not its project's headquarters.
+  const l = WORKSPACE.landmarks.find((x) => x.agents?.includes(a.id));
+  if (l) return { building: buildingDisplayName(`service:${l.id}`, l.name), module: moduleType(l.moduleType)?.name ?? null };
   const p = projects.find((x) => x.id === a.projectId);
   return { building: p?.name ?? null, module: moduleType(p?.module)?.name ?? null };
 }

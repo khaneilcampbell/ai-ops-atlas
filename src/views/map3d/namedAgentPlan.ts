@@ -2,7 +2,7 @@ import type { AgentJob } from "../../catalog/agentJobs";
 import type { Agent } from "../../catalog/types";
 import { cityFigureFor, type CityFigure } from "../../registry/cityFigures";
 import { identityFor, type ResolvedIdentity } from "../../registry/identity";
-import { agentAt, type AgentCommute, type CommutePlan } from "./agentCommutes";
+import { agentAt, landmarkDoor, type AgentCommute, type CommutePlan } from "./agentCommutes";
 import { ENTRANCE } from "./roads";
 import { TERRACE_H, type Scene3D } from "./scene";
 
@@ -42,6 +42,11 @@ function doorOf(scene: Scene3D, job: AgentJob): Door | undefined {
   if (job.work.kind === "headquarters") {
     const t = scene.towers.find((x) => x.projectId === job.work.projectId);
     return t && { x: t.x, z: t.z + t.size / 2 + ENTRANCE / 2, out: [0, 1], y: TERRACE_H + SPOT.sidewalk };
+  }
+  // A Financial District landmark that lists the agent (workspace.yaml): its own front path.
+  if (job.work.kind === "landmark") {
+    const p = landmarkDoor(scene, job.work.building);
+    return p && { x: p[0], z: p[1], out: [0, 1], y: TERRACE_H + SPOT.sidewalk };
   }
   // The Marketing Agency's entrance under the copper sweep, facing away from the building.
   if (scene.agency && job.work.building === "Benjaire Marketing Agency") {

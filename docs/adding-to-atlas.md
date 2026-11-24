@@ -25,6 +25,8 @@ switched on.
    - a desk in its project's building (the default: nothing to add once `projectId` is set);
    - a `workplace` room (Marketplace or Marketing Agency);
    - `agents` on a landmark in `catalog/workspace/workspace.yaml`.
+     It then works there on every tab and stands at that building's door; add it to `residents`
+     too and it lives there (Trade Desk and Market Research in the Investment Operations Center).
    A desk never resizes a district or moves a building. Leave outside services out of
    `registry.responsibilities.tools` unless Khaneil wants a new tool building
    (`dashboardData.test.ts` pins the tool buildings).

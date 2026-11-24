@@ -6,6 +6,7 @@ import type { TriggerType } from "../registry/types";
 import { buildingDisplayName } from "../modules/names";
 import { getAssignments, presenceAt, type PresenceAssignment, type PresencePlace } from "./agentPresence";
 import { financialBrand } from "../views/map3d/financialBrands";
+import { WORKSPACE } from "../modules/workspace";
 
 // Each AI agent's job: a role, an owner, a home, a workplace, a shift, a budget and the output it
 // owes at the end of the day. Everything is read from the agent's manifest or worked out by the
@@ -47,8 +48,9 @@ export interface AgentJob {
   /** The person accountable for the agent's work and spend. */
   owner: Decided<string>;
   home: { building: string; unit: string; label: string };
-  /** Where it works: its project's headquarters, or a declared workplace such as an OpenAI suite. */
-  work: { kind: "headquarters" | "workplace"; projectId: string; building: string; label: string };
+  /** Where it works: its project's headquarters, a declared workplace such as an OpenAI suite, or a
+   *  landmark that lists it in workspace.yaml (`building` is then the landmark id, such as "financial:investments"). */
+  work: { kind: "headquarters" | "workplace" | "landmark"; projectId: string; building: string; label: string };
   /** Shift in hours of the simulated day, plus the schedule as the manifest writes it. */
   shift: Decided<{ start: number; end: number }> & { declared: string | null };
   budget: Decided<string>;
@@ -122,7 +124,10 @@ function offDutyOf(a: Agent): OffDuty | null {
 /** The job of every AI agent in the catalog (types A, B and F), in catalog order. Automations have no job card. */
 export function agentJobs(catalog: Catalog, assignments: Record<string, PresenceAssignment> = {}): AgentJob[] {
   const agents = catalog.agents.filter(isAiAgent);
-  const homes = apartments(agents.map((a) => a.id), new Map(agents.flatMap((a) => { const o = offDutyOf(a); return o ? [[a.id, o] as const] : []; })), new Set(agents.filter((a) => a.registry?.identity).map((a) => a.id)));
+  // Agents a landmark lists in workspace.yaml work there; its `residents` live there too, so they take no apartment.
+  const landmarkOf = (id: string) => WORKSPACE.landmarks.find((l) => l.agents?.includes(id));
+  const residentOf = (id: string) => WORKSPACE.landmarks.find((l) => l.residents?.includes(id));
+  const homes = apartments(agents.filter((a) => !residentOf(a.id)).map((a) => a.id), new Map(agents.flatMap((a) => { const o = offDutyOf(a); return o ? [[a.id, o] as const] : []; })), new Set(agents.filter((a) => a.registry?.identity).map((a) => a.id)));
   return agents.map((a) => {
     const job = baseJob(a);
     const p = assignments[a.id], at = p && catalog.projects.find((x) => x.id === p.work);
@@ -131,21 +136,29 @@ export function agentJobs(catalog: Catalog, assignments: Record<string, Presence
     const home = p.home === job.home.building ? job.home : { building: p.home, unit: "", label: homeLabel(p.home) };
     return { ...job, presence: p, deskOnly: undefined, home, work: { kind: "headquarters", projectId: at.id, building: at.id, label: `${at.name} headquarters` } };
   });
+  /** A resident's home: the landmark itself. Home ids are Financial District ids ("investments"). */
+  function residentHome(id: string): AgentJob["home"] | undefined {
+    const l = residentOf(id);
+    return l && { building: l.id.replace(/^financial:/, ""), unit: "", label: buildingDisplayName(`service:${l.id}`, l.name) };
+  }
   function baseJob(a: Agent): AgentJob {
     const project = catalog.projects.find((p) => p.id === a.projectId);
     const tier = tierOf(a, catalog);
     const budget = a.registry?.cost?.budget?.trim();
     const output = a.registry?.responsibilities?.outputs?.[0]?.trim();
     const offDuty = offDutyOf(a);
+    const landmark = landmarkOf(a.id);
     return {
       agentId: a.id,
       title: a.name,
       role: { ...tier, value: TIER_INFO[tier.value].label },
       owner: ownerOf(a),
-      home: homes.get(a.id)!,
+      home: residentHome(a.id) ?? homes.get(a.id)!,
       work: a.workplace
         ? { kind: "workplace", projectId: a.projectId, building: a.workplace.building, label: `${a.workplace.building}, floor ${a.workplace.floor}, ${/^\d+$/.test(a.workplace.room) ? "suite" : "room"} ${a.workplace.room}` }
-        : { kind: "headquarters", projectId: a.projectId, building: a.projectId, label: `${project?.name ?? a.projectId} headquarters${a.officeFloor ? `, floor ${a.officeFloor}` : ""}` },
+        : landmark
+          ? { kind: "landmark", projectId: a.projectId, building: landmark.id, label: buildingDisplayName(`service:${landmark.id}`, landmark.name) }
+          : { kind: "headquarters", projectId: a.projectId, building: a.projectId, label: `${project?.name ?? a.projectId} headquarters${a.officeFloor ? `, floor ${a.officeFloor}` : ""}` },
       shift: shiftOf(a),
       budget: budget ? declared(budget, "registry.cost.budget in the manifest") : inferred("Not documented", "no budget written in the manifest"),
       output: output ? declared(output, "first of registry.responsibilities.outputs") : inferred("Not documented", "no outputs written in the manifest"),

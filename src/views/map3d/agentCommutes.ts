@@ -52,10 +52,20 @@ function homeDoor(scene: Scene3D, building: string): Pt3[] | undefined {
   const b = scene.financial?.buildings.find((x) => x.id === building && x.approach.length > 0);
   return b?.approach.map((p): Pt3 => [p[0], 0, p[1]]);
 }
+/** The front of a Financial District landmark ("financial:investments"): the start of its approach path. */
+export function landmarkDoor(scene: Scene3D, landmarkId: string): readonly [number, number] | undefined {
+  const id = landmarkId.replace(/^financial:/, "");
+  return scene.financial?.buildings.find((b) => b.id === id && b.approach.length > 0)?.approach[0];
+}
+
 function workDoor(scene: Scene3D, job: AgentJob): Pt3 | undefined {
   if (job.work.kind === "headquarters") {
     const t = scene.towers.find((x) => x.projectId === job.work.projectId);
     return t && [t.x, 0, t.z + t.size / 2 + ENTRANCE / 2];
+  }
+  if (job.work.kind === "landmark") {
+    const p = landmarkDoor(scene, job.work.building);
+    return p && [p[0], 0, p[1]];
   }
   // Workplace buildings (the Marketplace, the Agency) have no walk-up door on the map yet.
   return undefined;
