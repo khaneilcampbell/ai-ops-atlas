@@ -17,7 +17,7 @@ describe('Commerce Pipeline teardrop tower',()=>{
   expect(isCommerceTower('commerce-pipeline')).toBe(true);expect(isCommerceTower('benjaire-site')).toBe(false);
   for(const grouping of GROUPINGS){
    const scene=buildScene(layoutMap(catalog,[],grouping)),t=scene.towers.find(t=>isCommerceTower(t.projectId))!;
-   expect(t.name).toBe('Juniper House');expect(t.size).toBeCloseTo(DISTRICT_MIN_SIZE[COMMERCE.projectId]*DISTRICT_HQ_SHARE[COMMERCE.projectId]*.92,3);expect(t.size).toBeGreaterThan(COMMERCE.refSize);
+   expect(t.name).toBe('Commerce Operations Center');expect(t.size).toBeCloseTo(DISTRICT_MIN_SIZE[COMMERCE.projectId]*DISTRICT_HQ_SHARE[COMMERCE.projectId]*.92,3);expect(t.size).toBeGreaterThan(COMMERCE.refSize);
   }
  });
  it('widens the Commerce district where it stands, so Benjaire HQ keeps its place',()=>{

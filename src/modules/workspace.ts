@@ -39,9 +39,9 @@ export interface AtlasWorkspace {
   /** Module types this workspace may use, or "all". */
   entitlements: readonly ModuleTypeId[] | "all";
   /**
-   * Buildings grouped with a core building: grouped building key -> core building key (both map
-   * selection keys, `project:<id>` or `service:<id>`). A grouped building stays on the map but houses
-   * no module for now; its module is listed in the core building, so one building can hold several.
+   * Buildings folded into another building: folded building key -> host building key (both map
+   * selection keys, `project:<id>` or `service:<id>`). A folded building is not drawn on its own; its
+   * modules and agents stay as they are and are listed in the host, so one building can hold several.
    */
   merged?: Readonly<Record<string, string>>;
 }
@@ -140,7 +140,7 @@ export function hostOf(key: string | null | undefined, workspace: Pick<AtlasWork
   return key ? workspace.merged?.[key] : undefined;
 }
 
-/** True when a building is grouped with a core building, and so houses no module of its own for now. */
+/** True when a building is folded into another one and so is not drawn on its own. */
 export function isMerged(key: string | null | undefined, workspace: Pick<AtlasWorkspace, "merged"> = WORKSPACE): boolean {
   return !!hostOf(key, workspace);
 }

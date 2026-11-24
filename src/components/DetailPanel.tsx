@@ -175,8 +175,8 @@ function ServiceDetail({id}:{id:string}) {
   </>;
   const galleriaModule=id===GALLERIA_ID?liveLandmarkModule(GALLERIA_ID):undefined;
   if(id === GALLERIA_ID) return <>
-    <Head eyebrow={`Business operations · Behind ${marketplaceName()}`} title={GALLERIA_NAME} building={GALLERIA_KEY}><span className="chip">{galleriaModule?`${galleriaModule.name} · ${galleriaModule.availability==="available"?"Available":"Partly available"}`:"Planned · Visual building"}</span><EnterBuildingButton id={GALLERIA_ID}/></Head>
-    <div className="panel-body selectable"><ModuleSection/><BusinessLink/><HousedBuildings host={GALLERIA_KEY}/><p>A three-storey shopping mall over a basement car park. Two curved wings meet at a V-shaped entrance with a fountain forecourt, and a rounded supermarket fills the far side. The floors step in and out under wavy white fins, with rope lights and planted terraces, round a central atrium with a steel funnel column under a polycarbonate canopy.</p>
+    <Head eyebrow={`Shopping mall · Behind ${marketplaceName()}`} title={GALLERIA_NAME} building={GALLERIA_KEY}><span className="chip">{galleriaModule?`${galleriaModule.name} · ${galleriaModule.availability==="available"?"Available":"Partly available"}`:"Planned · Visual building"}</span><EnterBuildingButton id={GALLERIA_ID}/></Head>
+    <div className="panel-body selectable"><ModuleSection/><p>A three-storey shopping mall over a basement car park. Two curved wings meet at a V-shaped entrance with a fountain forecourt, and a rounded supermarket fills the far side. The floors step in and out under wavy white fins, with rope lights and planted terraces, round a central atrium with a steel funnel column under a polycarbonate canopy.</p>
       <section><div className="section-title">Floors</div><ul>{GALLERIA_FLOORS.map(f=><li key={f.floor}><strong>{f.label}</strong> · {f.summary}</li>)}</ul></section>
       <dl className="kv"><dt>Shops</dt><dd>Labelled by what they sell. None are open, selling or connected to payments.</dd><dt>Assigned workers</dt><dd>None</dd><dt>Model usage</dt><dd>None</dd><dt>Repository / workflow</dt><dd>{galleriaModule?`Reads ${galleriaModule.connectors.join(", ")}`:"Not connected"}</dd></dl>
     </div>
@@ -242,28 +242,30 @@ function buildingModule(key: string, catalog: Catalog) {
 const selectionOf = (key: string) => ({ kind: key.startsWith("project:") ? "project" as const : "service" as const, id: key.slice(8) });
 
 /**
- * The modules of the buildings grouped with this core building (workspace.yaml `merged`, Khaneil
- * 2026-11-24). Those buildings stay on the map but house no module for now, so this one holds them.
+ * The buildings folded into this one (workspace.yaml `merged`, Khaneil 2026-11-24: eight core buildings).
+ * Each keeps its own module, agents and records, so this building holds all of their modules.
  */
 export function HousedBuildings({ host }: { host: string }) {
   const { catalog, select } = useAtlas();
   const housed = housedIn(host);
   if (!housed.length) return null;
-  // A grouped building whose module is the one this building already houses adds nothing new.
-  const own = buildingModule(host, catalog);
-  const withModule = housed.filter(key => { const mod = buildingModule(key, catalog); return mod && mod !== own; });
-  return <>
-    {withModule.map(key => <ModuleSection key={key} of={selectionOf(key)} from={buildingName(key, catalog)}/>)}
-    <section><div className="section-title">Filler buildings grouped here</div><ul className="link-list">{housed.map(key => { const mod = buildingModule(key, catalog); return <li key={key}><button className="text-btn" onClick={() => select(selectionOf(key))}>{buildingName(key, catalog)} →</button><span className="muted small">{!mod ? "Filler building · No module" : mod === own ? `Filler building · Its ${mod} module is this building's` : `Filler building · Its ${mod} module is shown here`}</span></li>; })}</ul></section>
-  </>;
+  return <section><div className="section-title">Also in this building</div><ul className="link-list">{housed.map(key => { const mod = buildingModule(key, catalog); return <li key={key}><button className="text-btn" onClick={() => select(selectionOf(key))}>{buildingName(key, catalog)} →</button><span className="muted small">{mod ? `${mod} module` : "No module"}</span></li>; })}</ul></section>;
 }
 
-/** On a grouped building's own panel: which core building now holds its module. */
+/** On a folded building's own panel: which core building now houses it. */
 function PartOf({ building }: { building: string }) {
   const { catalog, select } = useAtlas();
   const host = hostOf(building);
   if (!host) return null;
-  return <div className="panel-body"><section><div className="section-title">Filler building</div><p className="muted small">No module for now. It is grouped with {buildingName(host, catalog)}, which shows this building's module. Its agents and records are unchanged.</p><button className="text-btn" onClick={() => select(selectionOf(host))}>Open {buildingName(host, catalog)} →</button></section></div>;
+  return <div className="panel-body"><section><div className="section-title">Part of {buildingName(host, catalog)}</div><p className="muted small">No longer a separate building on the map. Its module, agents and records are unchanged and are listed in {buildingName(host, catalog)}.</p><button className="text-btn" onClick={() => select(selectionOf(host))}>Open {buildingName(host, catalog)} →</button></section></div>;
+}
+
+/** The tools a building's agents use. They are part of the building, not separate offices on the map (Khaneil, 2026-11-24). */
+function BuildingTools({ project }: { project: Project }) {
+  const { catalog, select } = useAtlas();
+  const tools = orderToolsForWorkflow(servicesOf(catalog.agents.filter(a => a.projectId === project.id)));
+  if (!tools.length) return null;
+  return <section><div className="section-title">Tools in this building</div><div className="link-list">{tools.map(tool => <button key={tool.id} className="text-btn" onClick={() => select({ kind: "service", id: `${project.id}:${tool.id}` })}>{tool.name} <span className="muted small">· {tool.vendor}</span></button>)}</div></section>;
 }
 
 /** A project owns its building and agents; repositories are linked resources. */
@@ -283,6 +285,7 @@ function ProjectDetail({ id }: { id: string }) {
       <BuildingTasks buildingId={project.id}/>
       {project.module === "business-operations-hq" && <BusinessLink/>}
       <HousedBuildings host={`project:${project.id}`}/>
+      <BuildingTools project={project}/>
       <LinkedRepositories project={project}/>
       <ProjectOrganization project={project} agents={catalog.agents.filter(a => a.projectId === project.id)} />
       {project.links.length > 0 && <section><div className="section-title">Project links</div><div className="link-list">{project.links.map(link => <ExternalLink key={link.url} href={link.url}><Icon name="external" size={14} /> {link.label}</ExternalLink>)}</div></section>}

@@ -3,7 +3,7 @@ import { buildingInstance, landmarkInstances } from "./instances";
 import type { BuildingInstance, ModuleAvailability } from "./types";
 import { moduleAvailability, moduleType } from "./catalog";
 import { integrationLabel } from "./integrations";
-import { isMerged, type LandmarkInstance } from "./workspace";
+import type { LandmarkInstance } from "./workspace";
 
 /** The selection shapes a building can be picked by on the map (state.tsx Selection). */
 export type BuildingSelection = { kind: "project" | "service" | "agent" | "repo"; id: string } | null;
@@ -13,12 +13,8 @@ export type BuildingSelection = { kind: "project" | "service" | "agent" | "repo"
  * building (an agent, a repository, a tool, a park) or the building houses no module. Lookup is
  * by stable id only, never by display name.
  */
-export function buildingForSelection(selection: BuildingSelection, catalog: Catalog, opts: { grouped?: boolean } = {}): BuildingInstance | LandmarkInstance | undefined {
+export function buildingForSelection(selection: BuildingSelection, catalog: Catalog): BuildingInstance | LandmarkInstance | undefined {
   if (!selection) return undefined;
-  // A building folded into a core building (workspace.yaml `merged`) stays on the map but houses no
-  // module for now (Khaneil, 2026-11-24): its module shows in the core building instead, which asks
-  // with `grouped`.
-  if (!opts.grouped && (selection.kind === "project" || selection.kind === "service") && isMerged(`${selection.kind}:${selection.id}`)) return undefined;
   if (selection.kind === "project") {
     const project = catalog.projects.find((p) => p.id === selection.id);
     const b = project && buildingInstance(project, catalog);
@@ -31,7 +27,6 @@ export function buildingForSelection(selection: BuildingSelection, catalog: Cata
 /** What a landmark's module can do today, for the plain-words header a building shows before
  *  its module card: undefined when the landmark houses no module. */
 export function landmarkModuleStatus(landmarkId: string): { name: string; availability: ModuleAvailability; connectors: string[] } | undefined {
-  if (isMerged(`service:${landmarkId}`)) return undefined;
   const type = moduleType(landmarkInstances().find((l) => l.id === landmarkId)?.moduleType);
   if (!type) return undefined;
   return { name: type.name, availability: moduleAvailability(type), connectors: type.connectors.map(integrationLabel) };

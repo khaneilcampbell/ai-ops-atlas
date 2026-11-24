@@ -10,9 +10,6 @@
 schema: atlas/buildings-v1
 
 buildings:
-  # Nov 24: buildings grouped with one of the eight core buildings (workspace.yaml `merged`) house no
-  # module for now, so they carry a placeholder name after their core building (Khaneil: "rename
-  # buildings that don't have a module, something for now"). Their earlier names stay in former_names.
   "service:benjaire-marketing":
     display_name: Product & Growth Studio
     organization: Benjaire
@@ -21,97 +18,91 @@ buildings:
   # finance and operations buildings; the fictional brands they used to carry stay in former_names
   # so search still finds them. What Benjaire data each building holds: catalog/workspace/finance.yaml.
   "service:financial:residence":
-    display_name: Briarcliff Tower
-    organization: Filler building
-    former_names: [Aldren Insights, Data Intelligence Center]
+    display_name: Data Intelligence Center
+    organization: Benjaire
+    former_names: [Aldren Insights]
   "service:financial:banks":
-    display_name: Larkspur Tower
-    organization: Filler building
-    former_names: [Bayvale Bank, Financial Operations Tower]
+    display_name: Financial Operations Tower
+    organization: Benjaire
+    former_names: [Bayvale Bank]
   "service:financial:financial-planning":
-    display_name: Willow Court
-    organization: Filler building
-    former_names: [Ravelle Advisors, Knowledge & Research Center]
+    display_name: Knowledge & Research Center
+    organization: Benjaire
+    former_names: [Ravelle Advisors]
   "service:financial:budget":
-    display_name: Elmhurst Tower
-    organization: Filler building
-    former_names: [Ellery Budget Center, Budget & Forecasting Center]
+    display_name: Budget & Forecasting Center
+    organization: Benjaire
+    former_names: [Ellery Budget Center]
   "service:financial:records":
-    display_name: Maplewood Tower
-    organization: Filler building
-    former_names: [Halden Trust, Governance & Compliance Center]
+    display_name: Governance & Compliance Center
+    organization: Benjaire
+    former_names: [Halden Trust]
   "service:bmw-dealership":
-    display_name: Ironwood Hall
-    organization: Filler building
-    former_names: [Vantor Motors, Infrastructure Operations Hub]
+    display_name: Infrastructure Operations Hub
+    organization: Vantor Motors
+    former_names: [Vantor Motors]
   "service:financial:investments":
-    display_name: Ashford Tower
-    organization: Filler building
-    former_names: [Robin Exchange, Integration Exchange, Investment Operations Center]
+    display_name: Investment Operations Center
+    organization: Benjaire
+    former_names: [Robin Exchange, Integration Exchange]
   "service:atlas-marketplace":
-    display_name: Seaview Arcade
-    organization: Filler building
-    former_names: [Atlas Marketplace, Product Marketplace]
+    display_name: Product Marketplace
+    organization: Atlas
+    former_names: [Atlas Marketplace]
   "service:atlas-station":
     display_name: Workflow Automation Hub
     organization: Atlas
     former_names: [Atlas Central Station]
   # Nov 11: the rest of the map on the operational scheme. Buildings that house a module take the
-  # module's name. Vendor & Supplier Hub houses Integration Exchange (workspace.yaml), whose vendor
-  # catalog lists the outside services the manifests name. Nov 24: buildings with no module carry a
-  # neutral filler name instead (see the note at the end of this file).
+  # module's name; landmarks without one get a plain name for what they are, never a module.
+  # Client Success Center is named for a planned module (client onboarding and follow-up) that
+  # doesn't exist yet, so it houses none. Vendor & Supplier Hub houses Integration Exchange
+  # (workspace.yaml), whose vendor catalog lists the outside services the manifests name.
   "service:financial:harbor-residence":
-    display_name: Harborlight Tower
-    organization: Filler building
-    former_names: [Camton Hotel, Client Success Center]
-  "service:financial:circa":
-    display_name: Alder Towers
-    organization: Filler building
-    former_names: [Team Residence Towers, Ellipse Residences]
-  "service:financial:insurance":
-    display_name: Fairhaven Tower
-    organization: Filler building
-    former_names: [Merrow Credit Union, Risk & Insurance Center]
-  "service:financial:business-finance":
-    display_name: Cedar Row Tower
-    organization: Filler building
-    former_names: [Corvane Capital, Business Finance Center]
-  "service:atlas-galleria":
-    display_name: Business Operations HQ
+    display_name: Client Success Center
     organization: Benjaire
-    former_names: [Atlas Galleria, Vendor & Supplier Hub]
+    former_names: [Camton Hotel]
+  "service:financial:circa":
+    display_name: Team Residence Towers
+    organization: Benjaire
+    former_names: [Ellipse Residences]
+  "service:financial:insurance":
+    display_name: Risk & Insurance Center
+    organization: Benjaire
+    former_names: [Merrow Credit Union]
+  "service:financial:business-finance":
+    display_name: Business Finance Center
+    organization: Benjaire
+    former_names: [Corvane Capital]
+  "service:atlas-galleria":
+    display_name: Vendor & Supplier Hub
+    organization: Atlas
+    former_names: [Atlas Galleria]
   "service:skyline-stadium":
-    display_name: Oakridge Hall
-    organization: Filler building
-    former_names: [Team Events Arena, Atlas Stadium]
+    display_name: Team Events Arena
+    organization: Atlas
+    former_names: [Atlas Stadium]
   # Nov 18: public plaza in front of the Growth & Marketing Studio; its sign shows live automation status.
   "service:automation-plaza":
     display_name: Atlas Automation Plaza
     organization: Atlas
   "service:stadium-station":
-    display_name: Pinecrest Station
-    organization: Filler building
-    former_names: [Events Arena Station, Stadium Station]
+    display_name: Events Arena Station
+    organization: Atlas
+    former_names: [Stadium Station]
   "service:airport-building:terminal":
-    display_name: Hawthorn Hall
-    organization: Filler building
-    former_names: [Passenger Terminal, Atlas · Terminal]
+    display_name: Passenger Terminal
+    organization: Atlas Airport
+    former_names: [Atlas · Terminal]
   "service:airport-building:tower":
-    display_name: Rowan Tower
-    organization: Filler building
-    former_names: [Air Traffic Control, Atlas · Air Traffic]
+    display_name: Air Traffic Control
+    organization: Atlas Airport
+    former_names: [Atlas · Air Traffic]
   "service:airport-building:cargo":
-    display_name: Quarry House
-    organization: Filler building
-    former_names: [Atlas · Cargo, Model Intelligence Lab]
+    display_name: Model Intelligence Lab
+    organization: Atlas Airport
+    former_names: [Atlas · Cargo]
   "service:airport-building:operations":
-    display_name: Sparrow Hall
-    organization: Filler building
-    former_names: [Atlas · Operations, Observability Center]
-  # Nov 24: buildings that house no module get a neutral filler name, so nobody reads a purpose into them
-  # (Khaneil: "make the other buildings not in a module a random building name ... label it as a filler
-  # building"). Their earlier names stay in former_names for search.
-  "service:financial-station":
-    display_name: Birch Lane Station
-    organization: Filler building
-    former_names: [Financial District Station]
+    display_name: Observability Center
+    organization: Atlas Airport
+    former_names: [Atlas · Operations]

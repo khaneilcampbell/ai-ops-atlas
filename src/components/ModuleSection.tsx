@@ -1,7 +1,7 @@
 import { useAtlas } from "../state";
 import { relative } from "../lib/time";
 import { moduleAvailability, moduleType } from "../modules/catalog";
-import { buildingForSelection, type BuildingSelection } from "../modules/lookup";
+import { buildingForSelection } from "../modules/lookup";
 import { aggregateHealth, buildingAssets, executionHistory, observable } from "../modules/operations";
 import { PRODUCT_DISTRICT_LABEL, type ModuleAvailability, type ModuleView } from "../modules/types";
 import { integrationLabel } from "../modules/integrations";
@@ -29,11 +29,10 @@ const AVAILABILITY_LABEL: Record<ModuleAvailability, string> = { available: "Ava
  * building when it has watched ones, otherwise its own sources or its repositories' GitHub CI. A
  * building with none of these is shown as not verified rather than guessed.
  */
-export function ModuleSection({ of, from }: { of?: BuildingSelection; from?: string } = {}) {
+export function ModuleSection() {
   const { selection, catalog, repos, setView, select, setFilters, clearFilters } = useAtlas();
   const { watches } = useAlerts();
-  // `of`: a module a core building holds for a building grouped with it (workspace.yaml `merged`).
-  const building = of ? buildingForSelection(of, catalog, { grouped: true }) : buildingForSelection(selection, catalog);
+  const building = buildingForSelection(selection, catalog);
   const type = moduleType(building?.moduleType);
   if (!building || !type) return null;
   const entitled = isEntitled(WORKSPACE, type.id);
@@ -64,7 +63,7 @@ export function ModuleSection({ of, from }: { of?: BuildingSelection; from?: str
 
   return (
     <section className="module-section" aria-label="Atlas module" data-module={type.id}>
-      <div className="section-title">{from ? `Atlas module · from ${from}` : "Atlas module"}</div>
+      <div className="section-title">Atlas module</div>
       <div className="module-card">
         <div className="module-head">
           <strong>{type.name}</strong>
