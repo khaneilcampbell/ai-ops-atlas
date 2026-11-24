@@ -1,0 +1,2 @@
+- 2026-11-24 · New Team tab in Agents: your 8 roles as an org chart under Yusuf Demir, with what needs you and each agent lifecycle; Leila Haddad counts once, with her five Product Lab skills shown as skills (#526)
+- 2026-11-24 · New Roster tab in Agents: every AI agent in one sortable table with health, automations, last verified run and autonomy, details beside it; Leila Haddad's five Product Lab skills sit in a Skills section of her agent overview, with a small "5 skills" tag on her roster row, instead of as separate agents (#526)

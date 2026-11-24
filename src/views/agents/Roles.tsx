@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ESSENTIAL_ROLES, memberKind, placement, roleActivity, roleDirectory, roleOf } from "../../catalog/essentialRoles";
+import { ESSENTIAL_ROLES, memberKind, placement, roleActivity, roleDirectory, roleOf, SKILL_OF } from "../../catalog/essentialRoles";
 import type { Agent, Project } from "../../catalog/types";
 import { filterEntries, EMPTY_FILTER, type RegistryEntry } from "../../registry/registry";
 import { OPERATIONAL_LABEL } from "../../registry/telemetry";
@@ -54,8 +54,9 @@ export function Roles({ agents, projects, entries, view, query, current, pick, s
         if (query && !ids.length) return null;
         const act = roleActivity(all.flatMap((id) => (entry.has(id) ? [{ operational: entry.get(id)!.operational, lastVerifiedAt: entry.get(id)!.telemetry.lastVerifiedRun?.at ?? null }] : [])));
         const autos = all.filter((id) => memberKind(byId.get(id)!) === "Automation").length;
-        const leads = ids.filter((id) => memberKind(byId.get(id)!) !== "Automation");
-        const loose = ids.filter((id) => memberKind(byId.get(id)!) === "Automation" && !leads.includes(byId.get(id)!.ownedBy ?? ""));
+        const skills = all.filter((id) => SKILL_OF.has(id)).length;
+        const leads = ids.filter((id) => memberKind(byId.get(id)!) !== "Automation" && !SKILL_OF.has(id));
+        const loose = ids.filter((id) => (memberKind(byId.get(id)!) === "Automation" && !leads.includes(byId.get(id)!.ownedBy ?? "")) || (SKILL_OF.has(id) && !leads.includes(SKILL_OF.get(id)!)));
         return (
           <details key={r.id} className="role-card" open={!!query || undefined} data-role={r.id}>
             <summary>
@@ -63,13 +64,16 @@ export function Roles({ agents, projects, entries, view, query, current, pick, s
               <span className="meta">{r.purpose}</span>
               <span className="muted small">Home: {where(byId.get(r.id)!)}</span>
               <span className="muted small">
-                {plural(all.length - autos, "agent")} · {plural(autos, "automation")} · {act.verified} verified{act.failing ? ` · ${act.failing} failed` : ""}{act.stale ? ` · ${act.stale} stale` : ""}{act.unknown ? ` · ${act.unknown} unknown` : ""} · {act.noEvidence} no run evidence
+                {plural(all.length - autos - skills, "agent")}{skills ? ` · ${plural(skills, "skill")}` : ""} · {plural(autos, "automation")} · {act.verified} verified{act.failing ? ` · ${act.failing} failed` : ""}{act.stale ? ` · ${act.stale} stale` : ""}{act.unknown ? ` · ${act.unknown} unknown` : ""} · {act.noEvidence} no run evidence
               </span>
             </summary>
             <ul aria-label={`${r.name} members`}>
               {leads.map((id) => {
                 const steps = ids.filter((s) => byId.get(s)!.ownedBy === id);
-                return [row(id), steps.length > 0 && <li key={`${id}-steps`}><ul className="reg-nested" aria-label={`Automations run by ${entry.get(id)!.profile.title}`}>{steps.map((s) => row(s))}</ul></li>];
+                const own = ids.filter((s) => SKILL_OF.get(s) === id);
+                return [row(id),
+                  own.length > 0 && <li key={`${id}-skills`}><ul className="reg-nested" aria-label={`Skills of ${entry.get(id)!.profile.title}`}>{own.map((s) => row(s))}</ul></li>,
+                  steps.length > 0 && <li key={`${id}-steps`}><ul className="reg-nested" aria-label={`Automations run by ${entry.get(id)!.profile.title}`}>{steps.map((s) => row(s))}</ul></li>];
               })}
               {loose.map((id) => row(id))}
             </ul>
