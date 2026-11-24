@@ -24,7 +24,7 @@ export const SIDEWALK={
 
 /** Plaza stone per building style: field and the darker border band it sits in. */
 /** The light kerb band round a plain concrete forecourt. */
-const PLAIN_KERB='#ece6d8';
+const PLAIN_FIELD='#e9e2d4',PLAIN_KERB='#6e4f3c';
 export const PLAZA_STONE:Record<BuildingStyle,{field:string;border:string}>={
  tech:{field:'#7a838a',border:'#59626a'},       // dark granite under the circuit towers
  secure:{field:'#c3c8d0',border:'#8f97a3'},     // cool blue-grey setts
@@ -142,12 +142,12 @@ export function streetPavement(scene:Pick<Scene3D,'transportConnections'|'land'|
   const plaza=scene.paving.filter(p=>p.w>t.size&&Math.abs(p.x+p.w/2-t.x)<1e-6&&Math.abs(p.z+p.d/2-t.z)<1e-6&&Math.abs(p.w-p.d)<1e-6).sort((a,b)=>a.w-b.w)[0];
   if(!plaza)continue;
   // A plain concrete forecourt keeps the concrete field and only gains a slightly lighter kerb band (Khaneil, 2026-11-24).
-  const stone=t.plainPlaza?{field:'',border:PLAIN_KERB}:PLAZA_STONE[t.identity.style],top=plaza.y+plaza.h,band=t.plainPlaza?.14:.07;
+  const stone=t.plainPlaza?{field:PLAIN_FIELD,border:PLAIN_KERB}:PLAZA_STONE[t.identity.style],top=plaza.y+plaza.h,band=t.plainPlaza?.14:.07;
   const outer={x:plaza.x+.04,z:plaza.z+.04,w:plaza.w-.08,d:plaza.d-.08};
   const inner={x:outer.x+band,z:outer.z+band,w:outer.w-2*band,d:outer.d-2*band};
   // Keep clear of any road or sidewalk that crosses a plaza's edge.
   const clear=(r:R)=>{let parts=[r];for(const c of [...carriage,...roads.map(s=>along(s.a,s.b,half+sw,0))])parts=parts.flatMap(p=>minusRect(p,c));return parts;};
-  if(t.plainPlaza){for(const r of [{...outer,d:band},{...outer,z:outer.z+outer.d-band,d:band},{...outer,w:band},{...outer,x:outer.x+outer.w-band,w:band}])pavement.push(...clear(r).map(p=>box(p,top,.008,stone.border)));continue;}
+  if(t.plainPlaza){pavement.push(...clear(outer).map(p=>box(p,top,.006,stone.field)));for(const r of [{...outer,d:band},{...outer,z:outer.z+outer.d-band,d:band},{...outer,w:band},{...outer,x:outer.x+outer.w-band,w:band}])pavement.push(...clear(r).map(p=>box(p,top,.008,stone.border)));continue;}
   pavement.push(...clear(outer).map(p=>box(p,top-.004,.008,stone.border)),...clear(inner).map(p=>box(p,top,.008,stone.field)));
  }
  return {pavement,markings,zebras};

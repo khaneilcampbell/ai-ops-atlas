@@ -1048,7 +1048,7 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
         const c = HEALTH_ACCENT[health.get(t.key) ?? "unknown"];
         if (!c) return [];
         // Atlas HQ leaves most of its plinth open, so its health is a thin edge ring, not a slab.
-        if (t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId)) {
+        if (t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) || t.plainPlaza) {
           const w = t.size * 1.16, e = 0.05;
           return [-1, 1].flatMap((k) => [
             { p: [t.x, TERRACE_H + 0.15, t.z + (k * (w - e)) / 2], s: [w, 0.022, e], c } as Inst,

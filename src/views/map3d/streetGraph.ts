@@ -26,6 +26,8 @@ export const plazaSites = (s: Pick<Scene3D, "towers" | "clearedLots">) => [...s.
 export function plazaRings(scene: Pick<Scene3D, "towers" | "clearedLots" | "paving">): Map<string, Ring> {
   return new Map(
     plazaSites(scene).flatMap((t) => {
+      // A plain forecourt (the studio on the pond) is reached by its own drive, with no lane round it.
+      if ("plainPlaza" in t && t.plainPlaza) return [];
       const plaza = scene.paving
         .filter((p) => p.w > t.size && Math.abs(p.x + p.w / 2 - t.x) < 1e-6 && Math.abs(p.z + p.d / 2 - t.z) < 1e-6 && Math.abs(p.w - p.d) < 1e-6)
         .sort((a, b) => a.w - b.w)[0];
