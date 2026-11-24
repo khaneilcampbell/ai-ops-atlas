@@ -18,13 +18,15 @@
     "atlas-rerun-failed",
     "atlas-merge-pr",
     "atlas-executive",
+    "atlas-engineer",
+    "atlas-qa",
     "atlas-production-coordinator",
     "atlas-release-coordinator",
     "atlas-release-manager",
     "atlas-health-monitor"
    ],
    "ai_agents": 6,
-   "automations": 4
+   "automations": 6
   },
   {
    "id": "project:benjaire-site",
@@ -841,6 +843,34 @@
    "runtime": "Atlas web site functions; n8n Cloud for dispatched tasks",
    "trigger": "Goal from Khaneil in Mission Control, once its n8n workflows are published; both are drafts today (Atlas · Executive Dispatch, Atlas · Executive Schedule every 30 minutes)",
    "source": "server/executive/engine.ts"
+  },
+  {
+   "id": "atlas-engineer",
+   "name": "Autonomous Software Engineer",
+   "kind": "Automation",
+   "status": "paused",
+   "building_id": "project:ai-ops-atlas",
+   "building_name": "Atlas Command Center",
+   "placement": "Runs from its project building",
+   "owned_by": "agent-operations-lead",
+   "project": "ai-ops-atlas",
+   "runtime": "GitHub Actions (.github/workflows/atlas-engineer.yml), started by n8n for Atlas",
+   "trigger": "CI failure on main picked up by Atlas, once switched on; Atlas · Engineering Dispatch is a draft, ATLAS_ENGINEERING_ENABLED is off and migration 0004 is not applied",
+   "source": "server/engineering/handlers.ts"
+  },
+  {
+   "id": "atlas-qa",
+   "name": "Independent Quality Verification",
+   "kind": "Automation",
+   "status": "paused",
+   "building_id": "project:ai-ops-atlas",
+   "building_name": "Atlas Command Center",
+   "placement": "Runs from its project building",
+   "owned_by": "agent-operations-lead",
+   "project": "ai-ops-atlas",
+   "runtime": "Atlas web site functions, reading GitHub with the site's read-only token",
+   "trigger": "After each Atlas Engineering change, once the division is switched on; migration 0004 is not applied",
+   "source": "server/engineering/qaRunner.ts"
   },
   {
    "id": "atlas-production-coordinator",
@@ -2148,6 +2178,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-24T03:56:39.783Z",
- "commit": "7af81f6784727fe1a85f389017f0cd9e853c4648"
+ "generated_at": "2026-11-24T05:15:54.776Z",
+ "commit": "87b7a040bb918bc3a8ce2762cbb7b2b3b8edf4df"
 }
