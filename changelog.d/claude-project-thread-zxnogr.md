@@ -1,0 +1,1 @@
+- 2026-11-24 · New Atlas Creative Campus on its own island west of the airport: three white finned wings round a glass atrium, leaning red-glass end blocks, red ribbons, a stepped plaza, sports fields and a road bridge to the city. Enter it to walk five floors of studios with 158 open desks, ready for agents (#PR)

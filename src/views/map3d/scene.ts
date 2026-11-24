@@ -43,6 +43,7 @@ import { identityFor, type BuildingIdentity } from "./identity";
 import { DECK_W, planBridges, ROAD_W, stairsOf, towerRing, type BridgeSite, type CarBridge, type DistrictRoads } from "./roads";
 import { CITY_SCALE,alignOfficeScale } from "./cityScale";
 import { OPEN_LOT_LABEL, VACANT_LOT_LABEL, openLot } from "./openLot";
+import { campusCityRoad, planCreativeCampus, type CreativeCampusPlan } from "./creativeCampusPlan";
 
 // The 3D map reuses the 2D layout: grid x becomes world x and grid y becomes world z, so the
 // camera looking from +x+z sees the same arrangement as the isometric map.
@@ -194,6 +195,8 @@ export interface Scene3D {
   dealership?:DealershipPlan;
   /** Benjaire Marketing Agency on new land in the bay below the Financial District. */
   agency?:AgencyPlan;
+  /** Atlas Creative Campus on its own island west of the airport, kept out of `land` (creativeCampusPlan.ts). */
+  campus?:CreativeCampusPlan;
   /** Atlas Marketplace mall beside the open lot (once the Skyline park). */
   commons?:CommonsPlan;
   /** Atlas Automation Plaza on the lawn in front of the Growth & Marketing Studio (plazaPlan.ts). */
@@ -1038,7 +1041,15 @@ function buildCity(layout: Layout): Scene3D {
     stadium=moved;
   }
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
+  // Atlas Creative Campus: a new island west of the airport, last, so nothing on the city's island moves. Its
+  // road continues a street end over the meadow to the shore; only trees and shrubs on that run make way.
+  const campus=airport?planCreativeCampus({land,roads:connections.map(c=>c.road),rail:communityRail?.loop?.route,obstacles:[
+    airportFootprint(airport),...terraces,...paving.filter(p=>p.y>=top-.05),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),...brooks,
+    ...ponds.map(p=>({x:p.x-p.r,z:p.z-p.r,w:p.r*2,d:p.r*2})),...(stationPlaza?[stationPlaza.bounds]:[]),...(stadium?[{x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4}]:[]),
+    ...walks.flatMap(w=>{const r=w.route?.map(q=>[q.gx,q.gy] as [number,number])??[[w.x0,w.z0],[w.x1,w.z1]];return r.slice(1).map((q,i)=>({x:Math.min(q[0],r[i][0])-.2,z:Math.min(q[1],r[i][1])-.2,w:Math.abs(q[0]-r[i][0])+.4,d:Math.abs(q[1]-r[i][1])+.4}));})]}):undefined;
+  if(campus){const run=campusCityRoad(campus);for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(distanceToRoad([items[i].x,items[i].z],run)<.9)items.splice(i,1);}
   return {
+    campus,
     commons,
     plaza,
     financial,

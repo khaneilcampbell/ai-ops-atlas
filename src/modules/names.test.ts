@@ -3,6 +3,7 @@ import { catalog } from "../catalog";
 import type { ManifestIssue } from "../catalog/types";
 import { buildingPlaque } from "../views/map3d/plaques";
 import { AGENCY_KEY, AGENCY_NAME } from "../views/map3d/marketingAgencyPlan";
+import { CAMPUS_KEY } from "../views/map3d/creativeCampusPlan";
 import { MALL_KEY } from "../views/map3d/mallPlan";
 import { DEALERSHIP_KEY } from "../views/map3d/dealershipPlan";
 import { FINANCIAL_BUILDINGS, financialKey } from "../views/map3d/financialPlan";
@@ -15,7 +16,7 @@ import { financialBuildingMatches, landmarkMatches } from "../lib/financialSearc
 import { BUILDING_NAMES, buildingAliases, buildingDisplayName, buildingNameIssues, buildingOrganization, currentBuildingName, parseBuildingNames } from "./names";
 
 /** Every building id the map draws itself and can be renamed in catalog/workspace/buildings.yaml. */
-const MAP_KEYS = new Set([AGENCY_KEY, MALL_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id), GALLERIA_KEY, STADIUM_KEY, PLAZA_KEY, ...AIRPORT_BUILDINGS.map((b) => airportBuildingKey(b.id))]);
+const MAP_KEYS = new Set([AGENCY_KEY, CAMPUS_KEY, MALL_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id), GALLERIA_KEY, STADIUM_KEY, PLAZA_KEY, ...AIRPORT_BUILDINGS.map((b) => airportBuildingKey(b.id))]);
 
 describe("workspace building names", () => {
   it("loads without problems and only names buildings that exist on the map", () => {
@@ -47,6 +48,7 @@ describe("workspace building names", () => {
       ["service:airport-building:operations", "Security & Infrastructure Office", "Filler building"],
       // Nov 24: buildings that house no module carry a neutral filler name, labelled "Filler building".
       ["service:financial-station", "Business Operations Station", "Filler building"],
+      [CAMPUS_KEY, "Atlas Creative Campus", "Atlas"],
     ];
     for (const [key, name, org] of want) {
       expect(buildingDisplayName(key, "fallback"), key).toBe(name);

@@ -25,6 +25,7 @@ import { planAirportCommuters, planRailCommuters } from "../views/map3d/railComm
 import { travelPlan } from "../views/map3d/travelLoops";
 import { MALL_KEY } from "../views/map3d/mallPlan";
 import { AGENCY_KEY, AGENCY_NAME } from "../views/map3d/marketingAgencyPlan";
+import { CAMPUS_KEY, CAMPUS_NAME } from "../views/map3d/creativeCampusPlan";
 import { MAP_FLEET } from "../views/map3d/mapFleet";
 import { buildScene, TERRACE_H, type Scene3D } from "../views/map3d/scene";
 import { STADIUM_KEY, STADIUM_NAME } from "../views/map3d/stadiumPlan";
@@ -111,7 +112,7 @@ const landmarkKey = (id: string) => `service:${id}`;
 const landmarkFor = (key: string) => LANDMARK_MODULES.find((l) => landmarkKey(l.id) === key);
 
 /** Named workplaces in catalog manifests (agent `workplace.building`) and the building they mean. */
-const WORKPLACE_KEYS: Record<string, string> = { "Atlas Marketplace": MALL_KEY, "Benjaire Marketing Agency": AGENCY_KEY };
+const WORKPLACE_KEYS: Record<string, string> = { "Atlas Marketplace": MALL_KEY, "Benjaire Marketing Agency": AGENCY_KEY, [CAMPUS_NAME]: CAMPUS_KEY };
 
 /** Removed districts with no lot and no manifest left. */
 const REMOVED_NAMES: Record<string, string> = { skyline: "Skyline" };
@@ -173,6 +174,8 @@ function buildingsOf(catalog: Catalog, layout: Layout, scene: Scene3D): Inventor
   for (const s of stops) add({ id: s.id, name: s.name, kind: "Train station", area: "Perimeter rail loop", status: PLANNED, project: "", source: "src/views/map3d/perimeterRailPlan.ts" });
   if (scene.dealership) add({ id: DEALERSHIP_KEY, name: "Vantor Motors", kind: "Landmark", area: "Financial District", status: PLANNED, project: "", source: "src/views/map3d/dealershipPlan.ts" });
   if (scene.agency) add({ id: AGENCY_KEY, name: AGENCY_NAME, kind: "Landmark", area: "Bay", status: PLANNED, project: "", source: "src/views/map3d/marketingAgencyPlan.ts" });
+  // Its own island west of the airport, joined to the city by a road bridge (src/views/map3d/creativeCampusPlan.ts).
+  if (scene.campus) add({ id: CAMPUS_KEY, name: CAMPUS_NAME, kind: "Landmark", area: "Creative Campus island", status: PLANNED, project: "", source: "src/views/map3d/creativeCampusPlan.ts" });
   if (scene.mall) add({ id: MALL_KEY, name: "Atlas Marketplace", kind: "Landmark", area: "Marketplace", status: PLANNED, project: "", source: "src/views/map3d/mallPlan.ts" });
   if (scene.commons) add({ id: COMMONS_KEY, name: COMMONS_NAME, kind: "Public space", area: "Marketplace", status: PLANNED, project: "", source: "src/views/map3d/commonsPlan.ts" });
   // On the lawn in front of the Growth & Marketing Studio; its sign and rings show live automation status (src/plaza/plazaState.ts).

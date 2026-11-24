@@ -82,6 +82,17 @@ it("seats Benjaire Product Lab in Marketing Agency rooms that exist in the inter
   expect(buildCatalog({"a.yaml":manifest(w)}).issues.length).toBeGreaterThan(0);
 });
 
+it("offers Creative Campus desk rooms that exist in the interior plan, with nobody seated yet",async()=>{
+ const {CAMPUS_DESK_ROOMS}=await import("../views/office/campusInteriorPlan");
+ const {CAMPUS_WORKPLACE_ROOMS}=await import("./workplaces");
+ expect([...CAMPUS_WORKPLACE_ROOMS].sort()).toEqual(CAMPUS_DESK_ROOMS.map(r=>r.id).sort());
+ // Khaneil chose empty desks for now (2026-11-24).
+ expect(catalog.agents.filter(a=>a.workplace?.building==="Atlas Creative Campus")).toEqual([]);
+ expect(buildCatalog({"a.yaml":manifest('{building: Atlas Creative Campus, floor: 1, room: "1-west1"}')}).issues).toEqual([]);
+ for(const w of ['{building: Atlas Creative Campus, floor: 1, room: "1-west2"}','{building: Atlas Creative Campus, floor: 2, room: "1-west1"}','{building: Atlas Creative Campus, floor: 1, room: "101"}'])
+  expect(buildCatalog({"a.yaml":manifest(w)}).issues.length).toBeGreaterThan(0);
+});
+
 it("gives desks to AI agents only; automations are counted but never take an agent's desk",()=>{
   const hq=catalog.projects.find(p=>p.id==="ai-ops-atlas")!;
   const desks=officeDeskAgents(catalog.agents,hq.id);
