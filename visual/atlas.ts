@@ -89,6 +89,11 @@ export async function goTo(page: Page, name: string) {
 export async function selectBuilding(page: Page, name: string) {
   // Match the name boundary: a building name must never select a station named after it.
   const plaque = page.locator(`.m3-plaque[title^=${JSON.stringify(name + " ·")} i]`);
+  // Station nameplates only show close up, so zoom in a few steps until the nameplate is on the map.
+  for (let i = 0; i < 4 && !(await plaque.count()); i++) {
+    await page.getByRole("button", { name: "Zoom in", exact: true }).click();
+    await settle(page, 2);
+  }
   await plaque.first().dispatchEvent("click");
   await settle(page, 4);
 }
