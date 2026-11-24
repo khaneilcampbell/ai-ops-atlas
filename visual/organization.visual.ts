@@ -7,7 +7,7 @@ for(const width of [1512,390]) test(`Separated agents and automations ${width}`,
  await openAtlas(page,{storage:{'registry-prefs-agents':{classification:'B',view:'all'},'registry-prefs-automations':{sub:'directory',board:true}}});
  await goTo(page,'Agents');
  await expect(page.getByRole('heading',{name:'Agents',exact:true})).toBeVisible();
- await expect(page.locator('.reg-row')).toHaveCount(22);
+ await expect(page.locator('.reg-row')).toHaveCount(24); // 24: Trade Desk and Market Research joined as AI agents (#518)
  await expect(page.locator('.reg-row[data-id="repo-intelligence"]')).toHaveCount(1);
  await expect(page.locator('.reg-row[data-id="github-merge-flow"]')).toHaveCount(0);
  // Owns Merge Flow since 2026-11-14, so it is an agent now.
@@ -18,7 +18,7 @@ for(const width of [1512,390]) test(`Separated agents and automations ${width}`,
  await page.screenshot({path:`docs/agent-organization/agents-${width}.png`});
  await goTo(page,'Automations');
  await expect(page.getByRole('heading',{name:'Automations',exact:true})).toBeVisible();
- await expect(page.locator('.reg-row')).toHaveCount(42); // 42: Atlas Engineering and Atlas Quality Assurance (paused, #516) and the Atlas Security Sheet (#510) joined the 39 after #506 and #508
+ await expect(page.locator('.reg-row')).toHaveCount(47); // 47: Investment Operations and the trading team's three paused automations (#518); 43: Agent Self-Reports (published 2026-11-24, #517) joined; 42: Atlas Engineering and Atlas Quality Assurance (paused, #516) and the Atlas Security Sheet (#510) joined the 39 after #506 and #508
  for(const id of ['github-merge-flow','atlas-ci','benjaire-flow-intake'])await expect(page.locator(`.reg-row[data-id="${id}"]`)).toHaveCount(1);
  await expect(page.locator('.reg-row[data-id="repo-intelligence"]')).toHaveCount(0);
  await page.locator('.reg-row[data-id="github-merge-flow"]').click();await settle(page,1);

@@ -292,6 +292,13 @@ export interface RoutineInput {
    * "any" picks one it likes. Only the picture changes: work still calls it in as usual.
    */
   outing?: { kind: LeisureKind | "any"; at: number } | null;
+  /**
+   * Its daily self-report (selfReports.ts): at `at`, if the agent is in its free time, it walks to
+   * `option` (the Data Intelligence Center) and stays a few minutes. Passed only while the report
+   * workflow is published in n8n, so the walk matches a real scheduled report. Work comes first:
+   * busy at its desk then, it skips the walk.
+   */
+  report?: { at: number; option: LeisureOption } | null;
 }
 
 /**
@@ -338,7 +345,16 @@ export function planRoutine(input: RoutineInput): Routine {
    */
   const outing = input.outing && !isNight(input.outing.at, tz) ? input.outing : null;
   let outingDone = false;
+  const report = input.report && !isNight(input.report.at, tz) ? input.report : null;
+  let reportDone = false;
   const free = (stopAt: number, scheduled: number | null) => {
+    if (report && !reportDone && report.at >= cur.t && report.at < stopAt) {
+      reportDone = true;
+      if (!freeLoop(report.at, scheduled)) {
+        interrupt(report.at);
+        doOuting(report.option, `${personaId}:report:${Math.floor(report.at / MIN)}`, scheduled, "Walking to", `Walking to the ${report.option.label.replace(/^Reporting at (the )?/, "")} for its daily self-report`);
+      }
+    }
     if (outing && !outingDone && outing.at >= cur.t && outing.at < stopAt) {
       outingDone = true;
       // Still free at that moment (not already set to head in for a scheduled run): go.
@@ -378,8 +394,8 @@ export function planRoutine(input: RoutineInput): Routine {
     doOuting(pick, seed, scheduled, "Off on free time from Atlas: walking to");
   };
   /** Walk to an outing and spend it: a ride (queue, ride, off at its exit) or a stay. */
-  const doOuting = (pick: LeisureOption, seed: string, scheduled: number | null, walking = "Walking to") => {
-    walkTo(pick.spot, "walking", null, `${walking} ${pick.label.toLowerCase()}`, pick);
+  const doOuting = (pick: LeisureOption, seed: string, scheduled: number | null, walking = "Walking to", walkNote?: string) => {
+    walkTo(pick.spot, "walking", null, walkNote ?? `${walking} ${pick.label.toLowerCase()}`, pick);
     const room = scheduled !== null ? scheduled - cur.t - leadFrom({ spot: pick.exit }) : Infinity;
     if (pick.kind === "train" || pick.kind === "flight" || pick.kind === "yacht" || pick.kind === "wheel") {
       const times = env.ride(pick, cur.t, personaId);
