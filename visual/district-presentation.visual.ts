@@ -30,6 +30,6 @@ test('the Map view menu keeps the camera and district names; labels and controls
  }
  await page.getByRole('combobox',{name:'Map view',exact:true}).selectOption('automations');await settle(page,1);
  await expect(page.locator('.map-view-context')).toHaveCount(0);
- await selectBuilding(page,'Financial District');await selectBuilding(page,'Governance & Compliance Center');
+ await selectBuilding(page,'Governance & Compliance Center');
  await expect(page.getByLabel('Inspector',{exact:true})).toContainText('Governance & Compliance Center');
 });

@@ -52,7 +52,6 @@ for (const { light, phone } of cases)
     if (phone) await page.setViewportSize({ width: 390, height: 844 });
     await openAtlas(page, { light });
     await waitForScene(page);
-    await selectBuilding(page, "Financial District");
     await selectBuilding(page, "Team Residence Towers");
     const canvas = page.locator("canvas").first();
     for (let i = 0; i < 8; i++) {

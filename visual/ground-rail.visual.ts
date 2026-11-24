@@ -1,13 +1,13 @@
 import {test,expect} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene} from './atlas';
 // Runs only when SHOT_DIR names a folder; the regular visual checks skip it (software WebGL is slow in CI).
 test.skip(!process.env.SHOT_DIR,'Set SHOT_DIR to a folder to take ground-level railway screenshots.');
-/** The shore railway runs on the ground; Events Arena Station and the walk to the yacht dock (Khaneil, 2026-11-15). */
+/** The shore railway runs on the ground; Atlas Commons Station and the walk to the yacht dock (Khaneil, 2026-11-15). */
 const out=process.env.SHOT_DIR??'artifacts/ground-rail';
 // PHONE=1 takes the same views at iPhone width.
 if(process.env.PHONE)test.use({viewport:{width:390,height:844}});
 const suffix=process.env.PHONE?'-phone':'';
 type View=[string,[number,number,number],[number,number,number]];
-// Default "By district" layout: Events Arena Station at x -6.3, z 58; the marina's pier walk at x 2.5.
+// Default "By district" layout: Atlas Commons Station at x -6.3, z 58; the marina's pier walk at x 2.5.
 const VIEWS:View[]=[
  ['arena-station',[-2,0,55],[9,9,71]],
  ['marina-crossing',[2.5,.6,57.6],[7,3.6,63]],

@@ -51,7 +51,7 @@ const tasks = {
       source: "n8n",
       agentId: "shopify-publisher",
       agentName: "Commerce · Approve and Publish Product",
-      buildingId: "commerce-operations-center", buildingName: "Commerce Operations Center",
+      buildingId: "commerce-operations-center", buildingName: "Product & Growth Tower",
       workflow: { kind: "n8n", id: "nbjCeZ80noaGMzXr", label: "Commerce · Approve and Publish Product" },
     }),
     task(2, { title: "Approve launch", description: "Khaneil approves the launch: is the product ready?", priority: "high", buildingId: "atlas-command-center", buildingName: "Atlas Command Center" }),

@@ -30,7 +30,7 @@ for(const [i,id] of ids.entries())test(`${id} selected, desktop and phone`,async
  test.setTimeout(600_000);mkdirSync(out,{recursive:true});
  for(const [label,size] of [['desktop',{width:1512,height:900}],['phone',{width:390,height:844}]] as const){
   await page.setViewportSize(size);await openAtlas(page,{light:'day',storage:{mapProjectGrouping:'none'}});await waitForScene(page);await settle(page,2);
-  await selectBuilding(page,'Financial District');await selectBuilding(page,names[i]);await settle(page,3);
+  await selectBuilding(page,names[i]);await settle(page,3);
   await page.screenshot({path:`${out}/${id}-selected-${label}.png`});
  }
 });
