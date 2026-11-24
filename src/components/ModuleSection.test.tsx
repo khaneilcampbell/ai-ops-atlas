@@ -10,6 +10,10 @@ vi.mock("../intel/state", () => ({ useIntel: () => ({ telemetry: null }) }));
 const noop = () => {};
 const render = (selection: unknown, repos: Record<string, unknown> = {}) =>
   renderToStaticMarkup(<AtlasContext.Provider value={{ selection, catalog, repos, uncataloged: [], settings: { refreshMinutes: 30 }, setView: noop, select: noop, setFilters: noop, clearFilters: noop } as never}><ModuleSection /></AtlasContext.Provider>);
+// A building grouped with a core building (workspace.yaml `merged`) has no module of its own; the core
+// building shows its module with `of`.
+const grouped = (of: { kind: "project" | "service"; id: string }) =>
+  renderToStaticMarkup(<AtlasContext.Provider value={{ selection: null, catalog, repos: {}, uncataloged: [], settings: { refreshMinutes: 30 }, setView: noop, select: noop, setFilters: noop, clearFilters: noop } as never}><ModuleSection of={of} /></AtlasContext.Provider>);
 
 it("shows the module behind a building, keeping the building's own name out of the module", () => {
   const html = render({ kind: "project", id: "benjaire-site" });
@@ -27,7 +31,8 @@ it("reports health as not verified when CI has not loaded, and names the source"
 });
 
 it("shows the publishing pipeline in the Product Marketplace, with stages switched off on purpose as not running", () => {
-  const html = render({ kind: "service", id: "atlas-marketplace" });
+  const html = grouped({ kind: "service", id: "atlas-marketplace" });
+  expect(render({ kind: "service", id: "atlas-marketplace" })).toBe("");
   expect(html).toContain("Commerce &amp; Product Marketplace");
   expect(html).toContain("Products and releases, the pipelines that publish them");
   expect(html).toContain('aria-label="Publishing pipeline"');
@@ -91,7 +96,7 @@ it("shows connected signals in the Observability Center and the document invento
   expect(ops).toContain('aria-label="Connected signals"');
   expect(ops).toContain("GitHub");
   expect(ops).toContain("3 planned capabilities");
-  const docs = render({ kind: "service", id: "financial:financial-planning" });
+  const docs = grouped({ kind: "service", id: "financial:financial-planning" });
   expect(docs).toContain("Knowledge Repository");
   expect(docs).toContain('aria-label="Document inventory"');
   expect(docs).toContain("github.com/khaneilcampbell/ai-ops-atlas");

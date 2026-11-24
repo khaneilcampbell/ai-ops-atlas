@@ -6,7 +6,9 @@ it("finds the module building behind a map selection by stable id", () => {
   expect(buildingForSelection({ kind: "project", id: "benjaire-site" }, catalog)?.moduleType).toBe("business-operations-hq");
   expect(buildingForSelection({ kind: "project", id: "intelligence-hub" }, catalog)?.moduleType).toBe("agent-operations-center");
   expect(buildingForSelection({ kind: "service", id: "benjaire-marketing" }, catalog)?.moduleType).toBe("growth-marketing-studio");
-  expect(buildingForSelection({ kind: "service", id: "financial:investments" }, catalog)?.moduleType).toBe("integration-exchange");
+  // Grouped with Business Operations HQ: no module of its own, but the HQ still finds it.
+  expect(buildingForSelection({ kind: "service", id: "financial:investments" }, catalog)).toBeUndefined();
+  expect(buildingForSelection({ kind: "service", id: "financial:investments" }, catalog, { grouped: true })?.moduleType).toBe("integration-exchange");
   expect(buildingForSelection({ kind: "service", id: "atlas-station" }, catalog)?.moduleType).toBe("workflow-automation-plant");
   expect(buildingForSelection({ kind: "project", id: "portfolio-site" }, catalog)?.moduleType).toBe("development-repository-hub");
 });

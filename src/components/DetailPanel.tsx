@@ -242,22 +242,26 @@ function buildingModule(key: string, catalog: Catalog) {
 const selectionOf = (key: string) => ({ kind: key.startsWith("project:") ? "project" as const : "service" as const, id: key.slice(8) });
 
 /**
- * The buildings folded into this one (workspace.yaml `merged`, Khaneil 2026-11-24: eight core buildings).
- * Each keeps its own module, agents and records, so this building holds all of their modules.
+ * The modules of the buildings grouped with this core building (workspace.yaml `merged`, Khaneil
+ * 2026-11-24). Those buildings stay on the map but house no module for now, so this one holds them.
  */
 export function HousedBuildings({ host }: { host: string }) {
   const { catalog, select } = useAtlas();
   const housed = housedIn(host);
   if (!housed.length) return null;
-  return <section><div className="section-title">Also in this building</div><ul className="link-list">{housed.map(key => { const mod = buildingModule(key, catalog); return <li key={key}><button className="text-btn" onClick={() => select(selectionOf(key))}>{buildingName(key, catalog)} →</button><span className="muted small">{mod ? `${mod} module` : "No module"}</span></li>; })}</ul></section>;
+  const withModule = housed.filter(key => buildingModule(key, catalog));
+  return <>
+    {withModule.map(key => <ModuleSection key={key} of={selectionOf(key)} from={buildingName(key, catalog)}/>)}
+    <section><div className="section-title">Grouped with this building</div><ul className="link-list">{housed.map(key => { const mod = buildingModule(key, catalog); return <li key={key}><button className="text-btn" onClick={() => select(selectionOf(key))}>{buildingName(key, catalog)} →</button><span className="muted small">{mod ? `Its ${mod} module is shown here` : "No module"}</span></li>; })}</ul></section>
+  </>;
 }
 
-/** On a folded building's own panel: which core building now houses it. */
+/** On a grouped building's own panel: which core building now holds its module. */
 function PartOf({ building }: { building: string }) {
   const { catalog, select } = useAtlas();
   const host = hostOf(building);
   if (!host) return null;
-  return <div className="panel-body"><section><div className="section-title">Part of {buildingName(host, catalog)}</div><p className="muted small">No longer a separate building on the map. Its module, agents and records are unchanged and are listed in {buildingName(host, catalog)}.</p><button className="text-btn" onClick={() => select(selectionOf(host))}>Open {buildingName(host, catalog)} →</button></section></div>;
+  return <div className="panel-body"><section><div className="section-title">Grouped with {buildingName(host, catalog)}</div><p className="muted small">This building houses no module for now. Its module is shown in {buildingName(host, catalog)}; its agents and records are unchanged.</p><button className="text-btn" onClick={() => select(selectionOf(host))}>Open {buildingName(host, catalog)} →</button></section></div>;
 }
 
 /** The tools a building's agents use. They are part of the building, not separate offices on the map (Khaneil, 2026-11-24). */
