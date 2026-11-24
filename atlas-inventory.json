@@ -319,10 +319,11 @@
    "module": "Data Intelligence Center",
    "agent_ids": [
     "dataset-census",
-    "atlas-data-inventory"
+    "atlas-data-inventory",
+    "agent-self-reports"
    ],
    "ai_agents": 0,
-   "automations": 2
+   "automations": 3
   },
   {
    "id": "service:financial:budget",
@@ -927,6 +928,20 @@
    "runtime": "n8n Cloud",
    "trigger": "Daily at 7:20am New York time (n8n, published 2026-11-13), after the Map inventory GitHub Action writes atlas-inventory.json on each merge",
    "source": "src/inventory/mapInventory.ts"
+  },
+  {
+   "id": "agent-self-reports",
+   "name": "Data Intelligence · Agent Self-Reports",
+   "kind": "Automation",
+   "status": "paused",
+   "building_id": "service:financial:residence",
+   "building_name": "Data Intelligence Center",
+   "placement": "Operates this building",
+   "owned_by": "atlas-health-monitor",
+   "project": "ai-ops-atlas",
+   "runtime": "n8n Cloud",
+   "trigger": "Unpublished n8n draft, run by hand; once published, daily at each agent's report time (17 times from 8:30am to 8:30pm New York, catalog/workspace/self-reports.yaml)",
+   "source": "catalog/workspace/self-reports.yaml"
   },
   {
    "id": "atlas-release-manager",
@@ -2178,6 +2193,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-24T06:02:57.222Z",
- "commit": "a65a08d9b4184cdab7586744d2fe5a22353723e7"
+ "generated_at": "2026-11-24T06:17:15.375Z",
+ "commit": "e7a613cb2787f6a0d76e244f7bf43261d156281e"
 }
