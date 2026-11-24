@@ -85,7 +85,22 @@ export function planGridAvenues({links,bridgeRoads,obstacles,land,financialStree
  if(fin){
   const x=fin[0][0];
   const corners=bridgeRoads.flatMap(r=>r.filter((p,i)=>i>0&&i<r.length-1&&Math.abs(p[0]-x)<1&&near(p[0],r[i-1][0])&&near(p[1],r[i+1][1])));
-  const start=corners.sort((a,b)=>b[1]-a[1])[0];
+  let start=corners.sort((a,b)=>b[1]-a[1])[0];
+  // Or, where a bridge road runs straight past the avenue's line (the Commerce tower's wider ring
+  // turns that bridge at its far corner, 2026-11-24), a T junction on that bridge road, shifted
+  // along it just enough that the avenue lands on the cross street below rather than beside its end.
+  if(!start)for(const r of bridgeRoads)for(let i=1;i<r.length&&!start;i++){
+   const a=r[i-1],b=r[i];if(!near(a[1],b[1])||Math.min(a[0],b[0])>=x||Math.max(a[0],b[0])<=x)continue;
+   // The cross street below: of the street runs at the first street line south that reach within a
+   // street's width of the avenue, the shortest (a local street's corner run, not a long through road).
+   const z=southTo([x,a[1]],streets,[]);if(z===undefined)continue;
+   const runs=streets.flatMap(s=>s.slice(1).map((q,j)=>[s[j],q] as const)).filter(([p,q])=>near(p[1],q[1])&&near(p[1],z)&&Math.max(p[0],q[0])-ROAD_W>=x-1&&Math.min(p[0],q[0])+ROAD_W<=x+1)
+    .sort(([p,q],[u,v])=>Math.abs(q[0]-p[0])-Math.abs(v[0]-u[0]));
+   for(const [p,q] of runs){
+    const lo=Math.min(p[0],q[0])+ROAD_W/2,hi=Math.max(p[0],q[0])-ROAD_W/2,lx=Math.min(Math.max(x,lo),hi);
+    if(lo<=hi&&lx>Math.min(a[0],b[0])&&lx<Math.max(a[0],b[0])&&southTo([lx,a[1]],streets,[])===z){start=[lx,a[1]];break;}
+   }
+  }
   const z=start&&southTo(start,streets,[]);
   if(start&&z!==undefined)pieces.push({id:`${GRID_ID}:middle-avenue`,road:[start,[start[0],z]]});
  }

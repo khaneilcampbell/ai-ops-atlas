@@ -1,4 +1,5 @@
 import type {Pt} from './roads';
+import {TRANSPORT} from './transportScale';
 
 /**
  * Commerce Pipeline's headquarters, the teardrop tower (Khaneil, 2026-11-01): a glass tower on a
@@ -75,7 +76,7 @@ export const COMMERCE={
   * outline; `edge` is how far inside the plinth's rim everything stops (negative: the grounds run
   * a little past it onto the level district plaza, which is wider than the plinth).
   */
- site:{forecourt:.16,lane:.15,laneSpan:20,ramp:[13,6] as [number,number],grid:.2,treeEvery:2,edge:-.08},
+ site:{forecourt:.16,lane:.15,laneSpan:20,ramp:[13,6] as [number,number],grid:.2,treeEvery:2,edge:-.07},
  lobby:{core:-.16,desk:[.42,.075,.09] as [number,number,number],deskBack:.42,columnEvery:4,columnInset:.13,column:.022,soffit:.035},
 } as const;
 
@@ -95,6 +96,18 @@ export const COMMERCE_FLOOR=.035;
 export const COMMERCE_GROW=1.35;
 /** Drawing scale for a Commerce tower of lot size `size`. */
 export const commerceScale=(size:number)=>size/COMMERCE.refSize*COMMERCE_GROW;
+/**
+ * The street ring round the tower (Khaneil, 2026-11-24, option A): once the building grew, the
+ * standard ring (half the tower's lot plus a lane) ran under the podium. The ring's centre line now
+ * runs a sidewalk and half a street outside the plinth's rim, so the kerb meets the forecourt.
+ * The kerb gap is set so the ring's west side falls on the avenue down from the Financial District
+ * (x 9.277 in the district view), so that avenue runs straight on along the ring. Half-widths from
+ * the tower's centre, in world units.
+ */
+export const COMMERCE_RING_KERB=.077;
+export const commerceRingHalf=(size:number)=>Math.floor((COMMERCE.plinth*commerceScale(size)+COMMERCE_RING_KERB+TRANSPORT.cityWidth/2)*1000)/1000;
+/** The plaza paving reaches past the ring by half a street and a kerb, the same edge the other plazas keep. */
+export const commercePlazaHalf=(size:number)=>commerceRingHalf(size)+TRANSPORT.cityWidth/2+.1;
 /** Roof height at the point: the reference drawing's, or the height the scene gives it. */
 export const commerceTop=(k=1,height?:number)=>height??COMMERCE.height*k;
 

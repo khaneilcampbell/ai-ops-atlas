@@ -1,3 +1,4 @@
+import { commercePlazaHalf, isCommerceTower } from "./commerceTowerPlan";
 import { movePortfolioOntoPond } from "./portfolioPond";
 import {uncoveredLand} from "./neighborhoodLinks";
 import {planStationPlaza,type StationPlaza} from "./stationPlazaPlan";
@@ -272,8 +273,14 @@ function strip(x0: number, z0: number, x1: number, z1: number, w: number, y: num
  * Candidate tree spots for a widened district's grounds: an even grid over the lot, inset from
  * its edges, outside the tower's plaza. The caller drops any that land on a road or path.
  */
-export function districtGrove(d: { ox: number; oy: number; size: number; hq: { size: number } }, cx: number, cz: number, step = 0.85): [number, number][] {
-  const out: [number, number][] = [], plaza = (d.hq.size * 1.25 + 1.0) / 2 + 0.35, inset = 0.55;
+/** A headquarters plaza's paved width: the standard square, or wider where the tower's street ring needs it. */
+export function hqPlazaW(d: { project: { id: string }; hq: { size: number } }, towerSize: number): number {
+  const w = d.hq.size * 1.25 + 1.0;
+  return isCommerceTower(d.project.id) ? Math.max(w, 2 * commercePlazaHalf(towerSize)) : w;
+}
+
+export function districtGrove(d: { ox: number; oy: number; size: number; project?: { id: string }; hq: { size: number } }, cx: number, cz: number, step = 0.85, plazaW = d.hq.size * 1.25 + 1.0): [number, number][] {
+  const out: [number, number][] = [], plaza = plazaW / 2 + 0.35, inset = 0.55;
   for (let x = d.ox + inset; x <= d.ox + d.size - inset + 1e-6; x += step)
     for (let z = d.oy + inset; z <= d.oy + d.size - inset + 1e-6; z += step)
       if (Math.max(Math.abs(x - cx), Math.abs(z - cz)) > plaza) out.push([x, z]);
@@ -364,7 +371,7 @@ function buildCity(layout: Layout): Scene3D {
       height: floors * FLOOR_H,
     });
     // Paved plaza around the tower, and paths out to each house.
-    const pz = d.hq.size * 1.25 + 1.0;
+    const pz = hqPlazaW(d, size);
     paving.push({ x: cx - pz / 2, z: cz - pz / 2, w: pz, d: pz, y: top, h: 0.03 });
     for (const l of d.lots) {
       const a = l.agent;
@@ -440,7 +447,7 @@ function buildCity(layout: Layout): Scene3D {
     const own = <T extends { projectId: string }>(xs: T[]) => xs.filter((x) => x.projectId === t.projectId);
     roadsOf.set(t.projectId, {
       tower: t,
-      ring: towerRing(t, d.hq.size * 1.25 + 1.0),
+      ring: towerRing(t, hqPlazaW(d, t.size)),
       obstacles: [
         stairsOf(t),
         ...own(houses),
@@ -540,7 +547,7 @@ function buildCity(layout: Layout): Scene3D {
     }
     // A widened district's extra land becomes planted grounds: rows of trees over the open lawn,
     // clear of every road, path and plaza, like a tree-lined city block (see DISTRICT_MIN_SIZE).
-    if (DISTRICT_MIN_SIZE[d.project.id] && d.project.id !== "intelligence-hub") for (const [x, z] of districtGrove(d, cx, cz)) {
+    if (DISTRICT_MIN_SIZE[d.project.id] && d.project.id !== "intelligence-hub") for (const [x, z] of districtGrove(d, cx, cz, 0.85, hqPlazaW(d, towers.find(t => t.projectId === d.project.id)?.size ?? 0))) {
       if (blocked(x, z) || paving.some((p) => inRect(p, x, z, 0.42)) || trees.some((t) => Math.hypot(t.x - x, t.z - z) < 0.5)) continue;
       trees.push({ x, y: top, z, s: 0.22 + hash(`${x.toFixed(2)}:${z.toFixed(2)}:g`) * 0.06, kind: hash(`${x.toFixed(2)}:${z.toFixed(2)}`) > 0.9 ? "blossom" : "round" });
     }
@@ -769,12 +776,15 @@ function buildCity(layout: Layout): Scene3D {
   // BMW takes the waterfront parcel east of the district; the train now stops in Financial Park.
   const dealership=planDealership({financial});
   if(dealership)land.push(dealership.lot);
-  const connections=districtConnections(airport,stadium,[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))]);
+  const connections=districtConnections(airport,stadium,[...towers.map(b=>{const w=isCommerceTower(b.projectId)?2*commercePlazaHalf(b.size):b.size;return {x:b.x,z:b.z,w,d:w};}),...kiosks.map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))]);
   if (cleared.has("street-reserve:ai-ops-atlas")) {
-    const ring = (id: string) => { const t = towers.find(t => t.projectId === id)!; return towerRing(t, byId.get(id)!.hq.size * 1.25 + 1)!; };
+    const ring = (id: string) => { const t = towers.find(t => t.projectId === id)!; return towerRing(t, hqPlazaW(byId.get(id)!, t.size))!; };
     const a = ring("commerce-pipeline"), b = ring("ai-ops-atlas");
-    connections.push({ id: "operations-through-street", road: [[a.x1, a.z0], [b.x0, a.z0]],
-      walk: [[a.x1, a.z0 + .65], [b.x0, a.z0 + .65]] });
+    // The through street keeps the line the layout aligned Business Operations HQ to (the standard
+    // ring's north side), and now meets the Commerce tower's wider ring on its east side.
+    const c = towers.find(t => t.projectId === "commerce-pipeline")!, z = towerRing({ x: c.x, z: c.z, size: c.size }, byId.get(c.projectId)!.hq.size * 1.25 + 1)!.z0;
+    connections.push({ id: "operations-through-street", road: [[a.x1, z], [b.x0, z]],
+      walk: [[a.x1, z + .65], [b.x0, z + .65]] });
   }
   if(dealership)connections.push({id:"bmw-dealership",road:dealership.road,walk:dealership.walk});
   if(financial)connections.push({id:"financial-district",road:financial.road,walk:financial.walk,frontage:financial.street});
@@ -1074,7 +1084,8 @@ function buildCity(layout: Layout): Scene3D {
     parks,
     houses,
     kiosks: [],
-    toolLots: kiosks.filter((k) => !cleared.has(k.projectId)).map(({ x, z, size }) => ({ x, z, size })),
+    // The Commerce wave tower's grounds and wider street ring now cover its old tool lots (2026-11-24).
+    toolLots: kiosks.filter((k) => !cleared.has(k.projectId) && !isCommerceTower(k.projectId)).map(({ x, z, size }) => ({ x, z, size })),
     towers: towers.filter((t) => !cleared.has(t.projectId)),
     clearedLots: towers.filter((t) => cleared.has(t.projectId)).map(({ projectId, x, z, size }) => ({ projectId, x, z, size })),
     strays,

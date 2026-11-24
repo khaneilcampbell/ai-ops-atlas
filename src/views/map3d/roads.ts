@@ -1,4 +1,5 @@
 import {TRANSPORT} from "./transportScale";
+import {commerceRingHalf, isCommerceTower} from "./commerceTowerPlan";
 // Where the decorative vehicles can drive: the lane round each headquarters, and the road bridges
 // that join neighboring districts. Pure data, shared by the scene (which paves and builds them)
 // and the vehicles (which drive them), so both agree on every coordinate.
@@ -40,8 +41,10 @@ export interface Ring {
 }
 
 /** The plaza lane for a tower of this size on a square plaza this wide, or null if there's no room. */
-export function towerRing(t: { x: number; z: number; size: number }, plazaW: number): Ring | null {
-  const lane = Math.min(plazaW / 2 - EDGE, t.size / 2 + LANE);
+export function towerRing(t: { x: number; z: number; size: number; projectId?: string }, plazaW: number): Ring | null {
+  // The Commerce wave tower outgrows its lot, so its ring runs just outside its plinth instead.
+  const want = t.projectId && isCommerceTower(t.projectId) ? commerceRingHalf(t.size) : t.size / 2 + LANE;
+  const lane = Math.min(plazaW / 2 - EDGE, want);
   if (lane < t.size / 2 + CLEAR) return null;
   return { x0: t.x - lane, z0: t.z - lane, x1: t.x + lane, z1: t.z + lane };
 }

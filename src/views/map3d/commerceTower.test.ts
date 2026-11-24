@@ -6,7 +6,9 @@ import {layoutMap,DISTRICT_MIN_SIZE,DISTRICT_HQ_SHARE,type GroupBy} from '../map
 import {buildScene} from './scene';
 import {towerTop} from './models';
 import {isRibbonTower} from './ribbonTowerPlan';
-import {COMMERCE,footprint,isCommerceTower,planAt,podiumHeight,poolRing,ribbonWindow,roofShare,roofTrees,signedArea,teardrop,twistAt} from './commerceTowerPlan';
+import {plazaRings} from './streetGraph';
+import {TRANSPORT} from './transportScale';
+import {COMMERCE,commerceScale,footprint,isCommerceTower,planAt,podiumHeight,poolRing,ribbonWindow,roofShare,roofTrees,signedArea,teardrop,twistAt} from './commerceTowerPlan';
 import {commerceGeometry,commerceTriangles} from './commerceTowerGeometry';
 
 const GROUPINGS:GroupBy[]=['none','district','status','tag'];
@@ -54,6 +56,17 @@ describe('Commerce Pipeline teardrop tower',()=>{
    for(const kiosk of scene.kiosks.filter(k=>k.projectId===t.projectId)){
     const gap=Math.max(Math.abs(kiosk.x-t.x),Math.abs(kiosk.z-t.z))-kiosk.size/2;expect(gap).toBeGreaterThan(COMMERCE.plinth);
    }
+  }
+ });
+ it('runs its street ring just outside the plinth, and no street crosses the building (option A, 2026-11-24)',()=>{
+  for(const grouping of GROUPINGS){
+   const scene=buildScene(layoutMap(catalog,[],grouping)),t=scene.towers.find(t=>isCommerceTower(t.projectId))!,ring=plazaRings(scene).get(t.projectId)!;
+   const rim=COMMERCE.plinth*commerceScale(t.size),inner=Math.min(t.x-ring.x0,ring.x1-t.x,t.z-ring.z0,ring.z1-t.z)-TRANSPORT.cityWidth/2;
+   expect(inner,grouping).toBeGreaterThan(rim);
+   // Every road and bridge road keeps its carriageway off the plinth.
+   const roads=[...scene.transportConnections.map(c=>c.road),...scene.carBridges.flatMap(b=>b.roads)];
+   for(const r of roads)for(let i=1;i<r.length;i++){const [a,b]=[r[i-1],r[i]],n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.05);
+    for(let k=0;k<=n;k++){const x=a[0]+(b[0]-a[0])*k/n,z=a[1]+(b[1]-a[1])*k/n;expect(Math.max(Math.abs(x-t.x),Math.abs(z-t.z))-TRANSPORT.cityWidth/2,`${grouping} road at ${x.toFixed(2)},${z.toFixed(2)}`).toBeGreaterThan(rim);}}
   }
  });
  it('keeps the pool and the olive trees on the podium roof, clear of the tower',()=>{
