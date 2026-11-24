@@ -25,7 +25,7 @@ export const COMMERCE={
  /** Points round every plan outline (fine enough for the gold valley's curved walls). */
  ring:112,
  /** Teardrop: the round end's radius, the point's radius, and how far apart their centres are. */
- round:.7,tip:.2,length:1.1,
+ round:.82,tip:.24,length:1.32,
  /** The way the point faces (radians, 0 = +x, turning toward +z); the round end's centre sits
   * inside the podium's round end, touching it at the back (see podium.offset). */
  heading:-.62,
@@ -52,7 +52,7 @@ export const COMMERCE={
   /** Storey heights bottom up: a grand clear-glass lobby (realism pass, 2026-11-24: taller, about two and a half storeys), then three office floors. */
   floors:[.56,.26,.26,.26] as number[],
   /** The podium's teardrop, same heading as the tower's base: half as wide again and longer. */
-  round:1.02,tip:.38,length:1.98,
+  round:1.1,tip:.4,length:2.1,
   /** The podium's round-end centre, local to the tower. */
   centre:[-.56,.4] as Pt,
   /** Roof garden parapet, glass. */
@@ -76,7 +76,7 @@ export const isCommerceTower=(projectId:string)=>projectId===COMMERCE.projectId;
  * building, plinth included, stands this much bigger than its lot size (Khaneil, 2026-11-24:
  * "expand the size"). Kept here, not in the district layout, so no street or neighbour moves.
  */
-export const COMMERCE_GROW=1.16;
+export const COMMERCE_GROW=1.35;
 /** Drawing scale for a Commerce tower of lot size `size`. */
 export const commerceScale=(size:number)=>size/COMMERCE.refSize*COMMERCE_GROW;
 /** Roof height at the point: the reference drawing's, or the height the scene gives it. */
