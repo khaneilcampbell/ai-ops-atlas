@@ -120,6 +120,8 @@ export interface Kiosk {
 }
 export interface Tower {
   key: string;
+  /** Plain concrete forecourt with a light kerb band instead of the building's plaza stone (the studio on the pond). */
+  plainPlaza?: boolean;
   projectId: string;
   repository: string;
   name: string;
