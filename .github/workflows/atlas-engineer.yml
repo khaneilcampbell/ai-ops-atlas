@@ -1,0 +1,272 @@
+name: Atlas Engineer
+
+# The Atlas Engineering Division's isolated runner. Atlas (through the n8n "Atlas · Engineering
+# Dispatch" workflow) starts it by workflow_dispatch with one JSON `task` input, after its own policy
+# checks. It never merges, never deploys and never touches the release pipeline.
+#
+#   guard      validates the task, confirms the failed run is real, fetches its log (redacted)
+#   implement  Claude Code edits a fresh checkout of the failing commit. No shell, no network tools,
+#              no repository secrets except ANTHROPIC_API_KEY in that one step. Nothing is installed or
+#              run from the repository in this job.
+#   report     pushes the atlas-eng/<task>-a<attempt> branch (never main), starts
+#              atlas-engineer-validate.yml on that branch, and posts the result to Atlas with
+#              ATLAS_ENGINEERING_CALLBACK_TOKEN.
+#
+# The model-written change is never installed or run here. atlas-engineer-validate.yml runs the
+# approved checks with NO secrets, on the atlas-eng branch as its ref, so nothing it does can reach
+# main's Actions cache. Atlas QA reads those checks' results from GitHub, never the runner's word.
+#
+# Workflow inputs are visible in this public repository, so the task carries nothing secret; the
+# callback key, the dispatch record and QA's own GitHub reads are what make a result count.
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: Atlas engineering task (JSON, written by Atlas)
+        required: true
+        type: string
+
+permissions: {}
+
+# One job per repository at a time. A second dispatch waits instead of racing the first.
+concurrency:
+  group: atlas-engineer
+  cancel-in-progress: false
+
+env:
+  ATLAS_OUT: ${{ github.workspace }}/out
+
+jobs:
+  guard:
+    name: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      base_sha: ${{ steps.task.outputs.base_sha }}
+      branch: ${{ steps.task.outputs.branch }}
+      model: ${{ steps.task.outputs.model }}
+      max_turns: ${{ steps.task.outputs.max_turns }}
+    steps:
+      - name: Only from main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::The runner only starts from main, where its workflow and helper are reviewed."
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: ops/atlas-engineer
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Validate task
+        id: task
+        env:
+          TASK: ${{ inputs.task }}
+        run: |
+          mkdir -p "$ATLAS_OUT"
+          node ops/atlas-engineer/runner.mjs guard
+          node -e 'const t=require(process.env.ATLAS_OUT+"/task.json");const o=require("fs");o.appendFileSync(process.env.GITHUB_OUTPUT,`base_sha=${t.baseSha}\nbranch=${t.branch}\nmodel=${t.model}\nmax_turns=${t.maxTurns}\nfailed_run_id=${t.failedRunId}\n`)'
+      - name: Confirm the failed run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.task.outputs.failed_run_id }}
+          BASE_SHA: ${{ steps.task.outputs.base_sha }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" > "$ATLAS_OUT/run.json"
+          node -e '
+            const r = require(process.env.ATLAS_OUT + "/run.json");
+            const bad = [];
+            if (r.head_sha !== process.env.BASE_SHA) bad.push("its commit is " + r.head_sha);
+            if (r.head_branch !== "main") bad.push("it ran on " + r.head_branch);
+            if (r.conclusion !== "failure") bad.push("it ended as " + r.conclusion);
+            if (r.path !== ".github/workflows/ci.yml") bad.push("it is " + r.path);
+            if (bad.length) { console.error("::error::The failed run does not match the task: " + bad.join(", ")); process.exit(1); }
+          '
+          node ops/atlas-engineer/runner.mjs phase CONTEXT_COLLECTED
+      - name: Fetch the failure log
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.task.outputs.failed_run_id }}
+        run: |
+          gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --log-failed > "$ATLAS_OUT/failure.raw.log" 2>/dev/null || echo "The failed run's log could not be read." > "$ATLAS_OUT/failure.raw.log"
+          node ops/atlas-engineer/runner.mjs redact
+          rm -f "$ATLAS_OUT/failure.raw.log" "$ATLAS_OUT/run.json"
+          node ops/atlas-engineer/runner.mjs phase POLICY_CHECKED
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: guard
+          path: out/
+          retention-days: 3
+
+  implement:
+    name: implement
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      outcome: ${{ steps.bounds.outputs.outcome }}
+    steps:
+      - name: Helper from main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: ops/atlas-engineer
+          path: tools
+      - name: Failing commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.guard.outputs.base_sha }}
+          path: work
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: guard
+          path: out
+      - name: Prepare workspace
+        run: |
+          # Repository-level Claude settings, hooks and MCP servers could run commands; drop them.
+          rm -rf work/.claude work/.mcp.json work/CLAUDE.local.md
+          node tools/ops/atlas-engineer/runner.mjs phase WORKSPACE_PREPARED
+          node tools/ops/atlas-engineer/runner.mjs prompt
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Claude Code (edits only)
+        working-directory: work
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MODEL: ${{ needs.guard.outputs.model }}
+          MAX_TURNS: ${{ needs.guard.outputs.max_turns }}
+          CLAUDE_CODE_VERSION: ${{ vars.CLAUDE_CODE_VERSION || '2.0.0' }}
+          DISABLE_AUTOUPDATER: "1"
+          CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+        run: |
+          npx -y "@anthropic-ai/claude-code@$CLAUDE_CODE_VERSION" -p \
+            --output-format json \
+            --model "$MODEL" \
+            --max-turns "$MAX_TURNS" \
+            --permission-mode acceptEdits \
+            --allowedTools "Read,Edit,Write,Glob,Grep" \
+            --disallowedTools "Bash,WebFetch,WebSearch,NotebookEdit,Task" \
+            < "$ATLAS_OUT/prompt.txt" > "$ATLAS_OUT/claude.json"
+      - name: Usage
+        if: always()
+        run: node tools/ops/atlas-engineer/runner.mjs usage
+      - name: Bounds check
+        id: bounds
+        working-directory: work
+        run: |
+          node ../tools/ops/atlas-engineer/runner.mjs bounds
+          OUTCOME=$(node -e 'console.log(require(process.env.ATLAS_OUT+"/outcome.json").outcome)')
+          echo "outcome=$OUTCOME" >> "$GITHUB_OUTPUT"
+          if [ "$OUTCOME" = changed ]; then node ../tools/ops/atlas-engineer/runner.mjs phase CODE_MODIFIED; fi
+      - name: Keep the change
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: change
+          path: |
+            out/outcome.json
+            out/change.patch
+            out/usage.json
+            out/phases.json
+          if-no-files-found: ignore
+          retention-days: 3
+
+  report:
+    name: report
+    needs: [guard, implement]
+    if: always() && needs.guard.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # contents: push the atlas-eng branch. actions: start the validate workflow on it.
+      actions: write
+      contents: write
+    steps:
+      - name: Helper from main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: ops/atlas-engineer
+          path: tools
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: guard
+          path: out
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        continue-on-error: true
+        with:
+          name: change
+          path: out/change
+      - name: Failing commit
+        if: needs.implement.outputs.outcome == 'changed'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.guard.outputs.base_sha }}
+          path: work
+      - name: Push the atlas-eng branch
+        id: push
+        if: needs.implement.outputs.outcome == 'changed'
+        working-directory: work
+        env:
+          BRANCH: ${{ needs.guard.outputs.branch }}
+        run: |
+          case "$BRANCH" in atlas-eng/*) ;; *) echo "::error::Refusing to push $BRANCH"; exit 1 ;; esac
+          git apply --index "$ATLAS_OUT/change/change.patch"
+          # Re-check what will actually be pushed, with the helper from main.
+          ATLAS_OUT="$RUNNER_TEMP" node ../tools/ops/atlas-engineer/runner.mjs bounds
+          test "$(node -e 'console.log(require(process.env.RUNNER_TEMP+"/outcome.json").outcome)')" = changed
+          git -c user.name="Atlas Engineering" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Atlas Engineering: fix failing check on $(git rev-parse --short HEAD)" -m "Task branch $BRANCH. Opened for Khaneil's review; never merged by Atlas."
+          git push origin "HEAD:refs/heads/$BRANCH"
+          echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Start the checks on the branch
+        id: checks
+        if: steps.push.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ needs.guard.outputs.branch }}
+        run: |
+          # Pushes made with this job's token don't start workflows, so the checks are dispatched,
+          # with the branch as their ref: they run and cache in that branch's context, not main's.
+          gh workflow run atlas-engineer-validate.yml --ref "$BRANCH"
+          node tools/ops/atlas-engineer/runner.mjs phase VALIDATION_STARTED
+      - name: Build result
+        if: always()
+        env:
+          IMPLEMENT: ${{ needs.implement.result }}
+          OUTCOME: ${{ needs.implement.outputs.outcome }}
+          PUSH: ${{ steps.push.outcome }}
+          CHECKS: ${{ steps.checks.outcome }}
+          HEAD_SHA: ${{ steps.push.outputs.head_sha }}
+        run: |
+          FAILED_JOB=""
+          if [ "$IMPLEMENT" != success ]; then FAILED_JOB=implement
+          elif [ "$OUTCOME" = changed ] && { [ "$PUSH" != success ] || [ "$CHECKS" != success ]; }; then FAILED_JOB=report
+          fi
+          export FAILED_JOB
+          cp out/change/outcome.json out/change/usage.json out/ 2>/dev/null || true
+          jq -s 'add | sort_by(.at)' out/phases.json $(ls out/change/phases.json 2>/dev/null) > out/phases.merged.json && mv out/phases.merged.json out/phases.json
+          node tools/ops/atlas-engineer/runner.mjs result
+      - name: Report to Atlas
+        if: always()
+        env:
+          RESULT_URL: ${{ vars.ATLAS_ENGINEERING_RESULT_URL }}
+          TOKEN: ${{ secrets.ATLAS_ENGINEERING_CALLBACK_TOKEN }}
+        run: |
+          if [ -z "$RESULT_URL" ] || [ -z "$TOKEN" ]; then
+            echo "::warning::ATLAS_ENGINEERING_RESULT_URL or ATLAS_ENGINEERING_CALLBACK_TOKEN isn't set; Atlas will time this attempt out."
+            exit 1
+          fi
+          curl -fsS --retry 3 --retry-all-errors --max-time 20 -X POST "$RESULT_URL" \
+            -H "authorization: Bearer $TOKEN" -H "content-type: application/json" \
+            --data-binary @out/result.json

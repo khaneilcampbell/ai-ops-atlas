@@ -36,6 +36,19 @@ describe("city places for the routine", () => {
     expect(seats.size).toBeGreaterThanOrEqual(10);
   });
 
+  it("puts the daily self-report at the Data Intelligence Center's own door, never in the free-time pool", () => {
+    const r = places.report!;
+    expect(r).toMatchObject({ id: "report:residence", kind: "district", label: "Reporting at the Data Intelligence Center", stay: [360, 360] });
+    const spot = places.spots.get(r.spot)!;
+    const door = scene.financial!.buildings.find((b) => b.id === "residence")!.approach[0];
+    expect([spot.path.at(-1)![0], spot.path.at(-1)![2]]).toEqual(door);
+    expect(spot.inside).toBe(true);
+    expect(places.leisure.some((o) => o.id === r.id)).toBe(false);
+    // Reachable on foot from a named agent's office.
+    const id = named.agents[0].personaId;
+    expect(Number.isFinite(routes.travel({ spot: places.agents.get(id)!.office.id }, r.spot))).toBe(true);
+  });
+
   it("offers every listed outing that this layout has", () => {
     const kinds = new Set(places.leisure.map((o) => o.kind));
     for (const k of ["park", "district", "wheel", "train", "flight", "arena"] as const) expect(kinds.has(k), k).toBe(true);

@@ -250,6 +250,29 @@ export const CITY_FIGURES: Record<string, CityFigure> = {
     shoes: DARK_SHOES,
     build: { height: 1.02, shoulders: 1.02 },
   },
+  // Marcus Reid: short salt-and-pepper hair, trimmed grey beard, charcoal quarter-zip over a light blue collar.
+  "trade-desk": {
+    skin: "#a8673f",
+    hair: { style: "short", color: "#3b3836", streak: "#9a9794" },
+    facialHair: { style: "short", color: "#8a8682" },
+    top: "#3a3a3d",
+    neck: { kind: "collar", color: "#a9c4e4" },
+    trousers: "#2c2f35",
+    shoes: DARK_SHOES,
+    build: { height: 1.01, shoulders: 1.03 },
+  },
+  // Nadia Ferreira: shoulder-length dark waves, round brown glasses, mustard cardigan over a white top.
+  "market-research": {
+    skin: "#e8b38a",
+    hair: { style: "shoulder", color: "#3a2620" },
+    glasses: "#5a3a2a",
+    top: "#f4efe8",
+    neck: { kind: "tee", color: "#f4efe8" },
+    jacket: "#d6971f",
+    trousers: "#3a3d44",
+    shoes: "#3a2c24",
+    build: { height: 0.96, shoulders: 0.93 },
+  },
 };
 
 /** The figure for an identity's persona id, or null when it has none (initials only). */
