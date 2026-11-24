@@ -13,7 +13,7 @@ describe('Commerce district tool offices',()=>{
  // still reserve, built the way the scene used to build them.
  const commerce=layout.districts.find(d=>d.project.id===ANNEX.projectId)!;
  const annexes=commerce.kiosks.map(k=>({key:`service:${ANNEX.projectId}:${k.service.id}`,projectId:ANNEX.projectId,name:k.service.name,users:k.service.users.map(a=>a.name),
-  x:k.gx+k.size/2,z:k.gy+k.size/2,size:k.size,canopy:'#c9a35a'})).sort((a,b)=>a.key<b.key?-1:1);
+  x:k.gx+k.size/2,z:k.gy+k.size/2,size:k.size,canopy:'#c9a35a',height:undefined as number|undefined})).sort((a,b)=>a.key<b.key?-1:1);
  it('covers every Commerce tool and no other district',()=>{
   expect(annexes.map(k=>k.name).sort()).toEqual(expect.arrayContaining(['Design Studio','Search Desk','Payments Office']));
   for(const k of annexes)expect(isCommerceAnnex(k)).toBe(true);
