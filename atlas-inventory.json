@@ -933,14 +933,14 @@
    "id": "agent-self-reports",
    "name": "Data Intelligence · Agent Self-Reports",
    "kind": "Automation",
-   "status": "paused",
+   "status": "active",
    "building_id": "service:financial:residence",
    "building_name": "Data Intelligence Center",
    "placement": "Operates this building",
    "owned_by": "atlas-health-monitor",
    "project": "ai-ops-atlas",
    "runtime": "n8n Cloud",
-   "trigger": "Unpublished n8n draft, run by hand; once published, daily at each agent's report time (17 times from 8:30am to 8:30pm New York, catalog/workspace/self-reports.yaml)",
+   "trigger": "Published n8n workflow: daily at each agent's report time (17 times from 8:30am to 8:30pm New York, catalog/workspace/self-reports.yaml), or run by hand",
    "source": "catalog/workspace/self-reports.yaml"
   },
   {
@@ -2193,6 +2193,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-24T06:17:15.375Z",
- "commit": "e7a613cb2787f6a0d76e244f7bf43261d156281e"
+ "generated_at": "2026-11-24T06:59:45.616Z",
+ "commit": "6068eed20af868f6c19394b1f035099d0699bab5"
 }
