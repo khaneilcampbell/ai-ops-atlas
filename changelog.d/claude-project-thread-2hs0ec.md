@@ -1,1 +1,1 @@
-- 2026-11-24 · Fixed a screenshot check that broke when the two new investment agents joined the Roster; it now counts whatever agents the Roster shows
+- 2026-11-24 · Fixed a screenshot check that broke when the two new investment agents joined the Roster; it now counts whatever agents the Roster shows (#530)
