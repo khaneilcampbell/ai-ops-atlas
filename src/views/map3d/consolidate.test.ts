@@ -18,17 +18,17 @@ describe("eight core buildings", () => {
     const hosts = new Set(Object.values(WORKSPACE.merged ?? {}));
     for (const h of hosts) expect([...CORE, "service:atlas-commons"]).toContain(h);
     for (const k of [...CORE, "service:atlas-commons", "service:logistics-airport", financialKey("circa")]) expect(hostOf(k), k).toBeUndefined();
-    expect(housedIn("project:benjaire-site")).toEqual(expect.arrayContaining(["project:commerce-pipeline", financialKey("banks"), financialKey("insurance"), financialKey("budget")]));
+    expect(housedIn("project:benjaire-site")).toEqual(expect.arrayContaining([financialKey("banks"), financialKey("insurance"), financialKey("budget")]));
     expect(housedIn("project:github-profile")).toEqual([financialKey("financial-planning")]);
     // Khaneil, 2026-11-24: the Product Marketplace, Vendor & Supplier Hub and Automation Plaza stay on the map.
-    for (const k of ["service:atlas-marketplace", "service:atlas-galleria", "service:automation-plaza"]) expect(hostOf(k), k).toBeUndefined();
+    for (const k of ["service:atlas-marketplace", "service:atlas-galleria", "service:automation-plaza", "project:commerce-pipeline"]) expect(hostOf(k), k).toBeUndefined();
     expect(housedIn("project:soc-lab")).toEqual(["service:bmw-dealership"]);
     expect(onMapKey("service:atlas-galleria")).toBe("service:atlas-galleria");
     expect(onMapKey("project:ai-ops-atlas")).toBe("project:ai-ops-atlas");
   });
 
   it("draws the core towers, the Residence Towers, the airport, the Marketplace, Supplier Hub and Automation Plaza; folded buildings are not drawn", () => {
-    expect(drawn.towers.map((t) => t.key).sort()).toEqual(CORE.filter((k) => k.startsWith("project:")).sort());
+    expect(drawn.towers.map((t) => t.key).sort()).toEqual([...CORE.filter((k) => k.startsWith("project:")), "project:commerce-pipeline"].sort());
     expect(drawn.financial?.buildings.map((b) => b.id)).toEqual(["circa"]);
     expect([drawn.dealership, drawn.stadium, drawn.stadiumSite]).toEqual([undefined, undefined, undefined]);
     expect(drawn.agency && drawn.commons && drawn.airport && drawn.mall && drawn.galleria && drawn.plaza).toBeTruthy();

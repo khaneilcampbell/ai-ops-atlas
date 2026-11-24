@@ -89,7 +89,6 @@ merged:
   "service:financial:budget": "project:benjaire-site"
   "service:financial:insurance": "project:benjaire-site"
   "service:financial:harbor-residence": "project:benjaire-site"
-  "project:commerce-pipeline": "project:benjaire-site"
   # Product & Growth Studio (Growth & Marketing Studio)
   # Security & Infrastructure Center (Security Operations Center)
   "service:bmw-dealership": "project:soc-lab"
