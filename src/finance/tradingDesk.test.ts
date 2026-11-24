@@ -49,7 +49,7 @@ describe("sanitizeJournal", () => {
   });
 });
 
-describe("checkTrade (Risk & Limits)", () => {
+describe("checkTrade (Risk and Limits)", () => {
   it("counts only sent orders from the last 7 days toward the weekly limit", () => {
     const j = journal(entry({ amount: 30 }), entry({ amount: 10, status: "submitted", side: "sell" }), entry({ amount: 50, check: "blocked", status: "blocked" }), entry({ amount: 40, status: "rejected" }), entry({ amount: 70, at: "2026-10-20T00:00:00.000Z" }));
     expect(tradedThisWeek(j, now)).toBe(40);

@@ -94,7 +94,7 @@ changing them is a reviewed pull request.
 | --- | --- | --- | --- |
 | Trade Desk | `trade-desk` | A Claude Code session Khaneil runs; places orders Khaneil directs, Agentic only | Yes |
 | Portfolio Sync | `investment-operations` | The account snapshot above | No |
-| Risk & Limits | `trading-risk-limits` | `checkTrade`: blocks anything outside the limits, never places | No |
+| Risk and Limits | `trading-risk-limits` | `checkTrade`: blocks anything outside the limits, never places | No |
 | Trade Journal | `trade-journal` | Reads and checks the journal file | No |
 | Trading Reporting | `trading-reporting` | `weeklyReport`: last 7 days of sent orders | No |
 | Market Research | `market-research` | Planned daily facts brief; not built | Yes |

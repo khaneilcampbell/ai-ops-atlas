@@ -18,7 +18,7 @@ test('Investment Operations Center panel, desktop and phone',async({page})=>{
   if(await section.count()){
    await section.getByRole('tab',{name:'Trading desk'}).click();await settle(page,1);
    await expect(section).toContainText('Trading is off in Atlas');await expect(section).toContainText('Invented data');
-   for(const seat of ['Trade Desk','Portfolio Sync','Risk & Limits','Trade Journal','Market Research','Reporting'])await expect(section.locator('.trading-team')).toContainText(seat);
+   for(const seat of ['Trade Desk','Portfolio Sync','Risk and Limits','Trade Journal','Market Research','Reporting'])await expect(section.locator('.trading-team')).toContainText(seat);
    await expect(section.getByRole('button',{name:/^(Buy|Sell|Place order|Cancel order)$/})).toHaveCount(0);
    expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
    await section.locator('.trading-desk').scrollIntoViewIfNeeded();await settle(page,1);

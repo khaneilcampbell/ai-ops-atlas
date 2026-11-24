@@ -978,7 +978,7 @@ agents:
         beneficiaries:
           - Khaneil
       responsibilities:
-        tasks: [Place orders Khaneil directs in the Agentic account, Run the Risk & Limits check before each order, Write each order to the trade journal]
+        tasks: [Place orders Khaneil directs in the Agentic account, Run the Risk and Limits check before each order, Write each order to the trade journal]
         tools: [Atlas finance data]
         outputs: [Trade journal entries]
         inputs:
@@ -1008,14 +1008,14 @@ agents:
         kpis:
           - name: Orders inside the limits
             kind: quality
-            target: Every sent order passed Risk & Limits
+            target: Every sent order passed Risk and Limits
             basis: Checked against the trade journal
       docs:
         technical: docs/benjaire-finance.md#trading-desk
         runbook: docs/runbooks/ai-ops-atlas.md#trading-desk
         last_review: 2026-11-24
   - id: trading-risk-limits
-    name: Risk & Limits
+    name: Risk and Limits
     purpose: >-
       Checks each proposed agent trade against Khaneil's limits before it is sent. Can block an order, never place one.
     framework: Atlas web app (fixed rules, no model)
@@ -1032,7 +1032,7 @@ agents:
       - at: 2026-11-24
         event: Added with Khaneil's limit of $80 of agent trades a week, stocks and ETFs only, Agentic account only
     registry:
-      title: Risk & Limits
+      title: Risk and Limits
       tier: specialized
       category: business
       subcategory: Investment operations
@@ -1380,7 +1380,7 @@ agents:
       - at: 2026-11-23
         event: Also owns Investment Operations (paused, synthetic preview only) for the Investment Operations Center's data checks
       - at: 2026-11-24
-        event: Also owns the trading team's Trade Desk, Risk & Limits, Trade Journal, Trading Reporting and Market Research (all paused while trading is off); Investment Operations renamed Portfolio Sync
+        event: Also owns the trading team's Trade Desk, Risk and Limits, Trade Journal, Trading Reporting and Market Research (all paused while trading is off); Investment Operations renamed Portfolio Sync
     permissions:
       - None of its own; it acts only through the permissions listed on each automation it owns
     registry:

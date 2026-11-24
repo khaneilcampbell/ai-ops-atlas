@@ -40,7 +40,7 @@ it("shows the trading desk read only: limits, the six seats and the journal, wit
   expect(html).toContain("Agentic ••1111");
   expect(html).toContain("$80 of agent trades · $60 left");
   expect(html).toContain("Buy $20 DEMOA");
-  for (const seat of ["Trade Desk", "Portfolio Sync", "Risk &amp; Limits", "Trade Journal", "Market Research", "Reporting"]) expect(html).toContain(seat);
+  for (const seat of ["Trade Desk", "Portfolio Sync", "Risk and Limits", "Trade Journal", "Market Research", "Reporting"]) expect(html).toContain(seat);
   expect(html).toContain("Demo ••0000 · $100 · view only");
   expect(html).not.toContain("Invented data");
   expect(html).not.toMatch(/>(Buy|Sell|Place order|Cancel order)</);

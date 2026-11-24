@@ -46,7 +46,7 @@ export interface SeatInfo { id: Seat; name: string; role: string; uses_ai: boole
 export const TEAM: readonly SeatInfo[] = [
   { id: "trade-desk", name: "Trade Desk", role: "Claude Code, run by you. Places orders on the Agentic account only, within your limits.", uses_ai: true, can_trade: true },
   { id: "portfolio-sync", name: "Portfolio Sync", role: "Reads balances and holdings into the snapshot on your Mac.", uses_ai: false, can_trade: false },
-  { id: "risk-limits", name: "Risk & Limits", role: "Checks every order against your limits. Can block, never place.", uses_ai: false, can_trade: false },
+  { id: "risk-limits", name: "Risk and Limits", role: "Checks every order against your limits. Can block, never place.", uses_ai: false, can_trade: false },
   { id: "trade-journal", name: "Trade Journal", role: "Logs each order: who, what, why and the result.", uses_ai: false, can_trade: false },
   { id: "market-research", name: "Market Research", role: "Watchlist quotes, earnings dates and news. Facts only, no picks.", uses_ai: true, can_trade: false },
   { id: "reporting", name: "Reporting", role: "Weekly totals of agent trades from the journal.", uses_ai: false, can_trade: false },
@@ -121,7 +121,7 @@ export interface Proposal { side: Side; symbol: string; asset_class: AssetClass;
 export type CheckResult = { ok: true; left_after: number } | { ok: false; reasons: string[] };
 
 /**
- * The Risk & Limits check: whether a proposed agent trade fits the limits. Facts about the limits
+ * The Risk and Limits check: whether a proposed agent trade fits the limits. Facts about the limits
  * only; it never judges whether a trade is a good idea.
  */
 export function checkTrade(p: Proposal, journal: Journal, account: Portfolio | null, now: Date, limits: TradingLimits = TRADING_LIMITS): CheckResult {
