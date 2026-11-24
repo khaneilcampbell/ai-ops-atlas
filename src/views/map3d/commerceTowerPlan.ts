@@ -25,7 +25,7 @@ export const COMMERCE={
  /** Points round every plan outline (fine enough for the gold valley's curved walls). */
  ring:112,
  /** Teardrop: the round end's radius, the point's radius, and how far apart their centres are. */
- round:.52,tip:.15,length:.92,
+ round:.6,tip:.17,length:1.0,
  /** The way the point faces (radians, 0 = +x, turning toward +z); the round end's centre sits
   * inside the podium's round end, touching it at the back (see podium.offset). */
  heading:-.62,
@@ -49,8 +49,8 @@ export const COMMERCE={
   */
  ribbon:{width:17,wind:.07,depth:.11,lip:.055},
  podium:{
-  /** Storey heights bottom up: a double-height lobby, then three office floors (about a fifth of the tower). */
-  floors:[.44,.26,.26,.26] as number[],
+  /** Storey heights bottom up: a grand clear-glass lobby (realism pass, 2026-11-24: taller, about two and a half storeys), then three office floors. */
+  floors:[.56,.26,.26,.26] as number[],
   /** The podium's teardrop, same heading as the tower's base: half as wide again and longer. */
   round:1.02,tip:.38,length:1.98,
   /** The podium's round-end centre, local to the tower. */
@@ -61,10 +61,24 @@ export const COMMERCE={
  /** The pool on the podium roof beyond the tower, along the axis toward the point: share of the podium's length, and radii. */
  pool:{at:.98,rx:.28,rz:.17},
  /** The entrance canopy: a thin sweep over the lobby round the podium's front, as a share of its outline. */
- canopy:{span:.22,depth:.24,y:.46},
+ canopy:{span:.22,depth:.26,y:.58},
+ /**
+  * The lobby inside the clear glass (2026-11-24): a stone floor, the tower's core carried down
+  * as a warm stone wall (grown in from the tower's base outline), a reception desk facing the
+  * doors, slim white columns inside the glass line every this many podium points, and a lit soffit.
+  */
+ lobby:{core:-.16,desk:[.42,.075,.09] as [number,number,number],deskBack:.42,columnEvery:4,columnInset:.13,column:.022,soffit:.035},
 } as const;
 
 export const isCommerceTower=(projectId:string)=>projectId===COMMERCE.projectId;
+/**
+ * With the district's tool offices gone there is open plaza round the plinth, so the whole
+ * building, plinth included, stands this much bigger than its lot size (Khaneil, 2026-11-24:
+ * "expand the size"). Kept here, not in the district layout, so no street or neighbour moves.
+ */
+export const COMMERCE_GROW=1.16;
+/** Drawing scale for a Commerce tower of lot size `size`. */
+export const commerceScale=(size:number)=>size/COMMERCE.refSize*COMMERCE_GROW;
 /** Roof height at the point: the reference drawing's, or the height the scene gives it. */
 export const commerceTop=(k=1,height?:number)=>height??COMMERCE.height*k;
 

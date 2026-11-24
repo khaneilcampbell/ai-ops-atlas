@@ -4,9 +4,8 @@ import * as THREE from 'three';
 import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from './models';
 import type {Tower} from './scene';
 import {focusable,signTexture} from './materials';
-import {COMMERCE,commerceFront,commerceTop} from './commerceTowerPlan';
+import {COMMERCE,commerceFront,commerceScale,commerceTop} from './commerceTowerPlan';
 import {commerceGeometry} from './commerceTowerGeometry';
-import {glassTexture} from './atlasHqTextures';
 import {useQualityLevel} from '../../lib/governor';
 import {packNormals} from './packGeometry';
 
@@ -28,6 +27,39 @@ function skyReflection(gl:THREE.WebGLRenderer){
  pm.dispose();sphere.dispose();mat.dispose();skies.set(gl,tex);return tex;
 }
 
+/**
+ * Curtain wall with clear, properly sized windows (Khaneil, 2026-11-24: "clear size windows"):
+ * one tile is 4 bays by 4 floors, each pane one bay wide and a storey tall, framed by bright
+ * aluminium mullions, a slim transom and a dark slab band. The glass is a see-through teal that
+ * darkens toward its foot, with a pale ceiling line inside near its head, so each pane reads as a
+ * window into a floor rather than a stripe. The emissive map lights about two thirds at night.
+ */
+function curtainTexture(glassTop:string,glassFoot:string,frame:string,slab:string,seed:number){
+ const make=(lit:boolean)=>{
+  // The night map only needs lit or dark panes, so it is drawn at half size.
+  const S=lit?256:512,c=document.createElement('canvas');c.width=S;c.height=S;const g=c.getContext('2d')!;g.scale(S/512,S/512);
+  let r=seed;const rnd=()=>(r=(r*16807)%2147483647)/2147483647;
+  g.fillStyle=lit?'#000':slab;g.fillRect(0,0,512,512);
+  for(let fy=0;fy<4;fy++)for(let bx=0;bx<4;bx++){
+   const x=bx*128,y=fy*128,m=6,band=18,w=128-m*2,h=128-band-m;
+   if(lit){
+    if(rnd()<.62){const warm=200+Math.floor(rnd()*45);g.fillStyle=`rgb(255,${warm},${150+Math.floor(rnd()*60)})`;g.fillRect(x+m,y+m,w,h);g.fillStyle='rgba(255,250,235,.9)';g.fillRect(x+m,y+m,w,6);}
+    continue;
+   }
+   const grad=g.createLinearGradient(0,y+m,0,y+m+h);grad.addColorStop(0,glassTop);grad.addColorStop(1,glassFoot);g.fillStyle=grad;g.fillRect(x+m,y+m,w,h);
+   // Inside: the ceiling's light line near the head of the pane, and a faint floor edge.
+   g.fillStyle='rgba(235,240,232,.32)';g.fillRect(x+m,y+m+5,w,4);g.fillStyle='rgba(0,0,0,.14)';g.fillRect(x+m,y+m+h-10,w,10);
+   // A soft diagonal reflection, offset a little pane to pane.
+   g.save();g.beginPath();g.rect(x+m,y+m,w,h);g.clip();g.fillStyle='rgba(255,255,255,.12)';g.beginPath();const o=(bx*23+fy*11)%40;g.moveTo(x+o,y+m+h);g.lineTo(x+o+26,y+m+h);g.lineTo(x+o+70,y+m);g.lineTo(x+o+44,y+m);g.fill();g.restore();
+   // Transom: a slim horizontal bar a third of the way up.
+   g.fillStyle=frame;g.fillRect(x+m,y+m+Math.round(h*.68),w,3);
+  }
+  if(!lit){g.fillStyle=frame;for(let bx=0;bx<=4;bx++)g.fillRect(bx*128-4,0,8,512);for(let fy=0;fy<4;fy++){g.fillRect(0,fy*128+110,512,3);g.fillRect(0,fy*128+125,512,3);}}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;t.flipY=false;return t;
+ };
+ return {map:make(false),glow:make(true)};
+}
+
 /** The lobby wordmark: plain warm letters, no reference signage. */
 function wordmark(text:string){
  const c=document.createElement('canvas');c.width=1024;c.height=192;const g=c.getContext('2d')!;
@@ -42,7 +74,7 @@ function wordmark(text:string){
  * lights the curtain wall cool and the gold ribbon and lobby warm.
  */
 export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;base:number;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;pick:Pick;night?:boolean}){
- const k=t.size/COMMERCE.refSize,quality=useQualityLevel();
+ const k=commerceScale(t.size),quality=useQualityLevel();
  const height=commerceTop(k,t.customHeight);
  const geo=useMemo(()=>packNormals(commerceGeometry(k,height)),[k,height]);
  useEffect(()=>()=>{for(const v of Object.values(geo))if(v instanceof THREE.BufferGeometry)v.dispose();},[geo]);
@@ -51,7 +83,7 @@ export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
   // Sage-green glass in place of the silver-blue, like the city artwork (2026-11-17); the gold valley stays warm.
   // Realism pass (2026-11-24): the glass and metal now reflect a soft sky, so the curved blades pick up light like real curtain wall.
   const env=skyReflection(gl);
-  const silver=glassTexture('#8aa898','#d6e4da','#5e7a6b',73),gold=glassTexture('#c48a3c','#e8c078','#8a6430',89);
+  const silver=curtainTexture('#9bb8ae','#3f5a52','#e9eeec','#5a6f68',73),gold=curtainTexture('#e6bf7a','#9c6a2c','#f3e2bd','#7b5527',89);
   const glass=(tex:{map:THREE.Texture;glow:THREE.Texture},emissive:string,metal:number,shine:number)=>focusable(new THREE.MeshStandardMaterial({map:tex.map,emissiveMap:tex.glow,emissive,emissiveIntensity:0,roughness:.12,metalness:metal,envMap:env,envMapIntensity:shine}));
   return {
    textures:[silver.map,silver.glow,gold.map,gold.glow],
@@ -61,12 +93,15 @@ export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
    white:focusable(new THREE.MeshStandardMaterial({color:'#f2f3f1',roughness:.45,metalness:.2})),
    rail:focusable(new THREE.MeshStandardMaterial({color:'#cfe3ec',roughness:.1,metalness:.2,transparent:true,opacity:.45,depthWrite:false})),
    canopy:focusable(new THREE.MeshStandardMaterial({color:'#f6f7f6',roughness:.3,metalness:.35,emissive:'#ffe2a8',emissiveIntensity:0})),
+   // The lobby's clear glass: you see the stone floor, desk and lit core through it.
+   clear:focusable(new THREE.MeshStandardMaterial({color:'#dfeee9',roughness:.05,metalness:.3,envMap:env,envMapIntensity:.7,transparent:true,opacity:.28,depthWrite:false})),
+   interior:focusable(new THREE.MeshStandardMaterial({vertexColors:true,roughness:.55,metalness:.05,emissive:'#ffd59a',emissiveIntensity:0})),
    pool:focusable(new THREE.MeshStandardMaterial({color:'#5fb3cc',roughness:.1,metalness:.1,emissive:'#3b84a0',emissiveIntensity:0})),
   };
  },[gl]);
  useEffect(()=>{
   mats.glass.emissiveIntensity=night?.7:0;mats.gold.emissiveIntensity=night?1.15:0;
-  mats.canopy.emissiveIntensity=night?.3:0;mats.pool.emissiveIntensity=night?.65:0;
+  mats.canopy.emissiveIntensity=night?.55:0;mats.interior.emissiveIntensity=night?.5:0;mats.pool.emissiveIntensity=night?.65:0;
   // The reflected sky is a daytime one: after dark it dims, so the lit windows read.
   mats.glass.envMapIntensity=night?.12:.65;mats.gold.envMapIntensity=night?.1:.45;mats.fin.envMapIntensity=night?.15:.6;
  },[mats,night]);
@@ -95,14 +130,15 @@ export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
  }),[pick,t.key]);
  const front=commerceFront(k),signY=(COMMERCE.canopy.y+.06)*k-.02*k;
  const finsOn=quality<3;
- return <group>
+ return <group name="commerce-tower">
   <group position={[t.x,base,t.z]}>
    <mesh geometry={geo.glass} material={mats.glass} castShadow receiveShadow {...handlers}/>
    <mesh geometry={geo.gold} material={mats.gold} castShadow receiveShadow {...handlers}/>
    {finsOn&&<mesh geometry={geo.fins} material={mats.fin} castShadow={quality<2} raycast={noRaycast}/>}
    <mesh geometry={geo.roof} material={mats.roof} receiveShadow raycast={noRaycast}/>
    <mesh geometry={geo.bands} material={mats.fin} raycast={noRaycast}/>
-   <mesh geometry={geo.lobby} material={mats.gold} receiveShadow {...handlers}/>
+   <mesh geometry={geo.interior} material={mats.interior} receiveShadow raycast={noRaycast}/>
+   <mesh geometry={geo.lobby} material={mats.clear} {...handlers}/>
    <mesh geometry={geo.podiumGlass} material={mats.glass} receiveShadow {...handlers}/>
    <mesh geometry={geo.slabs} material={mats.white} castShadow receiveShadow {...handlers}/>
    {finsOn&&<mesh geometry={geo.ribs} material={mats.fin} raycast={noRaycast}/>}

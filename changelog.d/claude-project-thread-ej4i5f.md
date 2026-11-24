@@ -1,1 +1,1 @@
-- 2026-11-24 · The Commerce wave tower looks more realistic: the gold ribbon is now a curved valley between two glass blades, framed by white S-shaped trims, with finer fins and glass that reflects the sky (#532)
+- 2026-11-24 · The Commerce wave tower looks more realistic and stands a little bigger: the gold ribbon is now a curved valley between two glass blades with white S-shaped trims, the glass has clear window panes that reflect the sky, and the lobby is clear glass you can see into, with a stone floor, reception desk and lit core (#532)

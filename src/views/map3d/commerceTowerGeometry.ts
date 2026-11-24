@@ -4,7 +4,7 @@ import type {Pt} from './roads';
 import {compact,fins,lid,skin as skin2} from './atlasHqGeometry';
 import type {Pt3} from './atlasHqPlan';
 import {annulus,slab} from './ribbonTowerGeometry';
-import {COMMERCE,along,canopySpan,floorHeights,planAt,podiumRing,podiumTop,poolCentre,poolRing,ribbonCentre,roofShare,roofTrees,valleyInset} from './commerceTowerPlan';
+import {COMMERCE,along,commerceFront,canopySpan,floorHeights,planAt,podiumRing,podiumTop,poolCentre,poolRing,ribbonCentre,roofShare,roofTrees,valleyInset} from './commerceTowerPlan';
 
 /** Commerce Pipeline's teardrop tower: a few merged meshes, built once. See commerceTowerPlan for the design. */
 
@@ -128,6 +128,59 @@ function canopy(k:number){
  return geo(pos);
 }
 
+/** A box with flat vertex colours, for the lobby's furniture: its top and four sides (the floor hides its underside). */
+function box(pos:number[],col:number[],[cx,cy,cz]:Pt3,[sx,sy,sz]:Pt3,color:string){
+ const x0=cx-sx/2,x1=cx+sx/2,y0=cy,y1=cy+sy,z0=cz-sz/2,z1=cz+sz/2,n=pos.length;
+ const v=(x:number,y:number,z:number):Pt3=>[x,y,z];
+ quad(pos,v(x0,y1,z0),v(x0,y1,z1),v(x1,y1,z1),v(x1,y1,z0));
+ quad(pos,v(x0,y0,z1),v(x1,y0,z1),v(x1,y1,z1),v(x0,y1,z1));quad(pos,v(x1,y0,z0),v(x0,y0,z0),v(x0,y1,z0),v(x1,y1,z0));
+ quad(pos,v(x1,y0,z1),v(x1,y0,z0),v(x1,y1,z0),v(x1,y1,z1));quad(pos,v(x0,y0,z0),v(x0,y0,z1),v(x0,y1,z1),v(x0,y1,z0));
+ const c=new THREE.Color(color);for(let i=n;i<pos.length;i+=3)col.push(c.r,c.g,c.b);
+}
+/** A closed outline's floor (fan from its centre, facing up) and its wall, in flat vertex colours. */
+function colourFloor(pos:number[],col:number[],ring:Pt[],y:number,color:string){
+ const n=pos.length,cx=ring.reduce((a,p)=>a+p[0],0)/ring.length,cz=ring.reduce((a,p)=>a+p[1],0)/ring.length;
+ for(let i=0;i<ring.length;i++){const a=ring[i],b=ring[(i+1)%ring.length];pos.push(cx,y,cz,a[0],y,a[1],b[0],y,b[1]);}
+ const c=new THREE.Color(color);for(let i=n;i<pos.length;i+=3)col.push(c.r,c.g,c.b);
+}
+function colourWall(pos:number[],col:number[],ring:Pt[],y0:number,y1:number,color:string){
+ const n=pos.length;for(let i=0;i<ring.length;i++){const a=ring[i],b=ring[(i+1)%ring.length];quad(pos,[a[0],y0,a[1]],[b[0],y0,b[1]],[b[0],y1,b[1]],[a[0],y1,a[1]]);}
+ const c=new THREE.Color(color);for(let i=n;i<pos.length;i+=3)col.push(c.r,c.g,c.b);
+}
+
+/**
+ * The lobby behind the clear glass (realism pass, 2026-11-24): a pale stone floor, the tower's
+ * core carried down to the ground as a warm stone wall, a long reception desk facing the doors,
+ * and bronze frames round the doors. One mesh in vertex colours.
+ */
+function lobbyInterior(k:number){
+ const c=COMMERCE,L=c.lobby,pos:number[]=[],col:number[]=[],top=podiumTop(0,k)-.03*k;
+ colourFloor(pos,col,podiumRing(k,-.035),.004*k,'#d9d3c6');
+ colourWall(pos,col,planAt(0,k,L.core),0,top,'#b79a74');
+ const f=commerceFront(k),[dw,dh,dd]=L.desk;
+ box(pos,col,[f.x,0,f.wall-L.deskBack*k],[dw*k,dh*k,dd*k],'#3c3a36');
+ box(pos,col,[f.x,dh*k,f.wall-L.deskBack*k],[dw*k*1.02,.008*k,dd*k*1.1],'#e9e4da');
+ // The feature wall behind the desk: a lit gold panel on the core's front.
+ box(pos,col,[f.x,.06*k,f.wall-(L.deskBack+.14)*k],[dw*k*1.5,top*.72,.012*k],'#c89a52');
+ // Bronze door portal: two posts and a head round the doors (the doors themselves are EntranceDoors).
+ const w=.74*k,h=.4*k,t=.025*k,z=f.wall-.005*k;
+ box(pos,col,[f.x-w/2,0,z],[t,h,t*1.4],'#4e3d2c');box(pos,col,[f.x+w/2,0,z],[t,h,t*1.4],'#4e3d2c');box(pos,col,[f.x,h,z],[w+t,t,t*1.4],'#4e3d2c');
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.computeVertexNormals();return g;
+}
+/** Slim white columns standing just inside the lobby glass. */
+function lobbyColumns(k:number){
+ const L=COMMERCE.lobby,ring=podiumRing(k,-L.columnInset),top=podiumTop(0,k),out:THREE.BufferGeometry[]=[];
+ const front=commerceFront(k);
+ ring.forEach(([x,z],i)=>{if(i%L.columnEvery||Math.abs(x-front.x)<.5*k&&z>front.wall-.3*k)return;const g=new THREE.CylinderGeometry(L.column*k,L.column*k,top,8,1,true);g.translate(x,top/2,z);out.push(g);});
+ return merge(out);
+}
+/** The lobby's soffit: the underside of the first floor, facing down, lit warm at night with the canopy. */
+function soffit(k:number){
+ const ring=podiumRing(k,-.035),y=podiumTop(0,k)-COMMERCE.lobby.soffit*k,cx=ring.reduce((a,p)=>a+p[0],0)/ring.length,cz=ring.reduce((a,p)=>a+p[1],0)/ring.length,pos:number[]=[];
+ for(let i=0;i<ring.length;i++){const a=ring[i],b=ring[(i+1)%ring.length];pos.push(cx,y,cz,b[0],y,b[1],a[0],y,a[1]);}
+ return geo(pos);
+}
+
 export function commerceGeometry(k=1,height=COMMERCE.height*k){
  const H=height,c=COMMERCE,n=c.ring;
  // Tower levels: a level every two floors up to where the roof's cut begins, then the sloped top.
@@ -149,16 +202,18 @@ export function commerceGeometry(k=1,height=COMMERCE.height*k){
  // Podium: lobby of gold glass, silver floors, white slab edges, ribs, a garden roof with a glass rail.
  const storeys=c.podium.floors.length,ring=podiumRing(k),inner=podiumRing(k,-.03),ptop=podiumTop(storeys-1,k);
  const lobbyGlass=skin2([at(inner,0),at(inner,podiumTop(0,k)-.03*k)]);
+ // Lobby mullions: a slim fin every other podium point, only up the lobby's glass.
+ const lobbyFins=fins([at(ring,0),at(ring,podiumTop(0,k))],1,.02*k);
  const podiumGlass=merge(Array.from({length:storeys-1},(_,i)=>i+1).map(l=>skin2([at(inner,podiumTop(l-1,k)),at(inner,podiumTop(l,k)-.03*k)])));
  const slabs=merge(c.podium.floors.map((_,l)=>slab(ring,podiumTop(l,k),.04*k)));
- const ribs=fins([at(ring,0),at(ring,ptop)],2,.035*k);
+ const ribs=merge([fins([at(ring,podiumTop(0,k)),at(ring,ptop)],2,.035*k),lobbyFins]);
  const railRing=podiumRing(k,-.012),rail=skin2([at(railRing,ptop),at(railRing,ptop+c.podium.rail*k)]);
  const lawn=lid(at(podiumRing(k,-.04),ptop+.004*k));
  const pool=poolRing(k),[pcx,pcz]=poolCentre(k),poolRim=annulus(pool,pool.map(([x,z])=>[x+(x-pcx)*.12,z+(z-pcz)*.12] as Pt),ptop,.02*k);
  return compact({
   glass:smooth(glass),gold:smooth(gold),fins:smooth(finGeo),roof:roofLid,bands:smooth(merge(bands)),
-  lobby:smooth(lobbyGlass),podiumGlass:smooth(podiumGlass),slabs:merge([slabs,poolRim]),ribs,rail:smooth(rail),lawn,
-  pool:lid(at(pool,ptop+.016*k)),canopy:canopy(k),
+  lobby:smooth(lobbyGlass),podiumGlass:smooth(podiumGlass),slabs:merge([slabs,poolRim,lobbyColumns(k)]),interior:lobbyInterior(k),ribs,rail:smooth(rail),lawn,
+  pool:lid(at(pool,ptop+.016*k)),canopy:merge([canopy(k),soffit(k)]),
   trees:roofTrees(k),
  });
 }
