@@ -233,8 +233,6 @@ export interface Scene3D {
   parks: Park[];
   houses: House[];
   kiosks: Kiosk[];
-  /** Ground the removed tool offices still reserve; traffic keeps planning round it so its routes stay as they were. */
-  toolLots?: { x: number; z: number; size: number }[];
   towers: Tower[];
   /**
    * Where a removed tower stood on a cleared lot (Benjaire Dashboard, 2026-11-09). Nothing is drawn
@@ -309,9 +307,6 @@ function buildCity(layout: Layout): Scene3D {
   const steps: Slab[] = [];
   const houses: House[] = [];
   const kiosks: Kiosk[] = [];
-  // Tool buildings are not drawn (Khaneil, 2026-11-24: "remove tools buildings to make it consistent"): each building is one
-  // entity and its tools are listed in its panel. Their lots still reserve the same ground while the city is planned, so no
-  // street, building or district moves; only the tool offices and the paths out to them are left off the map.
   const towers: Tower[] = [];
   const strays: StrayBuilding[] = [];
   const trees: Tree[] = [];
@@ -387,6 +382,7 @@ function buildCity(layout: Layout): Scene3D {
     for (const k of d.kiosks) {
       const kx = k.gx + k.size / 2;
       const kz = k.gy + k.size / 2;
+      paving.push(strip(kx, kz + (d.project.id === ANNEX.projectId ? k.size * 0.3 : Math.min(k.size, 0.9) * 0.4), kx, k.gy + k.size + 0.25, INNER_PATH_W, top));
       kiosks.push({
         key: `service:${d.project.id}:${k.service.id}`,
         projectId: d.project.id,
@@ -399,8 +395,15 @@ function buildCity(layout: Layout): Scene3D {
         canopy: CANOPIES[Math.floor(hash(k.service.id) * CANOPIES.length)],
       });
     }
-    // Light the paths to legacy lots.
-    for (const l of d.lots) {
+    for (const path of toolWorkflowRoads({ gx: d.hq.gx, gy: d.hq.gy, size: d.hq.size }, d.kiosks)) {
+      for (let i = 1; i < path.length; i++) paving.push(strip(path[i-1].gx, path[i-1].gy, path[i].gx, path[i].gy, INNER_PATH_W, top));
+      for (const p of path.slice(1,-1)) {
+        const b = { x: p.gx + INNER_PATH_W, y: top, z: p.gy + INNER_PATH_W, s: 1 };
+        if (!bollards.some(o => Math.hypot(o.x-b.x,o.z-b.z)<0.3)) bollards.push(b);
+      }
+    }
+    // Light the paths to supporting tool buildings as well as legacy lots.
+    for (const l of [...d.lots, ...d.kiosks]) {
       const lx = l.gx + l.size / 2;
       const lz = l.gy + l.size / 2;
       const b = { x: lx + Math.sign(lx - cx || 1) * (INNER_PATH_W / 2 + 0.07), y: top, z: cz - Math.sign(lz - cz || 1) * (INNER_PATH_W / 2 + 0.07), s: 1 };
@@ -1015,8 +1018,7 @@ function buildCity(layout: Layout): Scene3D {
     walks,
     parks,
     houses,
-    kiosks: [],
-    toolLots: kiosks.filter((k) => !cleared.has(k.projectId)).map(({ x, z, size }) => ({ x, z, size })),
+    kiosks: kiosks.filter((k) => !cleared.has(k.projectId)),
     towers: towers.filter((t) => !cleared.has(t.projectId)),
     clearedLots: towers.filter((t) => cleared.has(t.projectId)).map(({ projectId, x, z, size }) => ({ projectId, x, z, size })),
     strays,

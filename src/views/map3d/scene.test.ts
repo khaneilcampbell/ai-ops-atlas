@@ -53,15 +53,12 @@ describe("buildScene", () => {
     expect(s.terraces.some((t) => t.id === "benjaire-ops")).toBe(false);
   });
 
-  it("draws no tool buildings, and keeps the ground their tools reserve clear of houses, towers and each other", () => {
-    // Khaneil, 2026-11-24: each building is one entity; its tools are listed in its panel, not drawn as offices.
+  it("keeps kiosks clear of houses, towers and each other", () => {
     const s = buildScene(layoutMap(catalog));
-    expect(s.kiosks).toEqual([]);
-    const lots = (s.toolLots ?? []).map((k, i) => ({ k: `lot:${i}`, ...k }));
-    expect(lots.length).toBeGreaterThan(0);
-    const boxes = [...s.houses.map((h) => ({ k: h.key, x: h.x, z: h.z, w: h.w, d: h.d })), ...s.towers.map((t) => ({ k: t.key, x: t.x, z: t.z, w: t.size, d: t.size })), ...lots.map((k) => ({ k: k.k, x: k.x, z: k.z, w: k.size, d: k.size }))];
-    for (const k of lots)
-      for (const b of boxes) if (b.k !== k.k) expect(Math.abs(k.x - b.x) < (k.size + b.w) / 2 && Math.abs(k.z - b.z) < (k.size + b.d) / 2, `${k.k} hits ${b.k}`).toBe(false);
+    expect(s.kiosks.length).toBeGreaterThan(0);
+    const boxes = [...s.houses.map((h) => ({ k: h.key, x: h.x, z: h.z, w: h.w, d: h.d })), ...s.towers.map((t) => ({ k: t.key, x: t.x, z: t.z, w: t.size, d: t.size })), ...s.kiosks.map((k) => ({ k: k.key, x: k.x, z: k.z, w: k.size, d: k.size }))];
+    for (const k of s.kiosks)
+      for (const b of boxes) if (b.k !== k.key) expect(Math.abs(k.x - b.x) < (k.size + b.w) / 2 && Math.abs(k.z - b.z) < (k.size + b.d) / 2, `${k.key} hits ${b.k}`).toBe(false);
   });
 
   it("produces finite geometry and is deterministic", () => {
