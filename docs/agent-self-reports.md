@@ -5,7 +5,7 @@ Every named agent reports data about itself to the **Data Intelligence Center**
 what to improve in its workflow. Khaneil asked for this on 2026-11-22.
 
 - n8n workflow: [Data Intelligence · Agent Self-Reports](https://khancam15.app.n8n.cloud/workflow/SBtrX3tY3OKT8qzn)
-  (unpublished draft until Khaneil says "publish")
+  (published by Khaneil on 2026-11-24; reports run daily at each agent's time)
 - Sheet: [Atlas Agent Self-Reports](https://docs.google.com/spreadsheets/d/1IJPNjdqPJ2OLhHZ_HI-pgai2dtPplq9oCx1Qw3DlR4s/edit)
   with Summary, Agents, Report Schedule, Recommendations and Run Log tabs
 - Output Library: a PDF, an Excel workbook and a table, owned by Priya Raman (Atlas Health Monitor).
@@ -147,5 +147,9 @@ The Atlas records part needs its own data key; until then the reports say "Not c
 
 ## Publish
 
-When Khaneil says "publish": publish the workflow in n8n, then set the catalog entry's `status` to
-`active`, drop "draft" from its trigger, and record the date in its history.
+Khaneil published the workflow in n8n on 2026-11-24, and the catalog entry is `active`. If it is
+ever unpublished, set the catalog `status` back to `paused`, put "draft" in its trigger and record the
+date in its history.
+
+Daytime slots only update the Sheet. The Library files (combined and per agent) are made by the last
+slot of the day (8:30 PM New York) and by every run by hand.
