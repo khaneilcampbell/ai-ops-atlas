@@ -7,24 +7,25 @@ import { financialKey } from "../views/map3d/financialPlan";
 
 // Khaneil, 2026-11-24: eight core buildings hold the modules. The other buildings stay on the map
 // but house no module for now (workspace.yaml `merged`); nothing is deleted.
-const CORE = ["project:ai-ops-atlas", "project:intelligence-hub", "service:atlas-station", "project:github-profile", "project:portfolio-site", "project:benjaire-site", "service:benjaire-marketing", "project:soc-lab"];
+const CORE = ["project:ai-ops-atlas", "project:intelligence-hub", "service:atlas-station", "project:github-profile", "project:portfolio-site", "service:atlas-galleria", "service:benjaire-marketing", "project:soc-lab"];
 
 describe("eight core buildings", () => {
   it("groups every other building with a core building or Atlas Commons, and never a core building itself", () => {
     for (const h of new Set(Object.values(WORKSPACE.merged ?? {}))) expect([...CORE, "service:atlas-commons"]).toContain(h);
     for (const k of [...CORE, "service:atlas-commons", "service:logistics-airport", financialKey("circa")]) expect(hostOf(k), k).toBeUndefined();
-    expect(housedIn("project:benjaire-site")).toEqual(expect.arrayContaining(["project:commerce-pipeline", "service:atlas-galleria", financialKey("banks"), financialKey("insurance"), financialKey("budget")]));
+    expect(housedIn("service:atlas-galleria")).toEqual(expect.arrayContaining(["project:commerce-pipeline", "project:benjaire-site", financialKey("banks"), financialKey("insurance"), financialKey("budget")]));
     expect(housedIn("project:github-profile")).toEqual([financialKey("financial-planning")]);
     expect(housedIn("service:benjaire-marketing")).toEqual(["service:atlas-marketplace"]);
     expect(housedIn("project:soc-lab")).toEqual(["service:bmw-dealership"]);
-    expect(onMapKey("service:atlas-galleria")).toBe("project:benjaire-site");
+    expect(onMapKey("project:benjaire-site")).toBe("service:atlas-galleria");
   });
 
   it("gives a grouped building no module of its own, while core buildings keep theirs", () => {
     expect(buildingForSelection({ kind: "project", id: "commerce-pipeline" }, catalog)).toBeUndefined();
-    expect(buildingForSelection({ kind: "service", id: "atlas-galleria" }, catalog)).toBeUndefined();
+    expect(buildingForSelection({ kind: "project", id: "benjaire-site" }, catalog)).toBeUndefined();
     expect(landmarkModuleStatus("financial:banks")).toBeUndefined();
-    expect(buildingForSelection({ kind: "project", id: "benjaire-site" }, catalog)?.moduleType).toBe("business-operations-hq");
+    // Khaneil, 2026-11-24: the former Vendor & Supplier Hub is the Business Operations HQ building.
+    expect(buildingForSelection({ kind: "service", id: "atlas-galleria" }, catalog)?.moduleType).toBe("business-operations-hq");
     expect(buildingForSelection({ kind: "service", id: "benjaire-marketing" }, catalog)?.moduleType).toBe("growth-marketing-studio");
   });
 

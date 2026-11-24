@@ -78,9 +78,9 @@ buildings:
     organization: Benjaire
     former_names: [Corvane Capital, Business Finance Center]
   "service:atlas-galleria":
-    display_name: Business Operations Pavilion
-    organization: Atlas
-    former_names: [Atlas Galleria, Vendor & Supplier Hub]
+    display_name: Business Operations HQ
+    organization: Benjaire
+    former_names: [Atlas Galleria, Vendor & Supplier Hub, Business Operations Pavilion]
   "service:skyline-stadium":
     display_name: Team Events Arena
     organization: Atlas

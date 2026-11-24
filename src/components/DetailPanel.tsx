@@ -175,8 +175,8 @@ function ServiceDetail({id}:{id:string}) {
   </>;
   const galleriaModule=id===GALLERIA_ID?liveLandmarkModule(GALLERIA_ID):undefined;
   if(id === GALLERIA_ID) return <>
-    <Head eyebrow={`Shopping mall · Behind ${marketplaceName()}`} title={GALLERIA_NAME} building={GALLERIA_KEY}><span className="chip">{galleriaModule?`${galleriaModule.name} · ${galleriaModule.availability==="available"?"Available":"Partly available"}`:"Planned · Visual building"}</span><EnterBuildingButton id={GALLERIA_ID}/></Head>
-    <div className="panel-body selectable"><ModuleSection/><p>A three-storey shopping mall over a basement car park. Two curved wings meet at a V-shaped entrance with a fountain forecourt, and a rounded supermarket fills the far side. The floors step in and out under wavy white fins, with rope lights and planted terraces, round a central atrium with a steel funnel column under a polycarbonate canopy.</p>
+    <Head eyebrow={`Business operations · Behind ${marketplaceName()}`} title={GALLERIA_NAME} building={GALLERIA_KEY}><span className="chip">{galleriaModule?`${galleriaModule.name} · ${galleriaModule.availability==="available"?"Available":"Partly available"}`:"Planned · Visual building"}</span><EnterBuildingButton id={GALLERIA_ID}/></Head>
+    <div className="panel-body selectable"><ModuleSection/><BusinessLink/><HousedBuildings host={GALLERIA_KEY}/><p>A three-storey shopping mall over a basement car park. Two curved wings meet at a V-shaped entrance with a fountain forecourt, and a rounded supermarket fills the far side. The floors step in and out under wavy white fins, with rope lights and planted terraces, round a central atrium with a steel funnel column under a polycarbonate canopy.</p>
       <section><div className="section-title">Floors</div><ul>{GALLERIA_FLOORS.map(f=><li key={f.floor}><strong>{f.label}</strong> · {f.summary}</li>)}</ul></section>
       <dl className="kv"><dt>Shops</dt><dd>Labelled by what they sell. None are open, selling or connected to payments.</dd><dt>Assigned workers</dt><dd>None</dd><dt>Model usage</dt><dd>None</dd><dt>Repository / workflow</dt><dd>{galleriaModule?`Reads ${galleriaModule.connectors.join(", ")}`:"Not connected"}</dd></dl>
     </div>
@@ -249,10 +249,12 @@ export function HousedBuildings({ host }: { host: string }) {
   const { catalog, select } = useAtlas();
   const housed = housedIn(host);
   if (!housed.length) return null;
-  const withModule = housed.filter(key => buildingModule(key, catalog));
+  // A grouped building whose module is the one this building already houses adds nothing new.
+  const own = buildingModule(host, catalog);
+  const withModule = housed.filter(key => { const mod = buildingModule(key, catalog); return mod && mod !== own; });
   return <>
     {withModule.map(key => <ModuleSection key={key} of={selectionOf(key)} from={buildingName(key, catalog)}/>)}
-    <section><div className="section-title">Grouped with this building</div><ul className="link-list">{housed.map(key => { const mod = buildingModule(key, catalog); return <li key={key}><button className="text-btn" onClick={() => select(selectionOf(key))}>{buildingName(key, catalog)} →</button><span className="muted small">{mod ? `Its ${mod} module is shown here` : "No module"}</span></li>; })}</ul></section>
+    <section><div className="section-title">Grouped with this building</div><ul className="link-list">{housed.map(key => { const mod = buildingModule(key, catalog); return <li key={key}><button className="text-btn" onClick={() => select(selectionOf(key))}>{buildingName(key, catalog)} →</button><span className="muted small">{!mod ? "No module" : mod === own ? `Its ${mod} module is this building's` : `Its ${mod} module is shown here`}</span></li>; })}</ul></section>
   </>;
 }
 

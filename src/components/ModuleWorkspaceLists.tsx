@@ -4,7 +4,7 @@ import { openLibrary, useLibraryOpen } from "../library/client";
 import { buildConnections } from "../lib/connections";
 import { relative } from "../lib/time";
 import { useLiveStatus } from "../live/feed";
-import { instancesOf, workspaceBuildings } from "../modules/instances";
+import { workspaceBuildings } from "../modules/instances";
 import { datasetInventory, moduleInventory, projectDependencies, workflowMap, type DependencyLink } from "../modules/inventory";
 import type { AtlasModuleType, ModuleTypeId } from "../modules/types";
 import { panelsFor, type WorkspacePanel } from "../modules/workspaces";
@@ -29,9 +29,9 @@ import { useAgentReports } from "../reports/client";
 import { HealthBadge } from "./bits";
 import { signalCounts, signalRows, type SignalState } from "../observability/signals";
 import { documentCount, documentInventory } from "../knowledge/docs";
-import { assignmentCounts, automationAssignments, type AssignmentState } from "../business/assignments";
+import { assignmentCounts, automationAssignments, businessBuildings, type AssignmentState } from "../business/assignments";
 import { businessKpis, type KpiState } from "../business/kpis";
-import { aggregateHealth, buildingAssets } from "../modules/operations";
+import { aggregateHealth } from "../modules/operations";
 import { PROPERTIES } from "../properties/registry";
 import { SUPPLIER_SOURCES, supplierRows } from "../vendors/suppliers";
 
@@ -809,12 +809,10 @@ function BusinessKpis() {
   const props = useAllPropertyData();
   const groups = useMemo(() => {
     const assignments = automationAssignments(catalog, n8n.value, repos);
-    return instancesOf(workspaceBuildings(catalog), "business-operations-hq").flatMap((b) => {
-      if (!b.projectId) return [];
-      const assets = buildingAssets(b, catalog);
-      const sites = PROPERTIES.filter((p) => p.projectId === b.projectId).map((property) => ({ property, snap: props[property.id]?.site }));
-      const mine = assignments.filter((g) => g.projectId === b.projectId);
-      return [{ id: b.projectId, business: b.organization ?? b.name, kpis: businessKpis({ sites, ci: aggregateHealth(assets.repositories, repos), automations: assignmentCounts(mine) }) }];
+    return businessBuildings(catalog).map(({ projectId, business, assets }) => {
+      const sites = PROPERTIES.filter((p) => p.projectId === projectId).map((property) => ({ property, snap: props[property.id]?.site }));
+      const mine = assignments.filter((g) => g.projectId === projectId);
+      return { id: projectId, business, kpis: businessKpis({ sites, ci: aggregateHealth(assets.repositories, repos), automations: assignmentCounts(mine) }) };
     });
   }, [catalog, n8n.value, repos, props]);
   const all = groups.flatMap((g) => g.kpis);

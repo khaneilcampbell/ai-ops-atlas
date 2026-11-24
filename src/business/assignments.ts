@@ -2,7 +2,7 @@ import { isAiAgent } from "../catalog/roles";
 import type { Agent, Catalog } from "../catalog/types";
 import type { RepoState } from "../github/types";
 import { observedRun, repoData } from "../lib/derive";
-import { instancesOf, workspaceBuildings } from "../modules/instances";
+import { buildingInstance, instancesOf, workspaceBuildings } from "../modules/instances";
 import { buildingAssets } from "../modules/operations";
 import { n8nHealth, n8nWorkflowId } from "../n8n/runs";
 import type { N8nSnapshot } from "../n8n/types";
@@ -59,18 +59,34 @@ function assignment(a: Agent, n8n: N8nSnapshot | null, repos: Record<string, Rep
 const ORDER: Record<AssignmentState, number> = { failing: 0, running: 1, ok: 2, "not-seen": 3, off: 4, "not-observed": 5 };
 
 /**
+ * The businesses the Business Operations HQ module houses: each of its buildings' project, with all of
+ * that project's repositories, agents and automations. The module's building can be a landmark linked
+ * to the project (workspace.yaml `project`, the former Vendor & Supplier Hub since Khaneil, 2026-11-24)
+ * or the project's own building. One entry per project, in workspace order.
+ */
+export function businessBuildings(catalog: Catalog) {
+  const seen = new Set<string>();
+  return instancesOf(workspaceBuildings(catalog), "business-operations-hq").flatMap((b) => {
+    const projectId = b.projectId ?? ("linked" in b ? b.linked?.projectId : undefined);
+    const project = projectId ? catalog.projects.find((p) => p.id === projectId) : undefined;
+    if (!project || seen.has(project.id)) return [];
+    seen.add(project.id);
+    // The project's own building scope (moduleType cleared): all of its agents, not only the ones with desks here.
+    return [{ projectId: project.id, business: b.organization ?? b.name, assets: buildingAssets({ ...buildingInstance(project, catalog), moduleType: null }, catalog) }];
+  });
+}
+
+/**
  * One group per business the Business Operations HQ module houses (in catalog order), listing the
  * agents and automations assigned to it. Failing first, then by most recent run, then by name.
  */
 export function automationAssignments(catalog: Catalog, n8n: N8nSnapshot | null, repos: Record<string, RepoState>): BusinessAssignments[] {
-  return instancesOf(workspaceBuildings(catalog), "business-operations-hq").flatMap((b) => {
-    if (!b.projectId) return [];
-    const assets = buildingAssets(b, catalog);
+  return businessBuildings(catalog).map(({ projectId, business, assets }) => {
     const items = [...assets.agents, ...assets.automations]
       .filter((a) => a.status !== "retired")
       .map((a) => assignment(a, n8n, repos))
       .sort((x, y) => ORDER[x.state] - ORDER[y.state] || (y.lastAt ?? "").localeCompare(x.lastAt ?? "") || x.name.localeCompare(y.name));
-    return [{ projectId: b.projectId, business: b.organization ?? b.name, items }];
+    return { projectId, business, items };
   });
 }
 

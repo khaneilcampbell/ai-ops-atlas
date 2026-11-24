@@ -4,9 +4,9 @@ schema: atlas/v2
 
 project:
   id: benjaire-site
-  name: Business Operations HQ
+  name: Business Operations Tower 9
   organization: Benjaire
-  former_names: [Benjaire HQ]
+  former_names: [Benjaire HQ, Business Operations HQ]
   summary: >-
     Website for Benjaire, an Astro site on Cloudflare Workers with a contact
     Worker that forwards inquiries to the Benjaire Flow intake in n8n.
@@ -14,7 +14,8 @@ project:
   repository: khaneilcampbell/benjaire.com
   tags: [benjaire, astro, cloudflare, n8n]
   district: business-operations
-  module: business-operations-hq
+  # Business Operations HQ module moved to the former Vendor & Supplier Hub (Khaneil, 2026-11-24):
+  # workspace.yaml landmark service:atlas-galleria, linked to this project.
   links:
     - label: Live site
       url: https://benjaire.com

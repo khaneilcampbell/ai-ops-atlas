@@ -52,7 +52,8 @@ landmarks:
     agents: [investment-operations, trading-risk-limits, trade-journal, trading-reporting]
   "service:atlas-galleria":
     map_name: Atlas Galleria
-    module: integration-exchange
+    module: business-operations-hq
+    project: benjaire-site
   "service:financial:residence":
     map_name: Aldren Insights
     module: data-intelligence-center
@@ -79,18 +80,19 @@ landmarks:
 merged:
   # AI Engineering & Research Center (Development Hub)
   "service:financial:financial-planning": "project:github-profile"
-  # Business Operations HQ: the Financial District towers, Vendor & Supplier and Commerce
-  "service:financial-district": "project:benjaire-site"
-  "service:financial:banks": "project:benjaire-site"
-  "service:financial:records": "project:benjaire-site"
-  "service:financial:investments": "project:benjaire-site"
-  "service:financial:residence": "project:benjaire-site"
-  "service:financial:business-finance": "project:benjaire-site"
-  "service:financial:budget": "project:benjaire-site"
-  "service:financial:insurance": "project:benjaire-site"
-  "service:financial:harbor-residence": "project:benjaire-site"
-  "service:atlas-galleria": "project:benjaire-site"
-  "project:commerce-pipeline": "project:benjaire-site"
+  # Business Operations HQ (the former Vendor & Supplier Hub, Khaneil 2026-11-24): the Financial District
+  # towers, the former Benjaire HQ tower and Commerce
+  "service:financial-district": "service:atlas-galleria"
+  "service:financial:banks": "service:atlas-galleria"
+  "service:financial:records": "service:atlas-galleria"
+  "service:financial:investments": "service:atlas-galleria"
+  "service:financial:residence": "service:atlas-galleria"
+  "service:financial:business-finance": "service:atlas-galleria"
+  "service:financial:budget": "service:atlas-galleria"
+  "service:financial:insurance": "service:atlas-galleria"
+  "service:financial:harbor-residence": "service:atlas-galleria"
+  "project:commerce-pipeline": "service:atlas-galleria"
+  "project:benjaire-site": "service:atlas-galleria"
   # Product & Growth Studio (Growth & Marketing Studio)
   "service:atlas-marketplace": "service:benjaire-marketing"
   # Security & Infrastructure Center (Security Operations Center)

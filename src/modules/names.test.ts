@@ -38,7 +38,7 @@ describe("workspace building names", () => {
       [financialKey("circa"), "Team Residence Towers", "Benjaire"],
       [financialKey("insurance"), "Business Operations Tower 7", "Benjaire"],
       [financialKey("business-finance"), "Business Operations Tower 5", "Benjaire"],
-      ["service:atlas-galleria", "Business Operations Pavilion", "Atlas"],
+      ["service:atlas-galleria", "Business Operations HQ", "Benjaire"],
       ["service:skyline-stadium", "Team Events Arena", "Atlas"],
       ["service:stadium-station", "Events Arena Station", "Atlas"],
       ["service:airport-building:terminal", "Passenger Terminal", "Atlas Airport"],
@@ -55,7 +55,7 @@ describe("workspace building names", () => {
   it("renames catalog buildings in their manifests, keeping ids, modules and the old name as an alias", () => {
     const want: [string, string, string | undefined, ...string[]][] = [
       ["ai-ops-atlas", "Atlas Command Center", "Atlas", "Atlas HQ"],
-      ["benjaire-site", "Business Operations HQ", "Benjaire", "Benjaire HQ"],
+      ["benjaire-site", "Business Operations Tower 9", "Benjaire", "Benjaire HQ", "Business Operations HQ"],
       ["intelligence-hub", "Agent Operations Center", undefined, "Intelligence Hub"],
       ["commerce-pipeline", "Business Operations Annex", undefined, "Commerce Pipeline", "Commerce Operations Center"],
       ["soc-lab", "Security & Infrastructure Center", undefined, "SOC Lab", "Security Operations Center"],
