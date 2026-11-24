@@ -162,9 +162,14 @@ function lobbyInterior(k:number){
  box(pos,col,[f.x,dh*k,f.wall-L.deskBack*k],[dw*k*1.02,.008*k,dd*k*1.1],'#e9e4da');
  // The feature wall behind the desk: a lit gold panel on the core's front.
  box(pos,col,[f.x,.06*k,f.wall-(L.deskBack+.14)*k],[dw*k*1.5,top*.72,.012*k],'#c89a52');
- // Bronze door portal: two posts and a head round the doors (the doors themselves are EntranceDoors).
- const w=.74*k,h=.4*k,t=.025*k,z=f.wall-.005*k;
- box(pos,col,[f.x-w/2,0,z],[t,h,t*1.4],'#4e3d2c');box(pos,col,[f.x+w/2,0,z],[t,h,t*1.4],'#4e3d2c');box(pos,col,[f.x,h,z],[w+t,t,t*1.4],'#4e3d2c');
+ // The entrance matches the tower (Khaneil, 2026-11-24): two gold-clad fins the full lobby height
+ // frame the sliding doors (EntranceDoors, set flush), with a gold glass transom above them and a
+ // stone threshold, echoing the gold valley between the blades above.
+ const w=.66*k,h=.38*k,fin=.05*k,deep=.16*k,z=f.wall;
+ for(const side of [-1,1])box(pos,col,[f.x+side*(w/2+fin/2),0,z-deep*.35],[fin,top,deep],'#c99a4f');
+ box(pos,col,[f.x,h,z-.01*k],[w,.022*k,.04*k],'#8a6430');
+ box(pos,col,[f.x,h+.022*k,z-.012*k],[w,top-h-.04*k,.01*k],'#d9b06a');
+ box(pos,col,[f.x,0,z+.08*k],[w+fin*2.4,.006*k,.2*k],'#cfc8bb');
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.computeVertexNormals();return g;
 }
 /** Slim white columns standing just inside the lobby glass. */

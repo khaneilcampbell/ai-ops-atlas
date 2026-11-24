@@ -25,7 +25,7 @@ export const COMMERCE={
  /** Points round every plan outline (fine enough for the gold valley's curved walls). */
  ring:112,
  /** Teardrop: the round end's radius, the point's radius, and how far apart their centres are. */
- round:.6,tip:.17,length:1.0,
+ round:.7,tip:.2,length:1.1,
  /** The way the point faces (radians, 0 = +x, turning toward +z); the round end's centre sits
   * inside the podium's round end, touching it at the back (see podium.offset). */
  heading:-.62,
@@ -59,7 +59,7 @@ export const COMMERCE={
   rail:.08,
  },
  /** The pool on the podium roof beyond the tower, along the axis toward the point: share of the podium's length, and radii. */
- pool:{at:.98,rx:.28,rz:.17},
+ pool:{at:1.04,rx:.24,rz:.16},
  /** The entrance canopy: a thin sweep over the lobby round the podium's front, as a share of its outline. */
  canopy:{span:.22,depth:.26,y:.58},
  /**

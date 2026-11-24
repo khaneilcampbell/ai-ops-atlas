@@ -619,13 +619,16 @@ export function Houses({ houses, g, m, pick }: { houses: House[]; g: G; m: M; pi
 }
 
 /** Shared double sliding entrance; panels respond to actual pedestrians, not a timer. */
-function EntranceDoors({doors,g,m}:{doors:Inst[];g:G;m:M}) {
+/** A door marked `flush` sits in its building's own glass (no foyer box), for headquarters that draw their own entrance. */
+export type Door=Inst&{flush?:boolean};
+function EntranceDoors({doors,g,m}:{doors:Door[];g:G;m:M}) {
   const mesh=useRef<THREE.InstancedMesh>(null),handles=useRef<THREE.InstancedMesh>(null);
   const openings=useRef<number[]>([]);
   const object=useMemo(()=>new THREE.Object3D(),[]);
   const glass=useMemo(()=>focusable(new THREE.MeshPhysicalMaterial({color:"#b7d4cc",transparent:true,opacity:0.28,roughness:0.12,metalness:0.15,depthWrite:false})),[]);
   useEffect(()=>()=>glass.dispose(),[glass]);
   const foyer=useMemo<Inst[]>(()=>doors.flatMap(door=>{
+    if(door.flush)return [];
     const [x,y,z]=door.p,[w,h]=door.s,depth=Math.max(0.13,h*0.48);
     return [
       {p:[x,y,z+depth/2],s:[w*1.12,0.025,depth],c:"#d9cfb8"},
@@ -642,7 +645,7 @@ function EntranceDoors({doors,g,m}:{doors:Inst[];g:G;m:M}) {
   useFrame((_,dt)=>{
     if(!mesh.current)return;
     doors.forEach((door,i)=>{
-      const [x,y,z]=door.p,[w,h,d]=door.s,depth=Math.max(0.13,h*0.48);
+      const [x,y,z]=door.p,[w,h,d]=door.s,depth=door.flush?0:Math.max(0.13,h*0.48);
       const open=reduced?(entranceOccupied(x,z)?1:0):doorOpenness(openings.current[i]??0,entranceOccupied(x,z),dt);
       openings.current[i]=open;
       for(let side=0;side<2;side++){
@@ -776,15 +779,15 @@ const SPIRE_H = 1.1;
  * standing plus clearance, nor narrower than one agent's pass width (agentBody.ts). It grows up and
  * out from where it stands; the facade around it keeps its size. The portrait badge is not counted.
  */
-export function fitDoor(door: Inst): Inst {
+export function fitDoor(door: Door): Door {
   const [w, h, d] = door.s;
   return { ...door, s: [Math.max(w, passWidth), Math.max(h, standingClearHeight), d] };
 }
 
-/** Commerce's lobby doors: Financial District size, in the gold glass under the canopy's middle. */
-function commerceDoor(t: Tower): Inst {
+/** Commerce's lobby doors: sliding glass set flush in the lobby's clear glass, inside CommerceTower's gold portal. */
+function commerceDoor(t: Tower): Door {
   const k = commerceScale(t.size), f = commerceFront(k);
-  return { p: [t.x + f.x, FLOOR_BASE, t.z + f.wall - 0.01 * k], s: [0.7 * k, 0.36 * k, 0.025] };
+  return { p: [t.x + f.x, FLOOR_BASE, t.z + f.wall - 0.02 * k], s: [0.6 * k, 0.36 * k, 0.025], flush: true };
 }
 
 export function towerTop(t: Tower) {
