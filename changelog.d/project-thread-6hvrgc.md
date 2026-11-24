@@ -1,0 +1,1 @@
+- 2026-11-24 · The map draws about 110 fewer batches per frame (785 → about 675 of its 800 limit), so new buildings and agents fit again. Nothing on the map looks different (#PR)
