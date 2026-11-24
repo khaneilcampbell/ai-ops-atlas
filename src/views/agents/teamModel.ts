@@ -15,6 +15,8 @@ export interface TeamRole {
   lead: string;
   /** The role's other AI agents, in role order. */
   members: string[];
+  /** Skills the lead runs as separate catalog entries (Leila's Product Lab steps). Not agents of their own. */
+  steps: string[];
   aiAgents: number;
   automations: number;
   building: string | null;
@@ -38,7 +40,7 @@ export interface Team {
   roles: TeamRole[];
   needs: NeedsYou[];
   lifecycle: { active: string[]; inactive: string[]; archived: number };
-  counts: { aiAgents: number; unassigned: number; automations: number; inactive: number; archived: number };
+  counts: { aiAgents: number; steps: number; unassigned: number; automations: number; inactive: number; archived: number };
 }
 
 export function roleHealth(a: Activity): TeamRole["health"] {
@@ -50,9 +52,16 @@ export function roleHealth(a: Activity): TeamRole["health"] {
 const isDraft = (a: Pick<Agent, "status" | "trigger">) => a.status === "paused" && /\bdraft\b/i.test(a.trigger ?? "");
 const n8nLink = (a: Pick<Agent, "links">) => a.links?.find((l) => /n8n/i.test(l.label)) ?? null;
 
+/** Catalog entries that are a lead's own steps: ids that extend the role id, e.g. benjaire-product-lab-research. */
+export function stepIds(): Set<string> {
+  return new Set(ESSENTIAL_ROLES.flatMap((r) => r.agents.slice(1).filter((id) => id.startsWith(`${r.id}-`))));
+}
+
 export function buildTeam(agents: Agent[], projects: Pick<Project, "id" | "name" | "module">[], entries: ReadonlyMap<string, Entry>, now = Date.now()): Team {
   const dir = roleDirectory(agents);
   const byId = new Map(agents.map((a) => [a.id, a]));
+  const steps = stepIds();
+  const current = (id: string) => byId.has(id) && !isArchived(byId.get(id)!);
   const roles: TeamRole[] = ESSENTIAL_ROLES.map((r) => {
     const all = dir.members.get(r.id) ?? [];
     const lead = byId.get(r.id);
@@ -62,8 +71,9 @@ export function buildTeam(agents: Agent[], projects: Pick<Project, "id" | "name"
       name: r.name,
       purpose: r.purpose,
       lead: r.id,
-      members: r.agents.slice(1).filter((id) => byId.has(id) && !isArchived(byId.get(id)!)),
-      aiAgents: r.agents.filter((id) => byId.has(id) && !isArchived(byId.get(id)!)).length,
+      members: r.agents.slice(1).filter((id) => current(id) && !steps.has(id)),
+      steps: r.agents.slice(1).filter((id) => current(id) && steps.has(id)),
+      aiAgents: r.agents.filter((id) => current(id) && !steps.has(id)).length,
       automations: all.filter((id) => !isAiAgent(byId.get(id)!)).length,
       building: lead ? placement(lead, projects).building : null,
       activity,
@@ -82,7 +92,8 @@ export function buildTeam(agents: Agent[], projects: Pick<Project, "id" | "name"
   const order = { failing: 0, draft: 1, inactive: 2 };
   needs.sort((x, y) => order[x.kind] - order[y.kind]);
 
-  const ai = agents.filter(isAiAgent);
+  const ai = agents.filter((a) => isAiAgent(a) && !steps.has(a.id));
+  const stepCount = agents.filter((a) => steps.has(a.id) && !isArchived(a)).length;
   return {
     coordinator: roles[0],
     roles: roles.slice(1),
@@ -92,6 +103,6 @@ export function buildTeam(agents: Agent[], projects: Pick<Project, "id" | "name"
       inactive: ai.filter((a) => !isArchived(a) && isInactive(a)).map((a) => a.id),
       archived: dir.counts.archived,
     },
-    counts: { aiAgents: dir.counts.aiAgents, unassigned: dir.unassigned.length, automations: dir.counts.automations, inactive: dir.counts.inactive, archived: dir.counts.archived },
+    counts: { aiAgents: dir.counts.aiAgents - stepCount, steps: stepCount, unassigned: dir.unassigned.length, automations: dir.counts.automations, inactive: dir.counts.inactive, archived: dir.counts.archived },
   };
 }

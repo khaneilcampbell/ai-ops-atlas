@@ -18,8 +18,17 @@ describe("Agents > Team", () => {
   it("counts every current AI agent and automation exactly as the directory does", () => {
     const roles = [team.coordinator, ...team.roles];
     expect(roles.reduce((n, r) => n + r.automations, 0) + dir.inactive.filter((id) => !isAiAgent(catalog.agents.find((a) => a.id === id)!)).length + dir.unassigned.length).toBe(dir.counts.automations);
-    expect(team.lifecycle.active.length + team.lifecycle.inactive.length).toBe(dir.counts.aiAgents);
+    expect(team.lifecycle.active.length + team.lifecycle.inactive.length + team.counts.steps).toBe(dir.counts.aiAgents);
+    expect(team.counts.aiAgents + team.counts.steps).toBe(dir.counts.aiAgents);
     expect(team.counts.unassigned).toBe(0);
+  });
+
+  it("shows Leila's Product Lab skills as her skills, not as 5 more agents with her face", () => {
+    const lab = team.roles.find((r) => r.id === "benjaire-product-lab")!;
+    expect(lab.steps).toHaveLength(5);
+    expect(lab.aiAgents).toBe(1);
+    expect(lab.members).toEqual([]);
+    for (const id of lab.steps) expect(team.lifecycle.active).not.toContain(id);
   });
 
   it("never invents health: no runs means no verified run", () => {
