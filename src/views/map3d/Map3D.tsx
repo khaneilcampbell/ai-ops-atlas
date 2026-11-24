@@ -1,3 +1,4 @@
+import { InstancePool } from "./instancePool";
 import {StationFerrisWheel} from "./StationFerrisWheel";
 import {StationPlaza} from "./StationPlaza";
 import Commons from './Commons';
@@ -657,6 +658,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       <Canvas key={glKey} onCreated={onGlCreated} shadows="percentage" dpr={readyKey !== glKey ? 1 : phone ? [1, Math.min(1.5, maxDpr)] : [1, maxDpr]} frameloop={drawing ? "demand" : "never"} camera={{ fov: FOV, near: 0.5, far: 800 }} gl={{ antialias: true }}>
         <FirstMapFrame key={glKey} ready={() => setReadyKey(glKey)}/>
         <FramePacer profile={power} running={drawing && !props.reduced} />
+        <InstancePool>
         <World
           drawing={drawing}
           namedAgents={namedAgents}
@@ -704,6 +706,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
           cover={props.cover ?? 0}
           surface={wrapEl}
         />
+        </InstancePool>
       </Canvas>
       </MapGuard>
       <div
