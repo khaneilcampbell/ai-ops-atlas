@@ -12,7 +12,7 @@ for (const width of [1512, 390])
     mkdirSync(out, { recursive: true });
     await goTo(page, "Agents");
     await page.getByRole("tab", { name: "Roster" }).click();
-    await expect(page.locator("table.roster tbody tr[data-id]")).toHaveCount(17); // 17 agents; Leila's 5 skills sit on her row
+    await expect(page.locator("table.roster tbody tr[data-id]")).toHaveCount(19); // 19 agents (Trade Desk and Market Research joined in #518); Leila's 5 skills sit on her row
     await page.locator('table.roster tr[data-id="benjaire-inquiry-manager"]').click();
     await settle(page, 1);
     await page.screenshot({ path: `${out}/roster-${width}.png` });

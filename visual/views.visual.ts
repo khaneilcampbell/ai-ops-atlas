@@ -5,7 +5,7 @@ import { check, goTo, openAtlas, selectBuilding, settle, waitForOffice, waitForS
 
 /** Automations → Manage automations, with one automation's details open. */
 async function openManage(page: Page) {
-  await openAtlas(page, { storage: { "registry-prefs-automations": { sub: "manage" } } });
+  await openAtlas(page, { storage: { "registry-prefs-automations": { sub: "manage", board: true } } });
   await goTo(page, "Automations");
   await expect(page.getByRole("heading", { name: "Manage automations" })).toBeVisible();
   await expect(page.locator(".manage-table .status").first()).toHaveText("Enabled");

@@ -19,7 +19,7 @@ for (const width of [1512, 390])
       test.setTimeout(180_000);
       mkdirSync(out, { recursive: true });
       await page.setViewportSize({ width, height: 900 });
-      await openAtlas(page, { storage: { "registry-prefs-agents": { view: "all" }, "registry-prefs-automations": { view: "all" } } });
+      await openAtlas(page, { storage: { "registry-prefs-agents": { view: "all" }, "registry-prefs-automations": { view: "all", sub: "directory", board: true } } });
       await goTo(page, section);
       await page.locator(`.reg-row[data-id="${id}"]`).click();
       await settle(page, 1);
