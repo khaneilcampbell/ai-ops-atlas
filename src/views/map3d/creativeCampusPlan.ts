@@ -38,8 +38,9 @@ export const CAMPUS={
  ],
  /** Tilted red glass block at each wing end: length along the wing, height, lean outward (degrees). */
  endBlock:{length:2.6,h:3.5,lean:14,wide:.3},
- /** Sawtooth fins: tooth pitch along the face and depth out from the wall. */
- fin:{pitch:.34,depth:.24},
+ /** Sawtooth fins: tooth pitch along the face, depth out from the wall, and the share of each tooth
+  *  the folded white panel covers (the rest shows the storey-tall glass behind it). */
+ fin:{pitch:.34,depth:.3,blade:.74},
  /** Ground storey pulled in under the wings near the atrium (pilotis), as a share of each wing. */
  pilotis:{share:.42,inset:.32},
  /** Bridge deck: height above the ground where it crosses the shore rail, width, ramp lengths. */

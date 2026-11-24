@@ -44,6 +44,11 @@ class Builder{
   if(this.colored)g.setAttribute('color',new THREE.Float32BufferAttribute(this.col,3));
   g.computeVertexNormals();return g;
  }
+ /** An upright n-sided column (a round pillar at map scale), sides only. */
+ column(x:number,z:number,y0:number,y1:number,r:number,n=8){
+  for(let i=0;i<n;i++){const a0=i/n*Math.PI*2,a1=(i+1)/n*Math.PI*2,am=(a0+a1)/2,P=(a:number,y:number):V3=>[x+Math.cos(a)*r,y,z+Math.sin(a)*r];
+   this.quad(P(a0,y0),P(a1,y0),P(a1,y1),P(a0,y1),[Math.cos(am),0,Math.sin(am)]);}
+ }
  get triangles(){return this.pos.length/9;}
 }
 
@@ -80,25 +85,35 @@ function wing(parts:{white:Builder;inner:Builder;red:Builder},b:WingBar,base:num
  body(pil,end,base,base+C.storey,hw-.06);
  // White floor bands at every storey (they read through the fins) and the roof with its parapet.
  for(let k=1;k<C.storeys;k++)parts.white.box(mid[0],mid[1],base+k*C.storey-.03,base+k*C.storey+.03,len,b.width+.06,yaw);
- parts.white.box(mid[0],mid[1],base+H-.04,base+H+C.parapet,len,b.width+2*C.fin.depth+.04,yaw);
+ // Roof deck sunk behind a white parapet rim on both long faces, so the rim throws a thin shadow line.
+ const roofW=b.width+2*C.fin.depth+.04,rim=.08;
+ parts.white.box(mid[0],mid[1],base+H-.04,base+H+.03,len,roofW,yaw);
+ for(const side of [-1,1]){const q=along(b,s0+len/2,side*(roofW/2-rim/2));parts.white.box(q[0],q[1],base+H-.04,base+H+C.parapet,len,rim,yaw);}
+ // Rooftop plant behind a low white louvred screen, near the atrium end.
+ const pl=along(b,s0+Math.min(1.4,len*.2),0);parts.white.box(pl[0],pl[1],base+H+.03,base+H+.17,.7,.42,yaw);
  parts.white.box(mid[0],mid[1],base+C.storey-.05,base+C.storey+.02,len,b.width+2*C.fin.depth,yaw);
- // Pilotis: round-ish columns along both edges where the ground storey is pulled in.
- for(let s=s0+.5;s<pil;s+=1.1)for(const side of [-1,1]){const p=along(b,s,side*(hw-.1));parts.white.box(p[0],p[1],base,base+C.storey,.12,.12,yaw);}
+ // Lit soffit under the first floor where the ground storey is pulled in: it samples the glass map's ceiling-light row.
+ {const v=hw+C.fin.depth,y=base+C.storey-.052,q=(s:number,w:number):V3=>{const r=along(b,s,w);return [r[0],y,r[1]];},lv=C.storey*.9;
+  parts.inner.quad(q(s0,-v),q(pil,-v),q(pil,v),q(s0,v),[0,-1,0],[[s0,lv],[pil,lv],[pil,lv],[s0,lv]]);}
+ // Pilotis: round columns along both edges where the ground storey is pulled in.
+ for(let s=s0+.5;s<pil;s+=1.1)for(const side of [-1,1]){const p=along(b,s,side*(hw-.1));parts.white.column(p[0],p[1],base,base+C.storey,.06);}
  // Sawtooth fins: a zigzag skin over both long faces from the first floor to the roof.
- const n=Math.max(2,Math.round(len/C.fin.pitch)),pitch=len/n,y0=base+C.storey+.02,y1=base+H-.04;
+ // Each tooth is a folded white panel over part of its pitch; between teeth the storey-tall glass shows.
+ // Fin UVs: u runs .05 at the wall to .95 at the fold, v one per storey, so the fin map draws panel joints.
+ const n=Math.max(2,Math.round(len/C.fin.pitch)),pitch=len/n,y0=base+C.storey+.02,y1=base+H-.04,gap=pitch*(1-C.fin.blade)/2,vt=(y1-y0)/C.storey+.5;
  for(const side of [-1,1]){
   const out:V3=[-b.dir[1]*side,0,b.dir[0]*side];
   for(let i=0;i<n;i++){
-   const sa=s0+i*pitch,sm=sa+pitch/2,sb=sa+pitch;
+   const sa=s0+i*pitch+gap,sb=s0+(i+1)*pitch-gap,sm=(sa+sb)/2;
    const pa=along(b,sa,side*hw),pm=along(b,sm,side*(hw+C.fin.depth)),pb=along(b,sb,side*hw);
    // Each tooth's two faces lean toward and away from the wing's end, so the facade catches light in stripes.
    const fa:V3=[out[0]-b.dir[0]*.6,0,out[2]-b.dir[1]*.6],fb:V3=[out[0]+b.dir[0]*.6,0,out[2]+b.dir[1]*.6];
-   parts.white.quad([pa[0],y0,pa[1]],[pm[0],y0,pm[1]],[pm[0],y1,pm[1]],[pa[0],y1,pa[1]],fa,[[0,0],[1,0],[1,1],[0,1]]);
-   parts.white.quad([pm[0],y0,pm[1]],[pb[0],y0,pb[1]],[pb[0],y1,pb[1]],[pm[0],y1,pm[1]],fb,[[1,0],[0,0],[0,1],[1,1]]);
+   parts.white.quad([pa[0],y0,pa[1]],[pm[0],y0,pm[1]],[pm[0],y1,pm[1]],[pa[0],y1,pa[1]],fa,[[.05,.5],[.95,.5],[.95,vt],[.05,vt]]);
+   parts.white.quad([pm[0],y0,pm[1]],[pb[0],y0,pb[1]],[pb[0],y1,pb[1]],[pm[0],y1,pm[1]],fb,[[.95,.5],[.05,.5],[.05,vt],[.95,vt]]);
   }
  }
  // A raked red skylight on the roof, over the studios: a bright red frame round darker red glass.
- const sk=along(b,s0+len*.56,0);rib.box(sk[0],sk[1],base+H+C.parapet-.02,base+H+C.parapet+.06,len*.48+.12,.98,yaw);parts.red.box(sk[0],sk[1],base+H+C.parapet-.02,base+H+C.parapet+.1,len*.48,.86,yaw);
+ const sk=along(b,s0+len*.56,0);rib.box(sk[0],sk[1],base+H+.02,base+H+.1,len*.48+.12,.98,yaw);parts.red.box(sk[0],sk[1],base+H+.02,base+H+.14,len*.48,.86,yaw);
  if(!b.last)return;
  // The end block: dark red glass, wider than the wing, leaning outward and rising above the roof.
  const E=C.endBlock,lean=Math.tan(rad(E.lean))*E.h,ehw=hw+E.wide/2,sa=end-.08,sb=b.length;
@@ -242,7 +257,8 @@ export function campusGeometry(p:CreativeCampusPlan,base:number):CampusGeometry{
   const yc=base+A.h;parts.white.quad(P(a0,A.r-.12,yc+.1),P(a1,A.r-.12,yc+.1),P(a1,A.r+.12,yc+.1),P(a0,A.r+.12,yc+.1),[0,1,0]);
   parts.white.quad(P(a0,A.r+.12,yc-.02),P(a1,A.r+.12,yc-.02),P(a1,A.r+.12,yc+.1),P(a0,A.r+.12,yc+.1),[Math.cos(am),0,Math.sin(am)]);
   // Triangulated glass skylight on top, with red ribs every few panels.
-  atr.tri(P(a0,A.r-.1,yc+.1),[p.cx,yc+.1+A.cone,p.cz],P(a1,A.r-.1,yc+.1));
+  // Its UVs pick the drum map's clear upper glass, so the skylight reads as glass, not a wall.
+  const g:UV=[.25,C.storey*.82];atr.tri(P(a0,A.r-.1,yc+.1),[p.cx,yc+.1+A.cone,p.cz],P(a1,A.r-.1,yc+.1),g,g,g);
   if(k%6===0){const q=P(a0,A.r-.1,yc+.1);ribbon(trim,[[q[0],q[1]+.03,q[2]],[p.cx,yc+.13+A.cone,p.cz]],.07,.04);}
  }
  // Ribbons and their posts.

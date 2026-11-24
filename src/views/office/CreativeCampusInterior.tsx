@@ -25,7 +25,7 @@ import '../../styles/skyline.css';
 const shown=()=>buildingDisplayName(CAMPUS_KEY,CAMPUS_NAME);
 type Item={p:[number,number,number];s:[number,number,number];c:string;r?:number};
 const H=CI.storey,A=CI.atrium;
-const WHITE='#f4f3ef',RED='#b52a2c',MAROON='#6e2224',INK='#2b2a28',DESK='#ece9e2',OAK='#c9a77f',GREY='#5d6870';
+const WHITE='#f4f3ef',RED='#b52a2c',MAROON='#8a2629',INK='#2b2a28',DESK='#ece9e2',OAK='#c9a77f',GREY='#5d6870',GLASS='#d3e2e6',PLANT='#4f8a46',POT='#e8e4dc';
 /** Rough half-extent of the floor plate, for the camera and floor labels. */
 const EXTENT=Math.max(...CAMPUS_BARS.flatMap(b=>[Math.abs(b.b[0]),Math.abs(b.b[1])]))+4;
 
@@ -55,7 +55,9 @@ function roomBox(r:CampusRoom,items:Item[]){
 /** Furniture for one room by kind. Desks are the open studio desks: a white top, a screen and a chair. */
 function furnish(r:CampusRoom):Item[]{
  const items:Item[]=[],box=roomBox(r,items),w=r.w,d=r.d;
- const tone:Record<CampusRoom['kind'],string>={reception:'#e7e3da',cafe:'#d8c3a5',gallery:'#efece6',hall:'#8c3a32',archive:'#d2c2a4',shop:'#e2dccf',workshop:'#c8c6c0',lab:'#d9d3cf',studio:'#e6e3dc',critique:'#ddd6ca',lounge:'#e3d9c8'};
+ // Floors by use: light oak in studios, lounges and the café; polished concrete in galleries, workshops and labs
+ // (the end-block labs tinted by their red glass).
+ const tone:Record<CampusRoom['kind'],string>={reception:'#e7e3da',cafe:'#d6bd98',gallery:'#dcd9d2',hall:'#8c3a32',archive:'#cdb48e',shop:'#d8d5ce',workshop:'#bfbdb7',lab:'#e2c8c3',studio:'#d9c19d',critique:'#d4bc98',lounge:'#d9c19d'};
  if(r.kind!=='reception')box(0,0,0,w-.12,.03,d-.12,tone[r.kind]);
  for(const k of campusDesks(r)){
   // Standard desk and chair; the chair sits on the side the figure would face from.
@@ -63,7 +65,7 @@ function furnish(r:CampusRoom):Item[]{
   items.push({p:[k.x+s*.32,.37,k.z+c*.32],s:[1.3,.74,.7],c:DESK,r:k.yaw},{p:[k.x+s*.5,.95,k.z+c*.5],s:[.62,.38,.05],c:INK,r:k.yaw},{p:[k.x-s*.3,.24,k.z-c*.3],s:[.46,.48,.46],c:GREY,r:k.yaw},{p:[k.x-s*.52,.7,k.z-c*.52],s:[.46,.5,.08],c:GREY,r:k.yaw});
  }
  switch(r.kind){
-  case 'cafe':box(-w/2+.6,0,0,.9,1.05,d-1.4,RED);for(let i=0;i<3;i++){box(-w/2+2.4+i*1.6,0,0,1.1,.74,1.1,OAK);}break;
+  case 'cafe':box(-w/2+.6,0,0,.9,1.05,d-1.4,RED);box(-w/2+.6,1.05,0,1,.05,d-1.3,WHITE);for(let i=0;i<3;i++){box(-w/2+2.4+i*1.6,0,0,1.1,.74,1.1,OAK);for(const k of [-1,1])box(-w/2+2.4+i*1.6,0,k*.85,.4,.46,.4,GREY);}box(w/2-.5,0,d/2-.5,.5,.4,.5,POT);box(w/2-.5,.4,d/2-.5,.6,.7,.6,PLANT);break;
   case 'gallery':for(let i=0;i<4;i++){const u=-w/2+1+(w-2)*i/3;box(u,0,d/2-.25,1.5,2.2,.12,WHITE);box(u,.8,d/2-.33,1,1,.04,[RED,'#2f4a5a','#d9a441',MAROON][i]);}box(0,0,-.4,.9,1,.9,WHITE);box(0,1,-.4,.5,.6,.5,RED);break;
   case 'hall':box(0,0,d/2-.6,w-1,.4,1,MAROON);for(let i=0;i<4;i++)for(let j=0;j<5;j++)box(-w/2+1.2+j*(w-2.4)/4,0,-d/2+.8+i*.8,.5,.46,.5,RED);break;
   case 'archive':for(let i=0;i<4;i++)box(-w/2+1+i*(w-2)/3,0,d/2-.6,.4,2,1,OAK);box(0,0,-.8,2.4,.74,1,DESK);break;
@@ -71,6 +73,10 @@ function furnish(r:CampusRoom):Item[]{
   case 'workshop':for(let i=0;i<2;i++)box(-w/4+i*w/2,0,0,w/2-1,.9,1.6,OAK);box(0,0,d/2-.3,w-1,1.8,.3,'#9aa0a3');break;
   case 'critique':box(0,0,0,Math.min(w-2,4.4),.76,1.3,DESK);for(let k=-2;k<=2;k++)for(const s of [-1,1])box(k*.85,0,s*1,.42,.48,.42,GREY);box(0,.6,d/2-.15,w-1,1.6,.06,WHITE);break;
   case 'lounge':for(let i=0;i<3;i++){box(-w/2+1.6+i*(w-3.2)/2,0,.6,1.8,.42,.8,i%2?RED:'#b9a88d');box(-w/2+1.6+i*(w-3.2)/2,0,-.6,.8,.32,.5,OAK);}break;
+  case 'studio':{
+   // Pin-up wall on the corridor side, oak shelving at one end, a plant at the other.
+   box(0,.5,-d/2+.12,w-1.2,1.5,.06,WHITE);for(let i=0;i<5;i++)box(-w/2+1.2+i*(w-2.4)/4,1.1,-d/2+.16,.5,.6,.02,['#f2d27a','#9cc3d5',RED,'#f4f3ef','#2f4a5a'][i]);
+   box(w/2-.35,0,0,.35,1.6,d-1.6,OAK);box(-w/2+.4,0,d/2-.4,.45,.4,.45,POT);box(-w/2+.4,.4,d/2-.4,.55,.75,.55,PLANT);break;}
   case 'lab':if(!r.desks){box(0,0,0,w-2,.9,1.6,'#9aa0a3');box(0,.9,0,1.2,.5,.8,INK);}box(0,.4,d/2-.15,w-1,1.6,.05,'#1f2a36');break;
   default:break;
  }
@@ -113,15 +119,21 @@ function Floor({level,single,night,onPick,onAgent}:{level:number;single:boolean;
    const inset=level===0?CI.groundInset:0,endS=b.last?b.length-CI.endBlock:b.length;
    for(const k of [-1,1]){
     seg(start,endS,k*(hw-inset-.08),0,level===0?wallH:.55,.16,WHITE);
-    if(level>0)for(let s=start+.4;s<endS;s+=1.36){const [x,z]=barPoint(b,s,k*(hw+.35));items.push({p:[x,.5,z],s:[.7,1,.05],c:WHITE,r:yaw+k*.6});}
+    // The sawtooth fins outside the glass: each tooth's two folded faces, full height in a single-floor view.
+    const fh=single?1.5:1;
+    if(level>0)for(let s=start+.4;s<endS;s+=1.36)for(const f of [-1,1]){const [x,z]=barPoint(b,s+f*.3,k*(hw+.3));items.push({p:[x,fh/2,z],s:[.66,fh,.05],c:WHITE,r:yaw+k*f*.75});}
    }
    // The leaning red end block: maroon glass walls round the lab, lower in the all-floors view.
-   if(b.last){for(const k of [-1,1])seg(endS,b.length,k*(hw+.2),0,wallH,.12,MAROON);cross(b.length,-hw-.2,hw+.2,wallH,.12,MAROON);cross(endS,-hw,hw,wallH,.08,'#c98f8a');}
+   if(b.last){for(const k of [-1,1])seg(endS,b.length,k*(hw+.2),0,wallH,.12,MAROON);cross(b.length,-hw-.2,hw+.2,wallH,.12,MAROON);cross(endS,-hw,hw,wallH,.08,'#c98f8a');
+    // White mullions on the red glass, as outside.
+    for(let s=endS+1.1;s<b.length-.3;s+=2.2)for(const k of [-1,1]){const [x,z]=barPoint(b,s,k*(hw+.27));items.push({p:[x,wallH/2,z],s:[.08,wallH,.08],c:'#efe6e2',r:yaw});}}
    if(level===0)continue;
    // Corridor: glass wall between it and the rooms, with a door into each room.
    const cv=-hw+CI.corridor;
    for(const r of rooms.filter(r=>r.wing===b.wing&&r.bar===b.index)){
-    const m=(r.s0+r.s1)/2;seg(r.s0+.1,m-.6,cv,0,wallH,.06,'#c9d6da');seg(m+.6,r.s1-.1,cv,0,wallH,.06,'#c9d6da');
+    const m=(r.s0+r.s1)/2;seg(r.s0+.1,m-.6,cv,0,wallH,.06,GLASS);seg(m+.6,r.s1-.1,cv,0,wallH,.06,GLASS);
+    // White door frame: posts either side and a head when the walls are full height.
+    for(const e of [m-.62,m+.62])seg(e-.04,e+.04,cv,0,wallH,.1,WHITE);if(single)seg(m-.66,m+.66,cv,wallH-.14,.14,.1,WHITE);
     cross(r.s1,cv,hw,wallH,.14,WHITE);
    }
    // Pin-up board along the corridor's outer wall, and the corridor's red floor stripe.
@@ -131,8 +143,11 @@ function Floor({level,single,night,onPick,onAgent}:{level:number;single:boolean;
   if(level>0){
    const gaps=[flightAngle(level-1),flightAngle(level)+Math.PI].map(a=>Math.atan2(Math.sin(a),Math.cos(a)));
    const near=(t:number)=>gaps.some(g=>Math.abs(Math.atan2(Math.sin(t-g),Math.cos(t-g)))<.2);
-   for(let k=0;k<48;k++){const t=k/48*Math.PI*2;if(near(t))continue;const x=Math.cos(t)*(A.r+.06),z=Math.sin(t)*(A.r+.06);
-    items.push({p:[x,.55,z],s:[.92,1.1,.05],c:'#e8e5df',r:-t-Math.PI/2},{p:[x,.88,z],s:[.92,.36,.1],c:RED,r:-t-Math.PI/2});}
+   // Gallery edge as in the reference: the red band on the slab edge, glass balustrade above, a white handrail.
+   for(let k=0;k<48;k++){const t=k/48*Math.PI*2;if(near(t))continue;const x=Math.cos(t)*(A.r+.06),z=Math.sin(t)*(A.r+.06),r=-t-Math.PI/2;
+    items.push({p:[x,-.12,z],s:[.92,.46,.12],c:RED,r},{p:[x,.56,z],s:[.92,.9,.03],c:GLASS,r},{p:[x,1.04,z],s:[.92,.06,.1],c:WHITE,r});}
+   // White columns round the gallery, clear of the flights.
+   for(let k=0;k<8;k++){const t=(k+.5)/8*Math.PI*2;if(near(t))continue;items.push({p:[Math.cos(t)*(A.r+.7),single?(H-.4)/2:.6,Math.sin(t)*(A.r+.7)],s:[.34,single?H-.4:1.2,.34],c:WHITE,r:-t});}
   }else{
    // Reception: a round white desk in the atrium, a red inlay ring and the plaza doors.
    for(let k=0;k<30;k++){const t=k/30*Math.PI*2;if(Math.abs(Math.atan2(Math.sin(t-ENTRANCE_ANGLE),Math.cos(t-ENTRANCE_ANGLE)))<.45)continue;items.push({p:[Math.cos(t)*2.2,.55,Math.sin(t)*2.2],s:[.32,1.1,.5],c:WHITE,r:-t},{p:[Math.cos(t)*2.2,1.12,Math.sin(t)*2.2],s:[.34,.05,.62],c:RED,r:-t});}
@@ -151,7 +166,9 @@ function Floor({level,single,night,onPick,onAgent}:{level:number;single:boolean;
   const out:Item[]=[],add=(lv:number,dy:number)=>{const a=flightAngle(lv),px=-Math.sin(a),pz=Math.cos(a);
    for(const st of campusFlight(lv)){out.push({p:[st.x,st.y-dy-.08,st.z],s:[1.1,.16,CI.stair.width],c:WHITE,r:st.yaw});
     // Red stringer bands either side, the reference's red stair ribbons.
-    for(const k of [-1,1])out.push({p:[st.x+px*k*CI.stair.width/2,st.y-dy-.2,st.z+pz*k*CI.stair.width/2],s:[1.16,.42,.12],c:RED,r:st.yaw});}};
+    for(const k of [-1,1]){const x=st.x+px*k*CI.stair.width/2,z=st.z+pz*k*CI.stair.width/2;out.push({p:[x,st.y-dy-.2,z],s:[1.16,.42,.12],c:RED,r:st.yaw},
+     // Glass balustrade and a white handrail along each side.
+     {p:[x,st.y-dy+.45,z],s:[1.12,.85,.03],c:GLASS,r:st.yaw},{p:[x,st.y-dy+.9,z],s:[1.14,.05,.08],c:WHITE,r:st.yaw});}}};
   if(level<CI.levels-1)add(level,level*H);
   if(single&&level>0)add(level-1,level*H);
   return out;
@@ -193,6 +210,8 @@ export default function CreativeCampusInterior({light}:{light:LightMode}){
    <ambientLight color={isNight?'#c1cfed':'#ffffff'} intensity={isNight?.3:.75}/>
    <hemisphereLight args={[isNight?'#91abdc':'#eef6ff',isNight?'#303e35':'#8c7e64',isNight?.45:1.25]}/>
    <directionalLight color={isNight?'#99b8ed':'#fff4da'} position={[20,40,26]} intensity={isNight?.35:1.9} castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-45} shadow-camera-right={45} shadow-camera-top={45} shadow-camera-bottom={-45}/>
+   {/* Daylight through the atrium skylight: one shared light for the whole building. */}
+   <spotLight position={[0,CI.levels*H+8,0]} angle={.42} penumbra={.8} color={isNight?'#ffd9a8':'#fff6e2'} intensity={isNight?60:260} distance={60} decay={1.6}/>
    <Camera all={all}/>
    <CityOutside allFloors={all} building={CAMPUS_NAME} span={EXTENT*2} clearSpan={16} elevation={floor>0?floor*H:0} anchorAt={s=>s.campus&&{x:s.campus.cx,z:s.campus.cz}} scaleOverride={()=>CI.scale}
     extras={({scene,g,m})=><CreativeCampus plan={scene.campus} g={g} m={m} pick={pick} night={isNight} building={false}/>}/>
