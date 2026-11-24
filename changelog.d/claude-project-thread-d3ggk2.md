@@ -1,1 +1,1 @@
-- 2026-11-24 · Agent alerts no longer go stale after the app restarts: Atlas now loads the last three days of agent check-ins, and monthly agents aren't flagged after a week (#PR)
+- 2026-11-24 · Agent alerts no longer go stale after the app restarts: Atlas now loads the last three days of agent check-ins, and monthly agents aren't flagged after a week (#529)
