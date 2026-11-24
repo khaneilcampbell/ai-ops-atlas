@@ -117,3 +117,8 @@ buildings:
     former_names: [Birch Lane Station, Financial District Station]
   # Nov 24: filler buildings are named after the core building or place they are grouped with (workspace.yaml merged),
   # so the map reads by group: "Security & Infrastructure Showroom", "Product & Growth Arcade", "Atlas Airport Terminal".
+  # Nov 24: Khaneil's new creative studios building on its own island west of the airport. Its
+  # desks are empty for now (Khaneil's choice), so it carries no module yet.
+  "service:creative-campus":
+    display_name: Atlas Creative Campus
+    organization: Atlas

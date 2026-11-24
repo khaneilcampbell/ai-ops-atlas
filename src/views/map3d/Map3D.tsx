@@ -35,6 +35,8 @@ import {Stadium,STADIUM_KEY} from "./Stadium";
 import {STADIUM_NAME} from "./stadiumPlan";
 import {stadiumCrown} from "./stadiumGeometry";
 import {MarketingAgency} from "./MarketingAgency";
+import {CreativeCampus} from "./CreativeCampus";
+import {CAMPUS,CAMPUS_KEY,CAMPUS_NAME,campusRoof} from "./creativeCampusPlan";
 import {AGENCY,AGENCY_KEY,AGENCY_NAME} from "./marketingAgencyPlan";
 import {currentBuildingName} from "../../modules/names";
 import {Mall} from "./Mall";
@@ -233,6 +235,7 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
   // The gold jet moves round the loop; selecting it frames its gate, where it boards (goldJetPlan).
   if(scene.airport)m.set(GOLD_JET_KEY,{x:airportPoint(scene.airport,GOLD_JET_GATE.x+.3,GOLD_JET_GATE.z)[0],z:scene.airport.z+GOLD_JET_GATE.z,y0:TERRACE_H,y1:TERRACE_H+1.2,w:3.6,d:3.8});
   if(scene.agency)m.set(AGENCY_KEY,{x:scene.agency.cx,z:scene.agency.cz,y0:TERRACE_H,y1:TERRACE_H+AGENCY.eastHigh,w:scene.agency.w,d:scene.agency.d});
+  if(scene.campus){const f=scene.campus.footprint;m.set(CAMPUS_KEY,{x:f.x+f.w/2,z:f.z+f.d/2,y0:TERRACE_H,y1:TERRACE_H+CAMPUS.endBlock.h,w:f.w,d:f.d});}
   if(scene.mall)m.set(MALL_KEY,{x:scene.mall.cx,z:scene.mall.cz,y0:TERRACE_H,y1:TERRACE_H+MALL.levels*MALL.floor+.4,w:scene.mall.rx*2,d:scene.mall.rz*2});
   if(scene.plaza)m.set(PLAZA_KEY,{x:scene.plaza.cx,z:scene.plaza.cz,y0:TERRACE_H,y1:TERRACE_H+PLAZA.rise+PLAZA.enclosureHeight+PLAZA.crownRise,w:PLAZA.stepsOuter*2,d:PLAZA.stepsOuter*2});
   if(scene.commons){const r=scene.commons.rect;m.set(COMMONS_KEY,{x:r.x+r.w/2,z:r.z+r.d/2,y0:TERRACE_H,y1:TERRACE_H+1.3,w:r.w,d:r.d});}
@@ -507,6 +510,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.communityRail?.loop)for(const stop of scene.communityRail.loop.stops)if(near==="near"||selKey===stop.id||stop.id===ATLAS_STATION_KEY){const [x,z]=stop.point;plaque({id:stop.id,select:stop.id,name:stop.name,x,roof:TERRACE_H+COMMUNITY.platformRise+1.2,z,priority:8,mark:PLANNED,title:`${stop.name} · ${currentBuildingName(stop.district)} · Visual simulation`});}
     if(scene.dealership)plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"Vantor Motors",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:2,mark:PLANNED,title:"Vantor Motors · Planned visual district"});
     if(scene.agency)plaque({id:AGENCY_KEY,select:AGENCY_KEY,name:AGENCY_NAME,x:scene.agency.cx,roof:TERRACE_H+AGENCY.eastHigh+.25,z:scene.agency.cz,priority:1.2,mark:PLANNED,title:`${AGENCY_NAME} · Planned`});
+    if(scene.campus)plaque({id:CAMPUS_KEY,select:CAMPUS_KEY,name:CAMPUS_NAME,x:scene.campus.cx,roof:TERRACE_H+campusRoof()+CAMPUS.atrium.cone+.6,z:scene.campus.cz,priority:1.2,mark:PLANNED,title:`${CAMPUS_NAME} · Planned`});
     if(scene.mall)plaque({id:MALL_KEY,select:MALL_KEY,name:"Atlas Marketplace",x:scene.mall.cx,roof:TERRACE_H+MALL.levels*MALL.floor+.4,z:scene.mall.cz,priority:1.2,mark:PLANNED,title:"Atlas Marketplace · Planned"});
     if(scene.plaza){const v=props.plaza?.view;plaque({id:PLAZA_KEY,select:PLAZA_KEY,name:PLAZA_NAME,x:scene.plaza.cx,roof:TERRACE_H+PLAZA.rise+PLAZA.enclosureHeight+PLAZA.crownRise+.15,z:scene.plaza.cz,priority:1.3,mark:plazaMark(v),title:`${PLAZA_NAME} · ${v?.sign.status??'Status unavailable'}`});}
     if(scene.commons){const r=scene.commons.rect;plaque({id:COMMONS_KEY,select:COMMONS_KEY,name:COMMONS_NAME,x:r.x+r.w/2,roof:TERRACE_H+1.4,z:r.z+r.d/2,priority:1.3,mark:PLANNED,title:"Atlas Commons · Planned public park"});}
@@ -1059,7 +1063,8 @@ function World({
     // Fit actual ground and building envelopes, not empty elevated corners of a bounding box.
     const corners = scene.land.flatMap(r=>[r.x,r.x+r.w].flatMap(x=>[r.z,r.z+r.d].map(z=>new THREE.Vector3(x,WATER_Y,z))));
     for(const [x,z]of [...(scene.freight?.highway??[]),...(scene.communityRail?.loop?.route??[])])corners.push(new THREE.Vector3(x,TERRACE_H+.5,z));
-    for(const a of anchors.values())for(const x of [a.x-a.w/2,a.x+a.w/2])for(const z of [a.z-a.d/2,a.z+a.d/2])corners.push(new THREE.Vector3(x,a.y1+.3,z));
+    // The Creative Campus island stands off the west shore; the home view keeps framing the city's island.
+    for(const [key,a] of anchors)if(key!==CAMPUS_KEY)for(const x of [a.x-a.w/2,a.x+a.w/2])for(const z of [a.z-a.d/2,a.z+a.d/2])corners.push(new THREE.Vector3(x,a.y1+.3,z));
     const cam = (camera as THREE.PerspectiveCamera).clone();
     cam.aspect = size.width / Math.max(1, size.height);
     cam.updateProjectionMatrix();
@@ -1506,6 +1511,7 @@ function World({
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}
       {detailsReady && <MarketingAgency night={lightMode==="night"} plan={scene.agency} g={g} m={m} pick={kioskPick.of([AGENCY_KEY])}/>}
+      {detailsReady && <CreativeCampus night={lightMode==="night"} plan={scene.campus} g={g} m={m} pick={kioskPick.of([CAMPUS_KEY])}/>}
       {detailsReady && harbourPlan && <TransitGateway plan={harbourPlan.gateway} g={g} m={m} pick={kioskPick} night={lightMode==="night"}/>}
       {detailsReady && <AtlasYacht berth={berth} marina={marina} travel={travel} night={lightMode==="night"} g={g} m={m} pick={kioskPick.of([YACHT_KEY])} moving={!reduced&&traffic&&(office.phase===null||ridingYacht)} exclusion={scene.pedestrianExclusion}/>}
       {detailsReady && ridingYacht && <Suspense fallback={null}><YachtRide night={lightMode==="night"} controls={controls} city={{ x: center.x, z: center.z }} /></Suspense>}

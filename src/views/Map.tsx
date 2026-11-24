@@ -68,6 +68,7 @@ const cityModule = import("./map3d/Map3D");
 const Map3D = lazy(() => cityModule);
 // The virtual office loads only when a building is entered.
 import { AGENCY_OFFICE_ID } from "./office/agencyInteriorPlan";
+import { CAMPUS_OFFICE_ID } from "./office/campusInteriorPlan";
 import { STADIUM_OFFICE_ID } from "./map3d/stadiumPlan";
 import { YACHT_OFFICE_ID } from "./map3d/yachtPlan";
 import { GOLD_JET_OFFICE_ID } from "./map3d/goldJetIds";
@@ -77,6 +78,7 @@ import "../styles/library.css";
 const OutputLibrary = lazy(() => import("./library/OutputLibrary").then((m) => ({ default: m.OutputLibrary })));
 const SkylineInterior = lazy(() => import("./office/SkylineInterior"));
 const AgencyInterior = lazy(() => import("./office/AgencyInterior"));
+const CreativeCampusInterior = lazy(() => import("./office/CreativeCampusInterior"));
 const OfficeLayer = lazy(() => import("./office/OfficeLayer"));
 const MallInterior = lazy(() => import("./office/MallInterior"));
 const GalleriaInterior = lazy(() => import("./office/GalleriaInterior"));
@@ -1072,7 +1074,7 @@ export function MapView({active=true}:{active?:boolean}) {
     <div className={`map-wrap ${!office.projectId&&(selection || pickedLink) ? "inspecting" : ""}`}>
       {active && office.projectId && (
         <Suspense fallback={null}>
-          {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : office.projectId === "atlas-galleria" ? <GalleriaInterior light={light} /> : office.projectId === AGENCY_OFFICE_ID ? <AgencyInterior light={light} key={office.projectId} /> : office.projectId === STADIUM_OFFICE_ID ? <StadiumInterior light={light} key={office.projectId} /> : office.projectId === YACHT_OFFICE_ID ? <YachtInterior light={light} key={office.projectId} /> : office.projectId === GOLD_JET_OFFICE_ID ? <GoldJetInterior light={light} key={office.projectId} /> : office.projectId.startsWith("skyline-business:") ? <SkylineInterior maxFloor={interiorFloors(office.projectId)} light={light} key={office.projectId} building={office.projectId.slice(17)} /> : <OfficeLayer light={light} />}
+          {office.projectId === "atlas-marketplace" ? <MallInterior light={light} /> : office.projectId === "atlas-galleria" ? <GalleriaInterior light={light} /> : office.projectId === AGENCY_OFFICE_ID ? <AgencyInterior light={light} key={office.projectId} /> : office.projectId === CAMPUS_OFFICE_ID ? <CreativeCampusInterior light={light} key={office.projectId} /> : office.projectId === STADIUM_OFFICE_ID ? <StadiumInterior light={light} key={office.projectId} /> : office.projectId === YACHT_OFFICE_ID ? <YachtInterior light={light} key={office.projectId} /> : office.projectId === GOLD_JET_OFFICE_ID ? <GoldJetInterior light={light} key={office.projectId} /> : office.projectId.startsWith("skyline-business:") ? <SkylineInterior maxFloor={interiorFloors(office.projectId)} light={light} key={office.projectId} building={office.projectId.slice(17)} /> : <OfficeLayer light={light} />}
         </Suspense>
       )}
       <div className="map-col">
