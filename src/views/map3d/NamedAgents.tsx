@@ -24,6 +24,7 @@ import { selectCityAgent, useCityAgents } from "./cityAgentsStore";
 import { namedAgentAt, type NamedAgent, type NamedAgentPlan } from "./namedAgentPlan";
 import { routineEnv, type CityPlaces, type CityRoutes } from "./routinePlaces";
 import { routinePose } from "./routinePose";
+import { cafeVisits } from "./cafeVisits";
 import { hideGait, newGait, stepGait, type Gait } from "./walkerFigure";
 import { yachtLivePose } from "./yachtRidePlan";
 import { wake } from "../../lib/power";
@@ -225,6 +226,10 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
   }, [ids, envs, ops.ops, ops.now, held, freeTime, reporting, reportPlace]);
   const routinesRef = useRef(routines);
   routinesRef.current = routines;
+  // Café seats and counter places, shared out across everyone's visits so no two agents take one chair.
+  const cafe = useMemo(() => (places?.cafe ? cafeVisits(routines, places.cafe) : undefined), [routines, places]);
+  const cafeRef = useRef(cafe);
+  cafeRef.current = cafe;
   useEffect(() => publishRoutines(routines), [routines]);
   const openRef = useRef(insideOpen);
   openRef.current = insideOpen;
@@ -303,7 +308,7 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
       const rt = routineOverride.get(id) ?? routinesRef.current.get(id);
       const seg = rt ? segmentAt(rt, wall) : null;
       L.segs[i] = seg;
-      let pose = seg && places && routes ? routinePose(seg, { routes, places, personaId: id, slot: i, open: openRef.current, wall, yacht, scale: cityScale, roofMarker: roofMarked?.(id) ?? false }) : null;
+      let pose = seg && places && routes ? routinePose(seg, { routes, places, personaId: id, slot: i, open: openRef.current, wall, yacht, scale: cityScale, roofMarker: roofMarked?.(id) ?? false, cafe: cafeRef.current }) : null;
       if (!rt) {
         // No routine (no city places for this layout): stand at the workplace as before.
         const s = namedAgentAt(a, L.t, new Date(wall));

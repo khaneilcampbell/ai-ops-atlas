@@ -502,6 +502,10 @@ export function MapView({active=true}:{active?:boolean}) {
       saveInside(true);
       if (d?.towerKey && d.floor !== undefined) pickFloor(d.towerKey, d.floor);
       if (d?.projectId) select({ kind: "project", id: d.projectId });
+      if (d?.service) {
+        select({ kind: "service", id: d.service.replace(/^service:/, "") });
+        window.setTimeout(() => map3d.current?.zoom(1.25 ** 2), 700);
+      }
       // "Locate agent": once the building is framed, move in close and keep the agent in view.
       if (d?.personaId)
         window.setTimeout(() => {

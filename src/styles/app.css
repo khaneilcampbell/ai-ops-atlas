@@ -1026,6 +1026,7 @@ button.chip-link { cursor: pointer; font: inherit; font-size: 11.5px; }
 
 /* A building's people (BuildingInside.tsx): floors, agents and Inside actions. */
 .building-inside-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.cafe-visitor-actions { display: flex; flex-wrap: wrap; gap: 14px; }
 .building-floors { display: inline-flex; gap: 4px; flex-wrap: wrap; }
 .building-floors button { border: 1px solid var(--line, #d9d4c7); background: transparent; border-radius: 999px; padding: 4px 10px; font-size: 12px; color: inherit; }
 .building-floors button[aria-pressed="true"] { background: var(--gold-deep, #8a6a2f); border-color: var(--gold-deep, #8a6a2f); color: #fff; }
