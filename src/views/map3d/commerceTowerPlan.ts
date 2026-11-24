@@ -76,7 +76,7 @@ export const COMMERCE={
   * outline; `edge` is how far inside the plinth's rim everything stops (negative: the grounds run
   * a little past it onto the level district plaza, which is wider than the plinth).
   */
- site:{forecourt:.16,lane:.15,laneSpan:20,ramp:[13,6] as [number,number],grid:.2,treeEvery:2,edge:-.07},
+ site:{forecourt:.16,lane:.15,laneSpan:20,ramp:[13,6] as [number,number],grid:.2,treeEvery:2,edge:0},
  lobby:{core:-.16,desk:[.42,.075,.09] as [number,number,number],deskBack:.42,columnEvery:4,columnInset:.13,column:.022,soffit:.035},
 } as const;
 

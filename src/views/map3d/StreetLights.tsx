@@ -7,7 +7,7 @@ import {Instanced,type Inst,type useGeometries,type useMaterials} from './models
 export function StreetLights({scene,g,m,night}:{scene:Scene3D;g:ReturnType<typeof useGeometries>;m:ReturnType<typeof useMaterials>;night:boolean}){
  // The pool fades out from under the lamp instead of ending in a hard edge, so on a dark street it reads
  // as light, not as a grey oval painted on the road (Khaneil, 2026-11-09). The cylinder's top cap maps its UVs radially.
- const glow=useMemo(()=>new THREE.MeshBasicMaterial({color:"#ffd18a",transparent:true,opacity:.2,alphaMap:poolFalloff(),depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}),[]);
+ const glow=useMemo(()=>new THREE.MeshBasicMaterial({color:"#ffd18a",transparent:true,opacity:.34,alphaMap:poolFalloff(),depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}),[]);
  useEffect(()=>()=>{glow.alphaMap?.dispose();glow.dispose();},[glow]);
  const parts=useMemo(()=>{const poles:Inst[]=[],heads:Inst[]=[],pools:Inst[]=[];for(const p of planStreetLights(scene)){
  if(p.highway)poles.push({p:[(p.x+p.roadX)/2,TERRACE_H-.08,(p.z+p.roadZ)/2],s:[.16,.12,Math.hypot(p.x-p.roadX,p.z-p.roadZ)+.12],r:p.yaw,c:'#7d8c81'});

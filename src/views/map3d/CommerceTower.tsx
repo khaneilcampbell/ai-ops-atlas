@@ -101,8 +101,8 @@ export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
   };
  },[gl]);
  useEffect(()=>{
-  mats.glass.emissiveIntensity=night?.7:0;mats.gold.emissiveIntensity=night?1.15:0;
-  mats.canopy.emissiveIntensity=night?.55:0;mats.interior.emissiveIntensity=night?.5:0;mats.pool.emissiveIntensity=night?.65:0;
+  mats.glass.emissiveIntensity=night?.32:0;mats.gold.emissiveIntensity=night?1.6:0;
+  mats.canopy.emissiveIntensity=night?.55:0;mats.interior.emissiveIntensity=night?.8:0;mats.pool.emissiveIntensity=night?.65:0;
   // The reflected sky is a daytime one: after dark it dims, so the lit windows read.
   mats.glass.envMapIntensity=night?.12:.65;mats.gold.envMapIntensity=night?.1:.45;mats.fin.envMapIntensity=night?.15:.6;
  },[mats,night]);

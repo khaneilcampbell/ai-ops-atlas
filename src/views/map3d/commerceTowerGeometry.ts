@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import {mergeGeometries,mergeVertices} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import type {Pt} from './roads';
+import {ROAD_W,type Pt} from './roads';
+import {SIDEWALK} from './streetPavement';
+import {COMMERCE_FLOOR,COMMERCE_GROW,commerceRingHalf} from './commerceTowerPlan';
 import {compact,fins,lid,skin as skin2} from './atlasHqGeometry';
 import type {Pt3} from './atlasHqPlan';
 import {annulus,slab} from './ribbonTowerGeometry';
@@ -221,6 +223,10 @@ function siteGround(k:number){
  for(const l of siteLawns(k)){const m=pos.length,hs=l.s/2;
   quad(pos,[l.x-hs,y,l.z-hs],[l.x-hs,y,l.z+hs],[l.x+hs,y,l.z+hs],[l.x+hs,y,l.z-hs]);
   const c=new THREE.Color(l.tree?'#7f9f62':'#8aa96c');for(let v=m;v<pos.length;v+=3)col.push(c.r,c.g,c.b);}
+ // A zebra from the lobby doors across the drop-off loop's front side (the street ring, streetGraph
+ // plazaLanes), in the city's crossing paint and at its marking height (world TERRACE_H+.061).
+ {const fx=commerceFront(k).x,lane=commerceRingHalf(k*COMMERCE.refSize/COMMERCE_GROW),zy=.061-COMMERCE_FLOOR,hw=.0325,hl=ROAD_W*.4,c=new THREE.Color(SIDEWALK.zebra);
+  for(let s=-3;s<=3;s++){const x=fx+s*.13,m=pos.length;quad(pos,[x-hw,zy,lane-hl],[x-hw,zy,lane+hl],[x+hw,zy,lane+hl],[x+hw,zy,lane-hl]);for(let v=m;v<pos.length;v+=3)col.push(c.r,c.g,c.b);}}
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.computeVertexNormals();return g;
 }
 

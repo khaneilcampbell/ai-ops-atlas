@@ -27,7 +27,9 @@ const c = (hex: string) => new THREE.Color(hex);
 // Day is late afternoon, about an hour before golden hour (Khaneil's city artwork, 2026-11-17):
 // a warm low sun, a soft warm haze and a slightly cooler sky fill, so shadows stay readable.
 const DAY = { bg: c("#dde2d3"), sky: c("#f6f1e2"), ground: c("#5f7a47"), hemi: 1.15, amb: c("#fff4e2"), ambI: 0.2, sun: c("#ffdcaa"), sunI: 2.85 };
-const NIGHT = { bg: c("#0f1a2e"), sky: c("#8ea2d6"), ground: c("#24323f"), hemi: 0.52, amb: c("#6f86c0"), ambI: 0.16, sun: c("#a9bcff"), sunI: 0.45 };
+// Night after a realism pass (Khaneil, 2026-11-24, from a relit reference of the map): far less blue
+// fill, so facades fall to charcoal and the lit windows, lamps and the gold ribbon carry the scene.
+const NIGHT = { bg: c("#0a1120"), sky: c("#5e6f97"), ground: c("#131a1c"), hemi: 0.3, amb: c("#53668f"), ambI: 0.08, sun: c("#a9bcff"), sunI: 0.22 };
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 
 /**
@@ -72,7 +74,7 @@ export function Sky({ mode, reduced, m, sun, fog }: { mode: LightMode; reduced: 
     sun.current.color.lerpColors(DAY.sun, NIGHT.sun, k);
     sun.current.intensity = lerp(DAY.sunI, NIGHT.sunI, k);
     // A cool moonlight from the side, so the faces of each building read apart at night.
-    moon.current.intensity = k * 0.5;
+    moon.current.intensity = k * 0.6;
     moon.current.visible = k > 0.01;
     m.glass.emissiveIntensity = lerp(0.35, 1.7, k);
     m.lamp.emissiveIntensity = lerp(0.8, 3.4, k);
