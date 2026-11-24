@@ -75,7 +75,7 @@ export function Team({ agents, projects, entries, statuses, verified, open, open
                 <article key={r.id} className="card team-role" data-role={r.id}>
                   <div className="team-role-head"><span className="eyebrow">{r.name}</span>{health(r)}</div>
                   {lead(r, 48)}
-                  <div className="team-members">{r.members.length ? r.members.map((id) => avatar(id, 28)) : <span className="muted small">Leads alone</span>}</div>
+                  <div className="team-members">{r.members.length ? r.members.map((id) => avatar(id, 28)) : <span className="muted small">{r.skills.length ? `${r.skills.length} skills: ${r.skills.join(", ")}` : "Leads alone"}</span>}</div>
                   <div className="muted small">{count(r)}</div>
                   <p className="muted small team-purpose">{r.purpose}</p>
                 </article>

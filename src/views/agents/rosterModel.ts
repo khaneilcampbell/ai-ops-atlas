@@ -1,4 +1,4 @@
-import { ESSENTIAL_ROLES, isArchived, isInactive, roleOf } from "../../catalog/essentialRoles";
+import { ESSENTIAL_ROLES, isArchived, isInactive, roleOf, SKILL_OF } from "../../catalog/essentialRoles";
 import { ownership } from "../../catalog/ownership";
 import { isAiAgent } from "../../catalog/roles";
 import type { Agent } from "../../catalog/types";
@@ -36,7 +36,7 @@ const isPaused = (a: Pick<Agent, "status" | "trigger">) => a.status === "paused"
 export function buildRoster(agents: Agent[], entries: ReadonlyMap<string, RegistryEntry>): RosterRow[] {
   const roles = roleOf(agents);
   const roleName = new Map(ESSENTIAL_ROLES.map((r) => [r.id, r.name]));
-  const parentOf = new Map(ESSENTIAL_ROLES.flatMap((r) => r.agents.slice(1).filter((id) => id.startsWith(`${r.id}-`)).map((id) => [id, r.id] as const)));
+  const parentOf = SKILL_OF;
   const owned = ownership({ agents }).owned;
   const current = agents.filter((a) => isAiAgent(a) && !isArchived(a));
   const ids = new Set(current.map((a) => a.id));

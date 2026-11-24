@@ -18,7 +18,7 @@ import { Team } from "./agents/Team";
 import { Roster, type RosterPrefs } from "./agents/Roster";
 import { RegistryRefresh } from "./agents/RegistryRefresh";
 import { Roles, type RoleView } from "./agents/Roles";
-import { roleDirectory } from "../catalog/essentialRoles";
+import { roleDirectory, SKILL_OF } from "../catalog/essentialRoles";
 import "../styles/registry.css";
 import { AgentIdentityLine } from "../components/AgentIdentity";
 import { identityFor } from "../registry/identity";
@@ -83,6 +83,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
   const statuses = useMemo(() => agentStatuses(allCatalog.agents, new Map(allEntries.map((e) => [e.profile.id, e.telemetry]))), [allCatalog, allEntries]);
   const orphanIds = useMemo(() => new Set(owns.orphans.map((a) => a.id)), [owns]);
   const summary = useMemo(() => summarize(entries), [entries]);
+  const skillCount = useMemo(() => entries.filter((e) => SKILL_OF.has(e.profile.id)).length, [entries]);
   const rows = useMemo(
     () => sortEntries(filterEntries(entries, { query: filters.query, project: filters.project, category: prefs.category, classification: prefs.classification, operational: prefs.operational, runtime: prefs.runtime }), prefs.sort),
     [entries, filters.query, filters.project, prefs],
@@ -119,7 +120,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
           <div className="eyebrow">{title} registry{prefs.sub === "manage" ? "" : " · read-only"}</div>
           <h1>{title}</h1>
           <p className="lede">
-            {summary.total} {kind === "automations" ? "automations, AI-assisted workflows, pipelines, and integrations" : "AI agents and planned agents"} supporting your projects. {summary.operational.verified} verified running from live data.
+            {kind === "automations" ? `${summary.total} automations, AI-assisted workflows, pipelines, and integrations` : `${summary.total - skillCount} AI agents and planned agents${skillCount ? ` (plus ${skillCount} skills that run inside them)` : ""}`} supporting your projects. {summary.operational.verified} verified running from live data.
           </p>
           {kind === "automations" && owns.orphans.length > 0 && (
             <p className="orphan-note" role="note">

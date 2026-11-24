@@ -10,7 +10,8 @@ const rows = buildRoster(catalog.agents, entries);
 describe("Agents > Roster", () => {
   it("has one row per current AI agent, with skills folded into the agent that runs them", () => {
     const skills = rows.reduce((n, r) => n + r.skills.length, 0);
-    expect(rows.length + skills).toBe(roleDirectory(catalog.agents).counts.aiAgents);
+    expect(rows.length).toBe(roleDirectory(catalog.agents).counts.aiAgents);
+    expect(skills).toBe(roleDirectory(catalog.agents).counts.skills);
     expect(new Set(rows.map((r) => r.id)).size).toBe(rows.length);
   });
 

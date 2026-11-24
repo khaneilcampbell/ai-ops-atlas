@@ -22,6 +22,13 @@ describe("Agents > Team", () => {
     expect(team.counts.unassigned).toBe(0);
   });
 
+  it("draws Leila Haddad as one agent with five skills, not six agents", () => {
+    const lab = team.roles.find((r) => r.id === "benjaire-product-lab")!;
+    expect(lab.aiAgents).toBe(1);
+    expect(lab.members).toEqual([]);
+    expect(lab.skills).toHaveLength(5);
+  });
+
   it("never invents health: no runs means no verified run", () => {
     for (const r of [team.coordinator, ...team.roles]) expect(r.health.label).toBe("No verified run");
     expect(roleHealth({ verified: 2, failing: 1, unknown: 0, stale: 0, noEvidence: 0 })).toEqual({ tone: "bad", label: "1 failing" });

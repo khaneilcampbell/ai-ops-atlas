@@ -1,4 +1,4 @@
-import { ESSENTIAL_ROLES, isArchived, isInactive, placement, roleActivity, roleDirectory, type Activity } from "../../catalog/essentialRoles";
+import { ESSENTIAL_ROLES, isArchived, isInactive, placement, roleActivity, roleDirectory, isSkill, type Activity } from "../../catalog/essentialRoles";
 import { isAiAgent } from "../../catalog/roles";
 import type { Agent, Project } from "../../catalog/types";
 import type { Operational } from "../../registry/types";
@@ -15,6 +15,8 @@ export interface TeamRole {
   lead: string;
   /** The role's other AI agents, in role order. */
   members: string[];
+  /** Names of skills that run inside the lead agent; part of the lead, not agents. */
+  skills: string[];
   aiAgents: number;
   automations: number;
   building: string | null;
@@ -63,6 +65,7 @@ export function buildTeam(agents: Agent[], projects: Pick<Project, "id" | "name"
       purpose: r.purpose,
       lead: r.id,
       members: r.agents.slice(1).filter((id) => byId.has(id) && !isArchived(byId.get(id)!)),
+      skills: (r.skills ?? []).filter((id) => byId.has(id) && !isArchived(byId.get(id)!)).map((id) => byId.get(id)!.name),
       aiAgents: r.agents.filter((id) => byId.has(id) && !isArchived(byId.get(id)!)).length,
       automations: all.filter((id) => !isAiAgent(byId.get(id)!)).length,
       building: lead ? placement(lead, projects).building : null,
@@ -82,7 +85,7 @@ export function buildTeam(agents: Agent[], projects: Pick<Project, "id" | "name"
   const order = { failing: 0, draft: 1, inactive: 2 };
   needs.sort((x, y) => order[x.kind] - order[y.kind]);
 
-  const ai = agents.filter(isAiAgent);
+  const ai = agents.filter((a) => isAiAgent(a) && !isSkill(a));
   return {
     coordinator: roles[0],
     roles: roles.slice(1),
