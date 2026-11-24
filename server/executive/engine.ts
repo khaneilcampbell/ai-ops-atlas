@@ -15,7 +15,7 @@
 // - a task completes only when Atlas's own checks pass on the returned output (verify.ts).
 
 import { canMoveGoal, canMoveTask, isTerminalGoal, taskCenterStatus } from "../../src/executive/control/lifecycle";
-import { checkPlan, draftPlan, validateGoal } from "../../src/executive/control/plan";
+import { checkPlan, draftPlan, draftTemplatePlan, validateGoal } from "../../src/executive/control/plan";
 import { APPROVAL_TTL_MS, authorizeTask, bindingHash, checkApproval, type ActionBinding } from "../../src/executive/control/policy";
 import { actionLevel, selectAgent, type AgentStats, type RosterAgent } from "../../src/executive/control/select";
 import { estimateCost, WORKFLOW_ROUTES, type DispatchEnvelope, type ResultBody, type WorkflowRoute } from "../../src/executive/control/contracts";
@@ -39,6 +39,8 @@ import {
   type Verification,
 } from "../../src/executive/control/types";
 import type { Db } from "../data/db";
+import { ENGINEERING_LIMITS } from "../../src/engineering/types";
+import { engineeringHandlers, engineeringSummary, isEngineeringGoal, onEngineeringClaim, onEngineeringStage } from "../engineering/handlers";
 
 export interface DispatchAnswer {
   state: "accepted" | "refused" | "unknown";
@@ -52,9 +54,14 @@ export interface ExecutionAdapter {
   dispatch(route: WorkflowRoute, envelope: DispatchEnvelope): Promise<DispatchAnswer>;
 }
 
+/** Work that runs inside the site through the normal claim and result path (QA). Keyed by route. */
+export type LocalRunner = (envelope: DispatchEnvelope) => Promise<ResultBody>;
+
 export interface Deps {
   db: Db;
   adapter: ExecutionAdapter;
+  /** In-site runners by route (route.local). A missing one holds the task with the reason. */
+  local?: Partial<Record<string, LocalRunner>>;
   /** The Agent Registry as it is on main. Throws when it can't be read. */
   roster: () => Promise<RosterAgent[]>;
   /** The Phase 9 emergency stop: a reason while it's on, null when off. Must fail closed. */
@@ -91,7 +98,7 @@ export class ExecRefusal extends Error {
 
 // ---- Rows -----------------------------------------------------------------------------------------
 
-interface GoalRow {
+export interface GoalRow {
   id: string;
   goal_id: string | null;
   objective: string;
@@ -102,12 +109,15 @@ interface GoalRow {
   budget_usd: number;
   spent_usd: number;
   summary: string | null;
+  template: string | null;
+  template_inputs: Record<string, string> | null;
+  area: string;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
 }
 
-interface TaskRow {
+export interface TaskRow {
   id: string;
   exec_goal_id: string;
   plan_key: string;
@@ -138,7 +148,7 @@ interface TaskRow {
   finished_at: string | null;
 }
 
-const GOAL_COLS = "id, goal_id, objective, state, resume_state, state_reason, autonomy, budget_usd::float8 AS budget_usd, spent_usd::float8 AS spent_usd, summary, created_at, updated_at, completed_at";
+const GOAL_COLS = "id, goal_id, objective, state, resume_state, state_reason, autonomy, budget_usd::float8 AS budget_usd, spent_usd::float8 AS spent_usd, summary, template, template_inputs, area, created_at, updated_at, completed_at";
 const TASK_COLS =
   "id, exec_goal_id, plan_key, task_id, title, capability, depends_on, inputs, agent_id, workflow, state, action_level, max_cost_usd::float8 AS max_cost_usd, cost_usd::float8 AS cost_usd, attempts, max_attempts, timeout_seconds, lease_until, correlation_id, idempotency_key, nonce_hash, external_execution_id, run_id, approval_id, blocked_reason, error, dispatched_at, finished_at";
 
@@ -180,6 +190,7 @@ async function moveGoal(db: Db, g: GoalRow, to: GoalState, actor: string, reason
   const completed = to === "GOAL_COMPLETED" ? ", completed_at = now()" : "";
   const [n] = await db.query<GoalRow>(`UPDATE atlas.exec_goals SET state = $2, state_reason = $3, resume_state = $4${completed} WHERE id = $1 RETURNING ${GOAL_COLS}`, [g.id, to, clip(reason, 1000), resume === undefined ? g.resume_state : resume]);
   await logEvent(db, { goalId: g.id, kind: "goal.state", from: g.state, to, actor, detail: reason });
+  if (isEngineeringGoal(g)) await onEngineeringStage(db, n, to, reason);
   return n;
 }
 
@@ -274,7 +285,7 @@ async function step(d: Deps, db: Db, goalId: string, actor: string, roster: Rost
       return done(true);
     }
     case "GOAL_VALIDATED": {
-      const p = draftPlan(g.objective);
+      const p = g.template ? draftTemplatePlan(g.template, json<Record<string, string>>(g.template_inputs, {}), ENGINEERING_LIMITS.implementCapUsd) : draftPlan(g.objective);
       if (!p.ok) {
         await moveGoal(db, g, "BLOCKED", EXECUTIVE_AGENT_ID, p.reason, "GOAL_VALIDATED");
         return done(false);
@@ -302,8 +313,8 @@ async function step(d: Deps, db: Db, goalId: string, actor: string, roster: Rost
         const route = WORKFLOW_ROUTES[t.capability];
         const [task] = await db.query<{ id: string }>(
           `INSERT INTO atlas.tasks (title, description, area, status, priority, goal_id, source, origin, created_by, updated_by)
-           VALUES ($1, $2, 'business', 'queued', 'medium', $3, 'agent', 'agent', $4, $4) RETURNING id`,
-          [t.title.slice(0, 200), `Atlas Executive task. Done when: ${t.acceptance.join("; ")}`.slice(0, 4000), g.goal_id, EXECUTIVE_AGENT_ID],
+           VALUES ($1, $2, $5, 'queued', $6, $3, 'agent', 'agent', $4, $4) RETURNING id`,
+          [t.title.slice(0, 200), `Atlas Executive task. Done when: ${t.acceptance.join("; ")}`.slice(0, 4000), g.goal_id, EXECUTIVE_AGENT_ID, g.area ?? "business", isEngineeringGoal(g) ? "high" : "medium"],
         );
         const [et] = await db.query<{ id: string }>(
           `INSERT INTO atlas.exec_tasks (exec_goal_id, plan_key, task_id, title, capability, depends_on, inputs, max_cost_usd, max_attempts, timeout_seconds)
@@ -502,7 +513,7 @@ async function run(d: Deps, db: Db, g: GoalRow, actor: string, stopped: string |
     if (t.state !== "ready") continue;
     const route = WORKFLOW_ROUTES[t.capability];
     if (!route) {
-      await runInProcess(db, g, t);
+      await runInProcess(d, db, g, t);
       moved = true;
       continue;
     }
@@ -539,12 +550,16 @@ async function claim(d: Deps, db: Db, g: GoalRow, t: TaskRow, route: WorkflowRou
     return null;
   };
   if (stopped) return hold(stopped);
-  if (!d.adapter.configured) return hold("The n8n Executive Dispatch workflow isn't set up on the site yet (N8N_BRIDGE_TOKEN / N8N_BRIDGE_CALLBACK_TOKEN).");
+  if (route.local ? !d.local?.[route.route] : !d.adapter.configured)
+    return hold(route.local ? `${route.workflow} isn't set up on the site yet.` : "The n8n Executive Dispatch workflow isn't set up on the site yet (N8N_BRIDGE_TOKEN / N8N_BRIDGE_CALLBACK_TOKEN).");
   if (t.attempts >= t.max_attempts) {
     await moveTask(db, t, "failed", EXECUTIVE_AGENT_ID, { error: `Gave up after ${t.attempts} attempts.` });
     return null;
   }
-  if ((await dispatchesToday(db)) + sentThisStep >= RUN_LIMITS.dailyDispatchCap) return hold(`The daily limit of ${RUN_LIMITS.dailyDispatchCap} Executive dispatches is reached.`);
+  // A local retry can carry a "not before" time (QA waiting for GitHub to answer again), so it waits
+  // for a later schedule tick instead of spending every attempt at once.
+  if (route.local && t.lease_until && Date.parse(t.lease_until) > Date.now()) return hold("Waiting a few minutes before trying again.");
+  if (!route.local && (await dispatchesToday(db)) + sentThisStep >= RUN_LIMITS.dailyDispatchCap) return hold(`The daily limit of ${RUN_LIMITS.dailyDispatchCap} Executive dispatches is reached.`);
   const [busy] = await db.query<{ n: number }>("SELECT COUNT(*)::int AS n FROM atlas.exec_tasks WHERE agent_id = $1 AND state IN ('dispatching', 'running') AND id <> $2", [t.agent_id, t.id]);
   if (busy.n >= RUN_LIMITS.perAgentConcurrency) return hold(`${t.agent_id} is already running ${busy.n} task(s); waiting for a free slot.`);
   const left = g.budget_usd - g.spent_usd - (await reservedUsd(db, g.id));
@@ -570,7 +585,8 @@ async function claim(d: Deps, db: Db, g: GoalRow, t: TaskRow, route: WorkflowRou
   );
   await db.query("UPDATE atlas.exec_tasks SET run_id = $2 WHERE id = $1", [t.id, r.id]);
   if (t.task_id) await db.query("UPDATE atlas.tasks SET status = 'running', updated_by = $2 WHERE id = $1", [t.task_id, EXECUTIVE_AGENT_ID]);
-  await logEvent(db, { goalId: g.id, taskId: t.id, kind: "task.dispatched", from: "ready", to: "dispatching", actor: EXECUTIVE_AGENT_ID, detail: `Attempt ${attempt} to ${route.workflow} (${t.agent_id})`, correlationId });
+  await logEvent(db, { goalId: g.id, taskId: t.id, kind: route.local ? "task.started_local" : "task.dispatched", from: "ready", to: "dispatching", actor: EXECUTIVE_AGENT_ID, detail: `Attempt ${attempt} to ${route.workflow} (${t.agent_id})`, correlationId });
+  const extra = isEngineeringGoal(g) ? await onEngineeringClaim(db, { g, t: fixTask(claimed), attempt, route, runId: r.id }) : {};
   return {
     task: fixTask(claimed),
     route,
@@ -585,7 +601,7 @@ async function claim(d: Deps, db: Db, g: GoalRow, t: TaskRow, route: WorkflowRou
       idempotencyKey,
       nonce,
       deadlineAt: new Date(nowOf(d) + route.timeoutSeconds * 1000).toISOString(),
-      inputs: t.inputs,
+      inputs: { ...t.inputs, ...extra },
       limits: { maxSearches: route.maxSearches, maxOutputTokens: 6000 },
     },
   };
@@ -593,6 +609,17 @@ async function claim(d: Deps, db: Db, g: GoalRow, t: TaskRow, route: WorkflowRou
 
 /** Sends a claimed task (outside any transaction) and records what n8n answered. */
 async function send(d: Deps, s: Send, actor: string): Promise<void> {
+  if (s.route.local) {
+    // In-site work (QA): no network send to n8n. Its result goes through the same checks as any other.
+    let result: ResultBody;
+    try {
+      result = await d.local![s.route.route]!(s.envelope);
+    } catch (e) {
+      result = { contract: "ATLAS_EXECUTIVE_ERROR", version: 1, eventId: `${s.envelope.idempotencyKey}:local`, taskId: s.envelope.taskId, attempt: s.envelope.attempt, correlationId: s.envelope.correlationId, idempotencyKey: s.envelope.idempotencyKey, nonce: s.envelope.nonce, executionId: "local", kind: "failed", error: clip(e instanceof Error ? e.message : String(e), 900) ?? "Local run failed", transient: true, at: iso(d) };
+    }
+    await applyResult(d, result);
+    return;
+  }
   let answer: DispatchAnswer;
   try {
     answer = await d.adapter.dispatch(s.route, s.envelope);
@@ -615,7 +642,11 @@ async function send(d: Deps, s: Send, actor: string): Promise<void> {
 }
 
 /** In-process work (executive.verify): re-check the research results and write the summary. No model. */
-async function runInProcess(db: Db, g: GoalRow, t: TaskRow): Promise<void> {
+async function runInProcess(d: Deps, db: Db, g: GoalRow, t: TaskRow): Promise<void> {
+  if (t.capability === "executive.verify" && isEngineeringGoal(g)) {
+    await engineeringSummary(db, g, t, kit(d));
+    return;
+  }
   if (t.capability !== "executive.verify") {
     await moveTask(db, t, "failed", EXECUTIVE_AGENT_ID, { error: `Atlas has no way to run ${t.capability} itself.` });
     return;
@@ -650,68 +681,73 @@ async function runInProcess(db: Db, g: GoalRow, t: TaskRow): Promise<void> {
 
 export type ResultAnswer = { status: number; body: { stored: boolean; duplicate?: boolean; stale?: boolean; message?: string } };
 
+/** What a route's output became after Atlas checked it. */
+export interface Checked {
+  schema: string;
+  body: unknown;
+  searched?: string[];
+  verification: Verification;
+  /** agent_runs.result_summary when it passed. */
+  summary: string | null;
+}
+
+/** Tools the route handlers get, so they never import the engine (no cycle) and use the same checked writes. */
+export interface Kit {
+  moveTask: typeof moveTask;
+  moveGoal: typeof moveGoal;
+  logEvent: typeof logEvent;
+  tasksOf: typeof tasksOf;
+  lockGoal: typeof lockGoal;
+  fixTask: typeof fixTask;
+  /** Files an owner approval bound to this exact task action (same rules as the Executive's own). */
+  fileApproval: (db: Db, g: GoalRow, t: TaskRow, reason: string) => Promise<void>;
+  now: () => number;
+}
+
+export interface SettleContext {
+  d: Deps;
+  g: GoalRow;
+  t: TaskRow;
+  r: ResultBody;
+  checked: Checked;
+  kit: Kit;
+}
+
+/**
+ * One handler per result schema. check() decides whether the output is acceptable; settle() may take
+ * over what happens next (QA's repair loop). Returning "default" keeps the normal rule: passed ->
+ * completed, failed -> retry while attempts are left, then failed.
+ */
+export interface RouteHandler {
+  check(db: Db, ctx: { d: Deps; g: GoalRow; t: TaskRow; r: ResultBody; at: string }): Promise<Checked>;
+  settle?(db: Db, ctx: SettleContext): Promise<"default" | "handled">;
+}
+
+const researchHandler: RouteHandler = {
+  async check(_db, { r, at }) {
+    const parsed = parseReport(r.report);
+    const verification: Verification = parsed.ok ? verifyReport(parsed.report, r.searched ?? [], at) : { passed: false, checkedAt: at, checks: [{ name: "Report has the expected shape", passed: false, detail: parsed.error }] };
+    return {
+      schema: "opportunity-report/1",
+      body: parsed.ok ? parsed.report : { invalid: true },
+      searched: (r.searched ?? []).slice(0, 100),
+      verification,
+      summary: parsed.ok ? `${parsed.report.productName}: verified opportunity report, ${parsed.report.sources.length} sources` : null,
+    };
+  },
+};
+
+const kit = (d: Deps): Kit => ({ moveTask, moveGoal, logEvent, tasksOf, lockGoal, fixTask, fileApproval: (db, g, t, reason) => fileApproval(d, db, g, t, reason), now: () => nowOf(d) });
+
+function handlerFor(capabilityId: string): RouteHandler {
+  const route = WORKFLOW_ROUTES[capabilityId];
+  if (route && engineeringHandlers[route.resultSchema]) return engineeringHandlers[route.resultSchema]!;
+  return researchHandler;
+}
+
 /** ATLAS_WORKFLOW_RESULT / ATLAS_EXECUTIVE_ERROR, already authenticated by the callback key. */
 export async function receiveResult(d: Deps, r: ResultBody): Promise<ResultAnswer> {
-  const out = await d.db.tx(async (db): Promise<ResultAnswer & { goalId?: string }> => {
-    const [t] = (await db.query<TaskRow>(`SELECT ${TASK_COLS} FROM atlas.exec_tasks WHERE id = $1 FOR UPDATE`, [r.taskId])).map(fixTask);
-    if (!t) return { status: 404, body: { stored: false, message: "Atlas didn't send this task." } };
-    // The result must name the attempt the site sent: same key, correlation id and attempt, and the nonce.
-    const expectedKey = `${t.id}:${r.attempt}`;
-    if (r.idempotencyKey !== expectedKey || r.correlationId !== t.correlation_id || r.attempt > t.attempts) return { status: 409, body: { stored: false, message: "The result doesn't match a dispatch Atlas made." } };
-    const fresh = await logEvent(db, { goalId: t.exec_goal_id, taskId: t.id, kind: r.contract === "ATLAS_EXECUTIVE_ERROR" ? "result.error" : `result.${r.kind}`, actor: "n8n", detail: clip(r.error ?? `n8n execution ${r.executionId}`, 300), correlationId: r.correlationId, key: `result:${r.eventId}` });
-    if (!fresh) return { status: 200, body: { stored: true, duplicate: true } };
-    if (r.idempotencyKey !== t.idempotency_key || r.attempt !== t.attempts || !(t.state === "dispatching" || t.state === "running")) {
-      await logEvent(db, { goalId: t.exec_goal_id, taskId: t.id, kind: "result.stale", actor: "n8n", detail: `Attempt ${r.attempt} arrived while the task is ${t.state} at attempt ${t.attempts}; ignored` });
-      return { status: 200, body: { stored: true, stale: true } };
-    }
-    if (!t.nonce_hash || (await sha256(r.nonce)) !== t.nonce_hash) return { status: 403, body: { stored: false, message: "The result's nonce doesn't match the dispatch." } };
-    const cost = r.usage ? estimateCost(r.usage) : 0;
-    await db.query("UPDATE atlas.exec_tasks SET external_execution_id = $2, cost_usd = cost_usd + $3 WHERE id = $1", [t.id, r.executionId.slice(0, 60), cost]);
-    await db.query("UPDATE atlas.exec_goals SET spent_usd = spent_usd + $2 WHERE id = $1", [t.exec_goal_id, cost]);
-    const runFields = [t.run_id, r.executionId.slice(0, 120), r.usage?.model ?? null, r.usage?.inputTokens ?? null, r.usage?.outputTokens ?? null, cost];
-    const finishRun = (status: "succeeded" | "failed", summary: string | null, error: string | null) =>
-      db.query(
-        "UPDATE atlas.agent_runs SET status = $7, external_run_id = $2, model = $3, input_tokens = $4, output_tokens = $5, cost_usd = $6, result_summary = $8, error = $9, finished_at = now() WHERE id = $1",
-        [...runFields, status, clip(summary, 2000), clip(error, 2000)],
-      );
-    const running = t.state === "dispatching" ? await moveTask(db, t, "running", "n8n") : t;
-    const retryOrFail = async (why: string, retryable: boolean) => {
-      if (retryable && running.attempts < running.max_attempts) await moveTask(db, running, "ready", "n8n", { error: why }, `Will retry: ${why}`);
-      else await moveTask(db, running, "failed", "n8n", { error: why });
-    };
-    if (r.kind === "failed") {
-      await finishRun("failed", null, r.error ?? "The workflow reported a failure.");
-      await retryOrFail(r.error ?? "The workflow reported a failure.", !!r.transient);
-      return { status: 202, body: { stored: true }, goalId: t.exec_goal_id };
-    }
-    // Succeeded: Atlas checks the output itself before anything counts as done.
-    const verifying = await moveTask(db, running, "verifying", EXECUTIVE_AGENT_ID);
-    const parsed = parseReport(r.report);
-    const at = iso(d);
-    const verification: Verification = parsed.ok ? verifyReport(parsed.report, r.searched ?? [], at) : { passed: false, checkedAt: at, checks: [{ name: "Report has the expected shape", passed: false, detail: parsed.error }] };
-    await db.query("INSERT INTO atlas.exec_artifacts (exec_task_id, exec_goal_id, attempt, schema, body, searched, verification, verified) VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8)", [
-      t.id,
-      t.exec_goal_id,
-      r.attempt,
-      "opportunity-report/1",
-      JSON.stringify(parsed.ok ? parsed.report : { invalid: true }),
-      JSON.stringify((r.searched ?? []).slice(0, 100)),
-      JSON.stringify(verification),
-      verification.passed,
-    ]);
-    const failedChecks = verification.checks.filter((c) => !c.passed);
-    await logEvent(db, { goalId: t.exec_goal_id, taskId: t.id, kind: verification.passed ? "verification.passed" : "verification.failed", actor: EXECUTIVE_AGENT_ID, detail: verification.passed ? `${verification.checks.length} checks passed` : failedChecks.map((c) => `${c.name}${c.detail ? ` (${c.detail})` : ""}`).join("; ") });
-    if (verification.passed) {
-      await finishRun("succeeded", parsed.ok ? `${parsed.report.productName}: verified opportunity report, ${parsed.report.sources.length} sources` : null, null);
-      await moveTask(db, verifying, "completed", EXECUTIVE_AGENT_ID, {}, "Output passed Atlas's checks");
-    } else {
-      await finishRun("failed", null, `Verification failed: ${failedChecks.map((c) => c.name).join(", ")}`);
-      const why = `The output failed Atlas's checks: ${failedChecks.map((c) => c.name).join(", ")}`;
-      if (verifying.attempts < verifying.max_attempts) await moveTask(db, verifying, "ready", EXECUTIVE_AGENT_ID, { error: why }, `Will retry: ${why}`);
-      else await moveTask(db, verifying, "failed", EXECUTIVE_AGENT_ID, { error: why });
-    }
-    return { status: 202, body: { stored: true }, goalId: t.exec_goal_id };
-  });
+  const out = await applyResult(d, r);
   if (out.goalId) {
     await advance(d, out.goalId, "n8n");
     // The agent's slot may be free now: move on other goals whose next task waits for it.
@@ -723,6 +759,71 @@ export async function receiveResult(d: Deps, r: ResultBody): Promise<ResultAnswe
     for (const w of waiting) await advance(d, w.id, "n8n");
   }
   return { status: out.status, body: out.body };
+}
+
+/** Records and checks one result in a transaction. Doesn't move the goal on (callers do). */
+export async function applyResult(d: Deps, r: ResultBody): Promise<ResultAnswer & { goalId?: string }> {
+  return d.db.tx(async (db): Promise<ResultAnswer & { goalId?: string }> => {
+    const [t] = (await db.query<TaskRow>(`SELECT ${TASK_COLS} FROM atlas.exec_tasks WHERE id = $1 FOR UPDATE`, [r.taskId])).map(fixTask);
+    if (!t) return { status: 404, body: { stored: false, message: "Atlas didn't send this task." } };
+    // The result must name the attempt the site sent: same key, correlation id and attempt, and the nonce.
+    const expectedKey = `${t.id}:${r.attempt}`;
+    if (r.idempotencyKey !== expectedKey || r.correlationId !== t.correlation_id || r.attempt > t.attempts) return { status: 409, body: { stored: false, message: "The result doesn't match a dispatch Atlas made." } };
+    const fresh = await logEvent(db, { goalId: t.exec_goal_id, taskId: t.id, kind: r.contract === "ATLAS_EXECUTIVE_ERROR" ? "result.error" : `result.${r.kind}`, actor: "n8n", detail: clip(r.error ?? `execution ${r.executionId}`, 300), correlationId: r.correlationId, key: `result:${r.eventId}` });
+    if (!fresh) return { status: 200, body: { stored: true, duplicate: true } };
+    if (r.idempotencyKey !== t.idempotency_key || r.attempt !== t.attempts || !(t.state === "dispatching" || t.state === "running")) {
+      await logEvent(db, { goalId: t.exec_goal_id, taskId: t.id, kind: "result.stale", actor: "n8n", detail: `Attempt ${r.attempt} arrived while the task is ${t.state} at attempt ${t.attempts}; ignored` });
+      return { status: 200, body: { stored: true, stale: true } };
+    }
+    if (!t.nonce_hash || (await sha256(r.nonce)) !== t.nonce_hash) return { status: 403, body: { stored: false, message: "The result's nonce doesn't match the dispatch." } };
+    const [g] = await db.query<GoalRow>(`SELECT ${GOAL_COLS} FROM atlas.exec_goals WHERE id = $1 FOR UPDATE`, [t.exec_goal_id]);
+    const cost = r.usage ? estimateCost(r.usage) : 0;
+    await db.query("UPDATE atlas.exec_tasks SET external_execution_id = $2, cost_usd = cost_usd + $3 WHERE id = $1", [t.id, r.executionId.slice(0, 60), cost]);
+    await db.query("UPDATE atlas.exec_goals SET spent_usd = spent_usd + $2 WHERE id = $1", [t.exec_goal_id, cost]);
+    const runFields = [t.run_id, r.executionId.slice(0, 120), r.usage?.model ?? null, r.usage?.inputTokens ?? null, r.usage?.outputTokens ?? null, cost];
+    const finishRun = (status: "succeeded" | "failed", summary: string | null, error: string | null) =>
+      db.query(
+        "UPDATE atlas.agent_runs SET status = $7, external_run_id = $2, model = $3, input_tokens = $4, output_tokens = $5, cost_usd = $6, result_summary = $8, error = $9, finished_at = now() WHERE id = $1",
+        [...runFields, status, clip(summary, 2000), clip(error, 2000)],
+      );
+    const running = t.state === "dispatching" ? await moveTask(db, t, "running", "n8n") : t;
+    const retryOrFail = async (task: TaskRow, why: string, retryable: boolean) => {
+      if (retryable && task.attempts < task.max_attempts) await moveTask(db, task, "ready", "n8n", { error: why }, `Will retry: ${why}`);
+      else await moveTask(db, task, "failed", "n8n", { error: why });
+    };
+    const handler = handlerFor(t.capability);
+    if (r.kind === "failed") {
+      await finishRun("failed", null, r.error ?? "The workflow reported a failure.");
+      // Engineering records the failed attempt (runner diagnostics) before the normal retry rule runs.
+      if (handler.settle && g) {
+        const checked: Checked = { schema: "failure", body: { error: r.error ?? null }, verification: { passed: false, checkedAt: iso(d), checks: [{ name: "The run finished", passed: false, detail: r.error }] }, summary: null };
+        if ((await handler.settle(db, { d, g, t: running, r, checked, kit: kit(d) })) === "handled") return { status: 202, body: { stored: true }, goalId: t.exec_goal_id };
+      }
+      await retryOrFail(running, r.error ?? "The workflow reported a failure.", !!r.transient);
+      return { status: 202, body: { stored: true }, goalId: t.exec_goal_id };
+    }
+    // Succeeded: Atlas checks the output itself before anything counts as done.
+    const verifying = await moveTask(db, running, "verifying", EXECUTIVE_AGENT_ID);
+    const checked = await handler.check(db, { d, g, t: verifying, r, at: iso(d) });
+    const { verification } = checked;
+    await db.query("INSERT INTO atlas.exec_artifacts (exec_task_id, exec_goal_id, attempt, schema, body, searched, verification, verified) VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8)", [
+      t.id,
+      t.exec_goal_id,
+      r.attempt,
+      checked.schema,
+      JSON.stringify(checked.body),
+      JSON.stringify(checked.searched ?? []),
+      JSON.stringify(verification),
+      verification.passed,
+    ]);
+    const failedChecks = verification.checks.filter((c) => !c.passed);
+    await logEvent(db, { goalId: t.exec_goal_id, taskId: t.id, kind: verification.passed ? "verification.passed" : "verification.failed", actor: EXECUTIVE_AGENT_ID, detail: verification.passed ? `${verification.checks.length} checks passed` : failedChecks.map((c) => `${c.name}${c.detail ? ` (${c.detail})` : ""}`).join("; ") });
+    await finishRun(verification.passed ? "succeeded" : "failed", verification.passed ? checked.summary : null, verification.passed ? null : `Verification failed: ${failedChecks.map((c) => c.name).join(", ")}`);
+    if (handler.settle && g && (await handler.settle(db, { d, g, t: verifying, r, checked, kit: kit(d) })) === "handled") return { status: 202, body: { stored: true }, goalId: t.exec_goal_id };
+    if (verification.passed) await moveTask(db, verifying, "completed", EXECUTIVE_AGENT_ID, {}, "Output passed Atlas's checks");
+    else await retryOrFail(verifying, `The output failed Atlas's checks: ${failedChecks.map((c) => c.name).join(", ")}`, true);
+    return { status: 202, body: { stored: true }, goalId: t.exec_goal_id };
+  });
 }
 
 // ---- Reconciliation (ATLAS_EXECUTIVE_SCHEDULE and the Check now button) ---------------------------
