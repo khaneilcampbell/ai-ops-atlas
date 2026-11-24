@@ -21,33 +21,33 @@ buildings:
   # finance and operations buildings; the fictional brands they used to carry stay in former_names
   # so search still finds them. What Benjaire data each building holds: catalog/workspace/finance.yaml.
   "service:financial:residence":
-    display_name: Briarcliff Tower
-    organization: Filler building
-    former_names: [Aldren Insights, Data Intelligence Center]
+    display_name: Data Intelligence Center
+    organization: Benjaire
+    former_names: [Aldren Insights]
   "service:financial:banks":
-    display_name: Larkspur Tower
-    organization: Filler building
-    former_names: [Bayvale Bank, Financial Operations Tower]
+    display_name: Financial Operations Tower
+    organization: Benjaire
+    former_names: [Bayvale Bank]
   "service:financial:financial-planning":
-    display_name: Willow Court
-    organization: Filler building
-    former_names: [Ravelle Advisors, Knowledge & Research Center]
+    display_name: Knowledge & Research Center
+    organization: Benjaire
+    former_names: [Ravelle Advisors]
   "service:financial:budget":
-    display_name: Elmhurst Tower
-    organization: Filler building
-    former_names: [Ellery Budget Center, Budget & Forecasting Center]
+    display_name: Budget & Forecasting Center
+    organization: Benjaire
+    former_names: [Ellery Budget Center]
   "service:financial:records":
-    display_name: Maplewood Tower
-    organization: Filler building
-    former_names: [Halden Trust, Governance & Compliance Center]
+    display_name: Governance & Compliance Center
+    organization: Benjaire
+    former_names: [Halden Trust]
   "service:bmw-dealership":
     display_name: Ironwood Hall
     organization: Filler building
     former_names: [Vantor Motors, Infrastructure Operations Hub]
   "service:financial:investments":
-    display_name: Ashford Tower
-    organization: Filler building
-    former_names: [Robin Exchange, Integration Exchange, Investment Operations Center]
+    display_name: Investment Operations Center
+    organization: Benjaire
+    former_names: [Robin Exchange, Integration Exchange]
   "service:atlas-marketplace":
     display_name: Seaview Arcade
     organization: Filler building
@@ -61,21 +61,21 @@ buildings:
   # catalog lists the outside services the manifests name. Nov 24: buildings with no module carry a
   # neutral filler name instead (see the note at the end of this file).
   "service:financial:harbor-residence":
-    display_name: Harborlight Tower
-    organization: Filler building
-    former_names: [Camton Hotel, Client Success Center]
+    display_name: Client Success Center
+    organization: Benjaire
+    former_names: [Camton Hotel]
   "service:financial:circa":
-    display_name: Alder Towers
-    organization: Filler building
-    former_names: [Team Residence Towers, Ellipse Residences]
+    display_name: Team Residence Towers
+    organization: Benjaire
+    former_names: [Ellipse Residences]
   "service:financial:insurance":
-    display_name: Fairhaven Tower
-    organization: Filler building
-    former_names: [Merrow Credit Union, Risk & Insurance Center]
+    display_name: Risk & Insurance Center
+    organization: Benjaire
+    former_names: [Merrow Credit Union]
   "service:financial:business-finance":
-    display_name: Cedar Row Tower
-    organization: Filler building
-    former_names: [Corvane Capital, Business Finance Center]
+    display_name: Business Finance Center
+    organization: Benjaire
+    former_names: [Corvane Capital]
   "service:atlas-galleria":
     display_name: Business Operations HQ
     organization: Benjaire

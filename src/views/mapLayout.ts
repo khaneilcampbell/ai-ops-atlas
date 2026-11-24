@@ -14,8 +14,6 @@ export const GAP = 2.25;
 /** These project sites share Commerce-sized land and one district selection rim. */
 export const OPERATIONS_DISTRICTS = new Set(["intelligence-hub", "ai-ops-atlas", "commerce-pipeline"]);
 const GROUP_GAP = 4.5;
-/** Security Operations Center sits this far south of Business Operations HQ's front, so its plaza road meets the street grid. */
-const SOC_LAKE_STEP = 2.5;
 /** Grid units per lot in the area for repositories without a manifest. */
 const STRAY_STEP = 3;
 
@@ -522,17 +520,6 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       const hubZ = (hub.hq.gy + hub.hq.size / 2) + commerceLane.z0 - hubLane.z0;
       resize(hub, x, y, x + commerce.size / 2, hubZ);
       resize(operations, x + GAP, y + commerce.size + GAP, x + GAP + commerce.size / 2, y + commerce.size * 1.5 + GAP);
-      // Security Operations Center stands on the lake west of Business Operations HQ, one street
-      // gap away (Khaneil, 2026-11-24). Its old parcel stays as land, so streets and neighbours keep their place.
-      const soc = districts.find(d => d.project.id === "soc-lab")!, business = districts.find(d => d.project.id === "benjaire-site")!;
-      const reserve = "street-reserve:soc-lab";
-      cleared.push({ ...soc, project: { ...soc.project, id: reserve }, hq: { ...soc.hq }, lots: [], crew: [], kiosks: [] });
-      rects.push({ id: reserve, x: soc.ox, y: soc.oy, w: soc.size, h: soc.size });
-      move(soc, business.ox - GAP - soc.size - soc.ox, business.oy + SOC_LAKE_STEP - soc.oy);
-      // Ground under the new parcel, from Business Operations HQ's front to the canal, so no pond or bare pit is left round it.
-      // It stays inside the city's west edge, so the airport and everything planned off that edge keep their place.
-      const west = Math.max(soc.ox - g2, Math.min(...meadows.map(m => m.ox)));
-      meadows.push({ ox: west, oy: business.oy - g2, w: business.ox - g2 - west, h: soc.oy + soc.size + GAP - business.oy });
     }
   }
 

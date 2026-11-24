@@ -161,9 +161,7 @@ export function addGithubAnnex(scene:Scene3D){
  // Every other feature's own footprint (stadium, Financial District, mall and so on), wherever it
  // keeps one at its top level, so features added later are respected too.
  for(const [key,v] of Object.entries(scene))if(!GROUND_KEYS.has(key)&&isRect(v))blocked.push(v);
- // With the perimeter loop running, the old airport rail leg is planned but never drawn; it reserves no ground.
- const rail=scene.communityRail,drawn={...scene,communityRail:rail?.loop?{...rail,airportLeg:undefined}:rail};
- const lines=sceneLines(Object.fromEntries(Object.entries(drawn).filter(([k])=>!GROUND_KEYS.has(k)||k==='paving')));
+ const lines=sceneLines(Object.fromEntries(Object.entries(scene).filter(([k])=>!GROUND_KEYS.has(k)||k==='paving')));
  const annex=planGithubAnnex({tower,terrace:own,blocked,lines});
  if(!annex)return;
  scene.githubAnnex=annex;
