@@ -101,7 +101,7 @@ export function Roster({ agents, entries, statuses, query, setQuery, prefs, setP
                         <span>
                           <b>{who.name}</b>
                           <span className="muted small">{who.name === r.name ? "" : r.name}</span>
-                          {r.skills.length > 0 && <span className="muted small roster-skills" title={r.skills.join(" · ")}>{r.skills.length} skills: {r.skills.join(", ")}</span>}
+                          {r.skills.length > 0 && <span className="roster-skills" title={r.skills.join(" · ")}>{r.skills.length} skills</span>}
                         </span>
                       </button>
                     </td>
