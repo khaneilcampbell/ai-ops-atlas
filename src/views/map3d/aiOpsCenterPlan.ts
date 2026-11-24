@@ -33,14 +33,10 @@ export const AIOPS={
  crownSlope:.55,
  /** Planted step round the tower's foot, above the terrace. */
  step:{scale:1.32,rise:.24},
- /** Lower planted tier between the terrace and the step, so the garden steps back from the tower in two rises. */
- tier:{scale:1.62,rise:.1},
  /** Twist of the tower's plan from the ground to the crown, radians: the glass turns gently as it rises. */
  twist:.32,
  /** Glass atrium drum over the main entrance, rising through the podium above the terrace. */
- atrium:{x:.9,z:2.85,r:1.05,above:.55,ring:32},
- /** Glazed entrance vestibule on the atrium's street face: width, depth out of the drum, height. */
- entry:{w:1.05,d:.42,h:.62},
+ atrium:{x:.9,z:2.85,r:1.05,above:.38,ring:32},
  /** Bronze ribbon: louvre every half floor, standing proud of the glass. */
  ribbon:{gap:.15,depth:.11,thick:.026,back:1.028,samples:10,louvreEvery:2},
  /** Forecourt in front of the podium, up to the district's north walk. */
@@ -145,7 +141,7 @@ export function terraceTrees(height:number):Pt[]{
  const ring=podiumRing(2,40),out:Pt[]=[];
  for(let i=0;i<ring.length;i+=2){
   const [x,z]=ring[i],p:Pt=[x*.9+(-.22)*.1,z*.9+(-.16)*.1];
-  const {cx,cz,rx,rz}=AIOPS.tower,s=AIOPS.tier.scale*towerScale(PODIUM_H,height)+.1,w=towerTwist(PODIUM_H,height),dx=p[0]-cx,dz=p[1]-cz,u=dx*Math.cos(w)-dz*Math.sin(w),v=dx*Math.sin(w)+dz*Math.cos(w);
+  const {cx,cz,rx,rz}=AIOPS.tower,s=AIOPS.step.scale*towerScale(PODIUM_H,height)+.12,w=towerTwist(PODIUM_H,height),dx=p[0]-cx,dz=p[1]-cz,u=dx*Math.cos(w)-dz*Math.sin(w),v=dx*Math.sin(w)+dz*Math.cos(w);
   if((u/(rx*s))**2+(v/(rz*s))**2<1)continue;
   if(Math.hypot(p[0]-AIOPS.atrium.x,p[1]-AIOPS.atrium.z)<AIOPS.atrium.r+.3)continue;
   out.push(p);

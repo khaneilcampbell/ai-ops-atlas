@@ -101,51 +101,27 @@ export function aiOpsGeometry(height:number){
   const g=wall([at(scaleAbout(ring,.975),y0),at(scaleAbout(ring,.975),y1-AIOPS.podium.slab)],T.floor*.8,(y1-y0)/4);
   (l===0?lobbyGlass:podGlass).push(g);
  }
- // Podium mullion fins: one face each (the fin material is double-sided) standing proud of every storey's glass, for facade depth.
- const podFins:number[]=[];
- for(let l=0;l<L;l++){const ring=scaleAbout(podiumRing(l,96),.975),y0=l?podiumTop(l-1):0,y1=podiumTop(l)-AIOPS.podium.slab,m=ring.length;
-  for(let i=0;i<m;i+=l?3:2){const a=ring[(i+m-1)%m],b=ring[(i+1)%m],p=ring[i],tx=b[0]-a[0],tz=b[1]-a[1],tl=Math.hypot(tx,tz),nx=tz/tl,nz=-tx/tl,d=l?.045:.06;
-   // Skip the fins in front of the entrance vestibule.
-   if(!l&&Math.abs(p[0]-AIOPS.atrium.x)<AIOPS.entry.w/2+.1&&p[1]>0)continue;
-  quad(podFins,[p[0],y0,p[1]],[p[0]+nx*d,y0,p[1]+nz*d],[p[0]+nx*d,y1,p[1]+nz*d],[p[0],y1,p[1]]);}}
  band(scaleAbout(podiumRing(1),.93),scaleAbout(podiumRing(1),.995),podiumTop(1),.06,planters);
  band(scaleAbout(podiumRing(2),.9),scaleAbout(podiumRing(2),.99),PODIUM_H,.05,planters);
  // Terrace lawn on the podium roof, and the planted step that rises round the tower's foot.
  const lawn:number[]=[];fan(at(scaleAbout(podiumRing(2),.92),PODIUM_H+.012),lawn);
- // Lower planted tier: the terrace steps up twice toward the tower.
- const tierOuter=towerRing(PODIUM_H,height,AIOPS.tier.scale);
- slabs.push(slab(tierOuter,PODIUM_H+AIOPS.tier.rise,AIOPS.tier.rise));
- fan(at(towerRing(PODIUM_H,height,AIOPS.tier.scale*.975),PODIUM_H+AIOPS.tier.rise+.012),lawn);
- band(towerRing(PODIUM_H,height,AIOPS.tier.scale*.96),towerRing(PODIUM_H,height,AIOPS.tier.scale*.995),PODIUM_H+AIOPS.tier.rise,.05,planters);
  const stepOuter=towerRing(PODIUM_H,height,AIOPS.step.scale);
  slabs.push(slab(stepOuter,PODIUM_H+AIOPS.step.rise,AIOPS.step.rise));
  fan(at(towerRing(PODIUM_H,height,AIOPS.step.scale*.97),PODIUM_H+AIOPS.step.rise+.012),lawn);
- // Atrium drum: a glass cylinder over the entrance rising through the podium and above the terrace,
- // bronze transoms at each storey, a slim white crown ring and a shallow ribbed glass dome with a lit oculus.
- const A=AIOPS.atrium,drumH=PODIUM_H+A.above,E=AIOPS.entry;
+ // Atrium drum: a glass cylinder over the entrance, a white crown ring, a lit oculus and a bronze canopy.
+ const A=AIOPS.atrium,drumH=PODIUM_H+A.above;
  const drum=new THREE.CylinderGeometry(A.r,A.r,drumH,A.ring,4,true).translate(A.x,drumH/2,A.z);
- const crownRing=new THREE.CylinderGeometry(A.r+.05,A.r+.05,.07,A.ring,1,false).translate(A.x,drumH+.02,A.z);
- const dome=new THREE.SphereGeometry(A.r,A.ring,6,0,Math.PI*2,0,Math.PI/2).scale(1,.42,1).translate(A.x,drumH+.05,A.z);
- const sky=new THREE.CylinderGeometry(A.r*.22,A.r*.22,.05,16).translate(A.x,drumH+.05+A.r*.42,A.z);
- const trim:THREE.BufferGeometry[]=[];
- for(let i=0;i<8;i++)trim.push(new THREE.TorusGeometry(A.r,.018,4,12,Math.PI).rotateY(i/8*Math.PI).scale(1,.42,1).translate(A.x,drumH+.05,A.z));
- for(let l=0;l<L;l++)trim.push(new THREE.TorusGeometry(A.r+.015,.022,4,A.ring).rotateX(Math.PI/2).translate(A.x,podiumTop(l)-.02,A.z));
- // Entrance canopy: a thin bronze arc over the vestibule, and the glazed vestibule itself with a bronze frame and doors.
- const canopy=new THREE.CylinderGeometry(A.r+.4,A.r+.4,.035,A.ring,1,false,0,Math.PI*.7).rotateY(-Math.PI*.35+Math.PI/2).translate(A.x,E.h+.06,A.z);
- const vz=A.z+A.r-.05+E.d/2,vestibule=new THREE.BoxGeometry(E.w,E.h,E.d).translate(A.x,E.h/2,vz);
- const fz=vz+E.d/2;
- for(const dx of [-E.w/2,-E.w/6,E.w/6,E.w/2])trim.push(new THREE.BoxGeometry(.035,E.h,.035).translate(A.x+dx,E.h/2,fz));
- slabs.push(new THREE.BoxGeometry(E.w+.06,.05,E.d+.05).translate(A.x,E.h+.02,vz));trim.push(new THREE.BoxGeometry(E.w,.03,.04).translate(A.x,E.h*.78,fz));
- for(const sx of [-1,1])trim.push(new THREE.BoxGeometry(.035,.035,E.d).translate(A.x+sx*E.w/2,E.h*.78,vz));
- const doors=new THREE.BoxGeometry(E.w/3-.04,E.h*.76,.012).translate(A.x,E.h*.38,fz+.01);
+ const crownRing=new THREE.CylinderGeometry(A.r+.06,A.r+.06,.12,A.ring,1,false).translate(A.x,drumH+.04,A.z);
+ const sky=new THREE.CylinderGeometry(A.r*.62,A.r*.62,.03,A.ring).translate(A.x,drumH+.1,A.z);
+ const canopy=new THREE.CylinderGeometry(A.r+.55,A.r+.55,.05,A.ring,1,false,0,Math.PI).rotateY(-Math.PI/2).translate(A.x,.62,A.z);
  const halo=new THREE.TorusGeometry(A.r*.6,.035,6,A.ring).rotateX(Math.PI/2).translate(A.x,podiumTop(0)+.25,A.z);
  // Drum mullions: thin posts round the glass.
- const posts:THREE.BufferGeometry[]=[];for(let i=0;i<20;i++){const t=i/20*Math.PI*2;posts.push(new THREE.BoxGeometry(.025,drumH,.025).translate(A.x+Math.cos(t)*(A.r+.012),drumH/2,A.z+Math.sin(t)*(A.r+.012)));}
+ const posts:THREE.BufferGeometry[]=[];for(let i=0;i<16;i++){const t=i/16*Math.PI*2;posts.push(new THREE.BoxGeometry(.03,drumH,.03).translate(A.x+Math.cos(t)*(A.r+.012),drumH/2,A.z+Math.sin(t)*(A.r+.012)));}
  return {
-  glass,fins:merge([mesh(fin),mesh(podFins)]),ledges:mesh(ledges),rim:mesh(rim),roof:mesh(roof),crownBand:mesh(crownBand),
+  glass,fins:mesh(fin),ledges:mesh(ledges),rim:mesh(rim),roof:mesh(roof),crownBand:mesh(crownBand),
   ribbonBack:mesh(back),ribbonLouvres:mesh(louvres),
   slabs:merge([...slabs,crownRing]),lobbyGlass:merge(lobbyGlass),podiumGlass:merge(podGlass),planters:mesh(planters),lawn:mesh(lawn),
-  drum,dome,drumPosts:merge(posts),bronzeTrim:merge(trim),vestibule,doors,sky,canopy,halo,
+  drum,drumPosts:merge(posts),sky,canopy,halo,
  };
 }
 export type AiOpsGeometry=ReturnType<typeof aiOpsGeometry>;
