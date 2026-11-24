@@ -12,7 +12,7 @@ for (const width of [1512, 390])
     mkdirSync(out, { recursive: true });
     await goTo(page, "Agents");
     await page.getByRole("tab", { name: "Roster" }).click();
-    await expect(page.locator("table.roster tbody tr[data-id]")).toHaveCount(22);
+    await expect(page.locator("table.roster tbody tr[data-id]")).toHaveCount(17); // 17 agents; Leila's 5 skills sit on her row
     await page.locator('table.roster tr[data-id="benjaire-inquiry-manager"]').click();
     await settle(page, 1);
     await page.screenshot({ path: `${out}/roster-${width}.png` });
@@ -27,3 +27,14 @@ for (const width of [1512, 390])
     await page.getByLabel("Search roster").fill("yusuf");
     await expect(page.locator("table.roster tbody tr[data-id]")).toHaveCount(1);
   });
+
+// Between phone and desktop widths the details sit below the table: picking an agent scrolls to them.
+test("Agents Roster details scroll into view at 1100", async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 900 });
+  await openAtlas(page);
+  await goTo(page, "Agents");
+  await page.getByRole("tab", { name: "Roster" }).click();
+  await page.locator('table.roster tr[data-id="benjaire-product-lab"]').click();
+  await page.clock.runFor(300);
+  await expect.poll(() => page.locator(".roster-split > .reg-inspector").evaluate((el) => el.getBoundingClientRect().top)).toBeLessThan(300);
+});

@@ -51,6 +51,20 @@ export function Roster({ agents, entries, statuses, query, setQuery, prefs, setP
   const cols = all.some((r) => r.spendUsd != null) ? COLS : COLS.filter((c) => c.label !== "AI spend this month");
   const sortBy = (id: RosterSort) => setPrefs(prefs.sort === id ? { desc: !prefs.desc } : { sort: id, desc: false });
 
+  // Between phone and desktop widths the details sit below the table, so a click scrolls to them.
+  const choose = (id: string) => {
+    pick(id);
+    if (!window.matchMedia("(min-width: 641px) and (max-width: 1280px)").matches) return;
+    // The details mount a moment after the click, so wait for them (up to about a second).
+    let tries = 0;
+    const go = () => {
+      const panel = document.querySelector(".roster-split > .reg-inspector");
+      if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      else if (++tries < 20) setTimeout(go, 50);
+    };
+    setTimeout(go, 0);
+  };
+
   const automations = (r: RosterRow) => {
     const { live, paused, manual } = r.automations;
     const total = live + paused + manual;
@@ -94,9 +108,9 @@ export function Roster({ agents, entries, statuses, query, setQuery, prefs, setP
               {rows.map((r) => {
                 const who = identityFor(r.id, agents);
                 return (
-                  <tr key={r.id} data-id={r.id} className={`${r.id === current ? "on" : ""} ${r.inactive ? "dim" : ""}`} onClick={() => pick(r.id)}>
+                  <tr key={r.id} data-id={r.id} className={`${r.id === current ? "on" : ""} ${r.inactive ? "dim" : ""}`} onClick={() => choose(r.id)}>
                     <td>
-                      <button className="roster-who" onClick={(e) => { e.stopPropagation(); pick(r.id); }}>
+                      <button className="roster-who" onClick={(e) => { e.stopPropagation(); choose(r.id); }}>
                         <AgentAvatar identity={who} size={30} status={statuses.get(r.id)?.status} />
                         <span>
                           <b>{who.name}</b>
