@@ -9,6 +9,9 @@ import { clock } from "../../routine/routine";
 import { setRoutineHeld, useRoutineHeld, useRoutineOps, useWhere } from "../../routine/useRoutineOps";
 import { useAtlas } from "../../state";
 import { planOffice } from "../office/model";
+import { useN8nRuns } from "../../n8n/runs";
+import { buildingDisplayName } from "../../modules/names";
+import { SELF_REPORTS, reportsLive } from "../../selfReports/selfReports";
 
 /**
  * The agent's daily routine settings (Agents → Workday, and the map's agent sheet): where it lives
@@ -30,6 +33,7 @@ export function RoutinePanel({ agentId }: { agentId: string }) {
   const ops = all.get(personaId);
   const held = useRoutineHeld().has(personaId);
   const where = useWhere(personaId);
+  const n8n = useN8nRuns();
   const job = useMemo(() => agentJobs(catalog).find((j) => j.agentId === personaId), [catalog, personaId]);
   const desk = useMemo(() => {
     if (!job || job.work.kind !== "headquarters") return null;
@@ -63,6 +67,10 @@ export function RoutinePanel({ agentId }: { agentId: string }) {
         </dd>
         <dt>Next run</dt>
         <dd>{ops.next ? `${ops.next.workflow.name}, ${dayTime(ops.next.at, ops.next.workflow.timeZone)} (${zoneName(ops.next.workflow.timeZone)})` : "No schedule found for its workflows"}</dd>
+        <dt>Self-report</dt>
+        <dd>
+          <SelfReport personaId={personaId} live={reportsLive(SELF_REPORTS, n8n.value?.state === "ok" ? n8n.value.workflows : null)} known={n8n.value?.state === "ok"} />
+        </dd>
       </dl>
 
       <div className="section-title">Workflows it owns</div>
@@ -99,6 +107,22 @@ export function RoutinePanel({ agentId }: { agentId: string }) {
       <p className="muted small">This only changes the map. Its scheduled runs keep running where they live; to pause one, switch the workflow off there (links above). Atlas can't change n8n.</p>
       <p className="muted small">{source === "live" ? "Run data: live from n8n." : source === "saved" ? `Run data: saved copy${fetchedAt ? ` from ${dayTime(Date.parse(fetchedAt), DEFAULT_TIME_ZONE)}` : ""}. ${message ?? ""}` : `Run data: ${message ?? "n8n isn't available here."} GitHub and the Task Center still count.`}</p>
     </div>
+  );
+}
+
+/** Its daily report to the Data Intelligence Center (catalog/workspace/self-reports.yaml). */
+function SelfReport({ personaId, live, known }: { personaId: string; live: boolean; known: boolean }) {
+  const slot = SELF_REPORTS.slots[personaId];
+  if (!slot) return <>No report time set</>;
+  const place = buildingDisplayName(SELF_REPORTS.building, "Data Intelligence Center");
+  const url = `https://khancam15.app.n8n.cloud/workflow/${SELF_REPORTS.workflowId}`;
+  return (
+    <>
+      Daily at {slot} ({zoneName(SELF_REPORTS.timeZone)}) at the {place}
+      <div className="muted small">
+        {live ? "Published in n8n: it walks there at that time when it is free." : known ? "Draft, not running yet: no report or walk until the workflow is published." : "Draft until n8n shows the workflow published: no walk is drawn."} <ExternalLink href={url}>n8n workflow</ExternalLink>
+      </div>
+    </>
   );
 }
 

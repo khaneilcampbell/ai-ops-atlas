@@ -31,7 +31,8 @@ describe("Agents at home in Ellipse Residences",()=>{
   });
 
   it("makes every named agent a resident in its own apartment, and nobody else",()=>{
-    const named=jobs.filter(j=>cityFigureFor(j.agentId));
+    // A paused named agent holds no apartment (apartments() in agentJobs.ts), so only working ones live here.
+    const named=jobs.filter(j=>cityFigureFor(j.agentId)&&!j.offDuty);
     expect(residents.map(r=>r.id)).toEqual(named.map(j=>j.agentId));
     for(const r of residents)expect(r.home.unit).toBe(jobs.find(j=>j.agentId===r.id)!.home.unit);
     // An agent whose saved home is another building doesn't live here.

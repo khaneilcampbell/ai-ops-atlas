@@ -38,10 +38,10 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 7 projects and 73 agents discoverable with no manifest problems", () => {
+  it("keeps all 7 projects and 82 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
     expect(catalog.projects).toHaveLength(7);
-    expect(entries).toHaveLength(73);
+    expect(entries).toHaveLength(82);
   });
 
 
@@ -55,7 +55,7 @@ describe("bundled registry", () => {
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 28, B: 13, C: 22, D: 9, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 30, B: 15, C: 26, D: 10, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -84,7 +84,7 @@ describe("bundled registry", () => {
       expect(action.profile.governance.approval).toBeTruthy();
       expect(action.profile.governance.permissions.length).toBeGreaterThan(0);
     }
-    expect(entries.filter((e) => (e.profile.governance.autonomy ?? 0) >= 2 && catalog.agents.some(a => a.id === e.profile.id && a.projectId === "ai-ops-atlas")).map((e) => e.profile.id)).toEqual(["atlas-ci", "atlas-rerun-failed", "atlas-merge-pr", "atlas-executive"]);
+    expect(entries.filter((e) => (e.profile.governance.autonomy ?? 0) >= 2 && catalog.agents.some(a => a.id === e.profile.id && a.projectId === "ai-ops-atlas")).map((e) => e.profile.id)).toEqual(["atlas-ci", "atlas-rerun-failed", "atlas-merge-pr", "atlas-executive", "atlas-engineer", "atlas-qa"]);
   });
 });
 
@@ -287,7 +287,7 @@ describe("directory", () => {
   it("groups by agent type in type order and by project", () => {
     const g = groupEntries(entries, "classification");
     expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E"]);
-    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(73);
+    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(82);
   });
 
   it("sorts verified runs first and keeps the rest stable by title", () => {
@@ -304,11 +304,12 @@ describe("directory", () => {
     // Every classification is verified and every agent that acts on external systems documents its permissions.
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
-    // 37 with a source of their own (Atlas Executive since 2026-11-22), 12 with n8n workflow links
-    // (10 automations, including the Career Execution Agent, Task Writer and Atlas Security Sheet drafts,
-    // Benjaire Product Lab, which links its hand-off workflow, and Product Lab Market Research, which
-    // links Atlas · Executive Dispatch), and 11 owning agents through their automations.
-    expect(s.observable).toBe(60);
+    // Items with a source of their own (Atlas Executive and Agent Self-Reports since 2026-11-22; Atlas Engineering and QA since
+    // 2026-11-23 count once between them here, as QA links the same dispatch run), 12 with n8n workflow links
+    // (10 automations, including the Career Execution Agent, Task Writer and Atlas Security Sheet drafts, Benjaire Product Lab,
+    // which links its hand-off workflow, and Product Lab Market Research, which links Atlas · Executive
+    // Dispatch), and 11 owning agents through their automations.
+    expect(s.observable).toBe(62);
   });
 });
 

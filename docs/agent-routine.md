@@ -107,6 +107,10 @@ automations, n8n workflows, Product Lab skills, pedestrians or retired agents) a
   or with their routine paused can't be sent. It never starts, delays or cancels a run or touches a
   schedule, workflow or permission: a run that comes due still calls the agent in, and when the next
   scheduled run is too close it takes a short break nearby instead.
+- **Daily self-report** (Nov 22): each named agent has a report time at the Data Intelligence Center
+  (`catalog/workspace/self-reports.yaml`, see [agent-self-reports.md](agent-self-reports.md)). The
+  walk is drawn only while the report workflow is published in live n8n (`report` in `planRoutine`),
+  and only when the agent is free then; while it is a draft, Workday says "Draft, not running yet".
 - Escape closes it and gives focus back to the Agents button; arrow keys move through the list.
   On a phone it is a bottom sheet over the lower map.
 

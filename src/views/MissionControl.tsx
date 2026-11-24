@@ -19,6 +19,7 @@ import { MissionFocus } from "./MissionFocus";
 import { CommandBrief } from "./CommandBrief";
 import { ExecutiveGoals } from "./executive/ExecutiveGoals";
 import { ExecutiveControl } from "./executive/ExecutiveControl";
+import { EngineeringOperations } from "./engineering/EngineeringOperations";
 import { AutonomousOperations } from "./operations/AutonomousOperations";
 import { WebsiteManagement } from "./WebsiteManagement";
 import { ProductionHealth } from "./ProductionHealth";
@@ -66,6 +67,8 @@ export function MissionControl({ attention }: { attention: AttentionItem[] }) {
       <CommandBrief attention={attention.length} />
 
       <ExecutiveControl />
+
+      <EngineeringOperations />
 
       <ExecutiveGoals />
 

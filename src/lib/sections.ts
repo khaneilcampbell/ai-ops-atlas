@@ -22,7 +22,7 @@ export const SECTIONS: Section[] = [
   { id: "agents", label: "Agents", icon: "agents", tabs: [{ view: "agents", label: "Agents" }] },
   // Labelled Auto in the sidebar; the page itself is still Automations.
   { id: "automations", label: "Auto", icon: "network", tabs: [{ view: "automations", label: "Automations" }] },
-  { id: "intel", label: "Intel", icon: "spark", tabs: [{ view: "intel", label: "Intelligence" }, { view: "review", label: "Engineering Review" }, { view: "repos", label: "Repositories" }, { view: "activity", label: "Activity" }, { view: "intel-api", label: "API" }] },
+  { id: "intel", label: "Intel", icon: "spark", tabs: [{ view: "guide", label: "Overview" }, { view: "intel", label: "Intelligence" }, { view: "review", label: "Engineering Review" }, { view: "repos", label: "Repositories" }, { view: "activity", label: "Activity" }, { view: "intel-api", label: "API" }] },
   // Labelled Hub in the sidebar; the page is still the Workspace.
   { id: "workspace", label: "Hub", icon: "compass", tabs: [{ view: "workspace", label: "Workspace" }] },
   { id: "settings", label: "Settings", icon: "settings", tabs: [{ view: "settings", label: "Connections" }, { view: "preferences", label: "Preferences" }] },
