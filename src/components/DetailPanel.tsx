@@ -223,14 +223,6 @@ function ToolDetail({ id }: { id: string }) {
   </>;
 }
 
-/** The tools a building's agents use. They are part of the building, not separate offices on the map (Khaneil, 2026-11-24). */
-function BuildingTools({ project }: { project: Project }) {
-  const { catalog, select } = useAtlas();
-  const tools = orderToolsForWorkflow(servicesOf(catalog.agents.filter(a => a.projectId === project.id)));
-  if (!tools.length) return null;
-  return <section><div className="section-title">Tools in this building</div><div className="link-list">{tools.map(tool => <button key={tool.id} className="text-btn" onClick={() => select({ kind: "service", id: `${project.id}:${tool.id}` })}>{tool.name} <span className="muted small">· {tool.vendor}</span></button>)}</div></section>;
-}
-
 /** A project owns its building and agents; repositories are linked resources. */
 function ProjectDetail({ id }: { id: string }) {
   const { catalog } = useAtlas();
@@ -247,7 +239,6 @@ function ProjectDetail({ id }: { id: string }) {
       <BuildingInside projectId={project.id}/>
       <BuildingTasks buildingId={project.id}/>
       {project.module === "business-operations-hq" && <BusinessLink/>}
-      <BuildingTools project={project}/>
       <LinkedRepositories project={project}/>
       <ProjectOrganization project={project} agents={catalog.agents.filter(a => a.projectId === project.id)} />
       {project.links.length > 0 && <section><div className="section-title">Project links</div><div className="link-list">{project.links.map(link => <ExternalLink key={link.url} href={link.url}><Icon name="external" size={14} /> {link.label}</ExternalLink>)}</div></section>}
