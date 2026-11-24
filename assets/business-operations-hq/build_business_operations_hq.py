@@ -50,6 +50,8 @@ MAT = {
     "green": material("boh_terrace_green", srgb("#5f9a3c"), rough=0.9),
     "frame": material("boh_dark_frame", srgb("#163b31"), metal=0.3, rough=0.45),
     "glow": material("boh_lobby_glow", srgb("#f3d9a6"), emit=srgb("#ffcf86"), strength=1.2),
+    "asphalt": material("boh_asphalt", srgb("#4b5150"), rough=0.95),
+    "bloom": material("boh_bloom", srgb("#9a6fc2"), rough=0.85),
 }
 
 parts = {}  # (building, material) -> list of objects
@@ -193,8 +195,7 @@ box(A, "glow", ax0 + .2, ax1 - .2, ay0 + .2, ay1 - .2, .1, .55)
 box(A, "gold", ax0 + .3, ax0 + 1.5, ay0 - .5, ay0, .75, .8)                              # entrance canopy
 box(A, "green", ax0 + .2, ax1 - .2, ay0 + .2, ay1 - .2, AH + .22, AH + .3)               # green roof
 box(A, "frame", AXC - .6, AXC + .6, AYC - .35, AYC + .55, AH + .3, AH + .48)            # skylight
-for x, y in ((ax0 - .5, ay0 - .5), (ax1 + .4, ay0 - .6)):
-    tree(A, x, y, 0, .9)
+tree(A, ax0 - .5, ay0 - .5, 0, .9)
 # Covered walkway at first-floor level from the HQ podium's east face to the annex.
 wx0, wx1, wy = PW / 2, ax0, AYC
 box(A, "stone", wx0, wx1, wy - .4, wy + .4, .7, .8)
@@ -202,6 +203,136 @@ box(A, "atrium", wx0, wx1, wy - .36, wy + .36, .8, 1.32)
 box(A, "frame", wx0, wx1, wy - .42, wy + .42, 1.32, 1.42)
 for x in [wx0 + .8, wx1 - .8]:
     box(A, "stone", x - .1, x + .1, wy - .1, wy + .1, 0, .7)
+
+
+# ---- Site (concept board surroundings) -----------------------------------------------------
+# North of the annex: a service yard with a loading dock and box trucks, reached by a service road
+# from the street down the annex's east side. North of the HQ: a low two-deck parking garage that
+# opens onto the yard. South of the annex: a visitor lot. Lawns, hedges, flowering shrubs and trees
+# fill the edges. Kept inside the corner plot: the railway runs about 2 units east and 1 north.
+SX0, SX1, SY0, SY1 = -6.1, 13.55, -6.7, 6.95   # site extent (Blender x/y); businessHqPlan.ts BOH_MODEL.site
+
+def cone(building, mat, x, y, z0, h, r, n=6):
+    bpy.ops.mesh.primitive_cone_add(vertices=n, radius1=r, radius2=0, depth=h, location=(x, y, z0 + h / 2))
+    o = bpy.context.active_object; o.data.materials.append(MAT[mat])
+    parts.setdefault((building, mat), []).append(o)
+
+def cypress(building, x, y, s=1.0):
+    cyl(building, "frame", x, y, 0, .12 * s, .03 * s, 4)
+    cone(building, "green", x, y, .1 * s, .75 * s, .17 * s)
+
+def shrub(building, x, y, s=1.0, mat="green"):
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=.13 * s, location=(x, y, .08 * s))
+    o = bpy.context.active_object; o.scale = (1, 1, .75); o.data.materials.append(MAT[mat])
+    parts.setdefault((building, mat), []).append(o)
+
+def oriented(building, along):
+    """Box helper in a vehicle's frame: u across, v along, mapped onto x/y."""
+    def b(mat, u0, u1, v0, v1, z0, z1, cx, cy):
+        if along == "y": box(building, mat, cx + u0, cx + u1, cy + v0, cy + v1, z0, z1)
+        else: box(building, mat, cx + v0, cx + v1, cy + u0, cy + u1, z0, z1)
+    return b
+
+def truck(building, x, y, s=1, along="y"):
+    """Box truck; (x, y) is the rear door, s = +1/-1 sets which way the cab points."""
+    b = oriented(building, along)
+    def v(a, c): return (min(s * a, s * c), max(s * a, s * c))
+    b("stone", -.26, .26, *v(0, 1.18), .13, .74, x, y)                     # box body
+    b("gold", -.27, .27, *v(.1, 1.08), .5, .56, x, y)                      # brand stripe
+    b("frame", -.25, .25, *v(1.2, 1.62), .1, .5, x, y)                     # cab
+    b("atrium", -.21, .21, *v(1.6, 1.64), .32, .48, x, y)                  # windscreen
+    b("frame", -.2, .2, *v(-.04, 1.62), .03, .13, x, y)                    # chassis
+    for w in (.22, .95, 1.45):
+        for side in (-1, 1):
+            b("frame", side * .28 - .04, side * .28 + .04, *v(w - .1, w + .1), 0, .17, x, y)
+
+def car(building, x, y, mat, along="y", z=0.0):
+    b = oriented(building, along)
+    b(mat, -.12, .12, -.22, .22, z + .03, z + .14, x, y)
+    b("atrium", -.1, .1, -.1, .12, z + .14, z + .21, x, y)
+
+def lamp(building, x, y, h=.9):
+    cyl(building, "frame", x, y, 0, h, .025, 4)
+    box(building, "glow", x - .07, x + .07, y - .07, y + .07, h, h + .06)
+
+# Service road and yard (asphalt), with stone kerbs and bay lines.
+RX0, RX1 = 11.7, 12.9
+box(H, "asphalt", RX0, RX1, SY0, 0.6, 0, .025)
+box(H, "asphalt", 4.9, RX1, 0.6, 6.2, 0, .025)
+for y in (SY0 + .4, -2.6, -.4):
+    box(H, "stone", RX0 + .55, RX0 + .65, y, y + .7, .025, .03)                 # centre dashes
+for x in (8.2, 9.2, 10.2, 11.2):
+    box(H, "stone", x - .02, x + .02, 1.7, 4.0, .025, .03)                       # dock bays
+# Loading dock on the annex's north face: stone shed, three lit roll-up doors, a gold canopy.
+DY0, DY1 = ay1, ay1 + 1.2
+box(A, "stone", 8.0, 11.4, DY0, DY1, 0, .95)
+box(A, "green", 8.1, 11.3, DY0 + .1, DY1 - .1, .95, 1.0)
+box(A, "stone", 8.0, 11.4, DY1, DY1 + .3, 0, .22)                                # dock apron
+for x in (8.7, 9.7, 10.7):
+    box(A, "frame", x - .34, x + .34, DY1 + .3 - .02, DY1 + .32, .22, .8)         # door
+    box(A, "glow", x - .3, x + .3, DY1 + .32, DY1 + .34, .74, .78)                # door light
+    box(A, "frame", x - .32, x + .32, DY1 + .3, DY1 + .5, .2, .24)                # bumper
+box(A, "gold", 7.9, 11.5, DY1, DY1 + .7, .9, .95)                                 # canopy
+TR = DY1 + .55
+truck(A, 8.7, TR, 1); truck(A, 10.7, TR, 1)                                      # backed up to the dock
+truck(A, 7.0, 5.4, -1, "x")                                                      # turning in the yard
+# Parking garage behind the HQ: two open decks between stone slabs, a planted roof deck with cars,
+# a gold band and an entry ramp onto the yard.
+GX0, GX1, GY0, GY1 = -4.6, 4.5, 3.5, 6.3
+box(H, "frame", GX0 + .15, GX1 - .15, GY0 + .15, GY1 - .15, 0, 1.0)              # shaded deck interior
+for z in (0, .48, .94):
+    box(H, "stone", GX0, GX1, GY0, GY1, z, z + .08)                               # deck slabs
+for x in [GX0 + k * (GX1 - GX0) / 6 for k in range(7)]:
+    for y in (GY0, GY1):
+        box(H, "stone", x - .09, x + .09, y - .09, y + .09, 0, 1.02)              # columns
+for y0, y1 in ((GY0 - .02, GY0 + .06), (GY1 - .06, GY1 + .02)):
+    box(H, "gold", GX0 - .02, GX1 + .02, y0, y1, 1.02, 1.07)                       # roof band
+box(H, "gold", GX1 - .06, GX1 + .02, GY0, GY1, 1.02, 1.07)
+box(H, "green", GX0, GX1, GY1 - .2, GY1, 1.02, 1.16)                              # planter edge
+box(H, "green", GX0, GX0 + .2, GY0, GY1, 1.02, 1.16)
+box(H, "asphalt", GX1, GX1 + .45, GY0 + .5, GY1 - .5, 0, .03)                     # entry
+box(H, "gold", GX1 - .02, GX1 + .02, GY0 + .4, GY0 + .9, .55, .9)                 # entry sign
+for i, (x, mat) in enumerate(zip([-3.6, -2.7, -1.8, -.4, .5, 1.4, 2.8, 3.7], ["stone", "glass", "gold", "stone", "frame", "glass", "stone", "gold"])):
+    car(H, x, 4.3 if i % 2 else 5.5, mat, z=1.02)                                 # roof deck
+    car(H, x + .45, 5.5 if i % 2 else 4.3, ["frame", "stone", "glass"][i % 3], z=.48)  # first deck
+    for y in (4.3, 5.5):
+        box(H, "stone", x + .2, x + .23, y - .28, y + .28, 1.02, 1.025)           # bay lines
+# Drop-off drive along the street side, from the street's end to the service road.
+box(H, "asphalt", 1.3, RX0, -6.75, -6.15, 0, .025)
+for x in (2.6, 4.4, 6.2, 8.0, 9.8):
+    box(H, "stone", x, x + .7, -6.47, -6.43, .025, .03)
+# Visitor lot south of the annex, opening onto the service road.
+LX0, LY0, LY1 = 7.4, -5.95, -3.4
+box(H, "asphalt", LX0, RX0, LY0, LY1, 0, .025)
+for x in (7.95, 8.55, 9.15, 9.75, 10.35, 10.95):
+    box(H, "stone", x - .29, x - .27, -4.4, -3.5, .025, .03)
+for x, mat in ((7.95, "stone"), (8.55, "glass"), (9.75, "gold"), (10.35, "stone"), (10.95, "frame")):
+    car(H, x, -3.95, mat)
+box(H, "green", LX0, RX0, LY0 + .02, LY0 + .2, 0, .22)                            # hedge
+box(H, "green", LX0 - .2, LX0, LY0, LY1, 0, .22)
+# Lamps along the road, yard and lot.
+for x, y in ((RX1 + .15, -5.0), (RX0 - .15, -2.2), (RX1 + .15, 1.0), (6.2, 6.0), (RX1 + .15, 4.4), (9.2, -5.2)):
+    lamp(H, x, y)
+
+# Trees and shrubs: a tree line on the road's east verge, cypresses behind the garage, a planted
+# west edge toward the Investment Operations Center, lawns between the forecourt and the visitor lot.
+for y in (-6.0, -4.4, -2.8, -1.2):
+    tree(H, 13.3, y, 0, .85)
+for y in (2.3, 3.9):
+    cypress(H, 13.3, y, .9)
+for x in (-5.8, -3.9, -2.0, -.1, 1.8, 3.7):
+    cypress(H, x, 6.75, 1.0)
+for y in (-5.6, -4.0, -2.2, -.4, 1.4, 3.2, 5.0):
+    tree(H, -5.75, y, 0, .95 if y % 2 else .85)
+for x, y, sc in ((6.1, -5.75, 1.0), (6.5, -4.4, .9), (6.0, -2.9, .85), (7.4, 2.6, .8), (5.6, 5.4, .8)):
+    tree(H, x, y, 0, sc)
+for x, y in ((5.6, -5.4), (6.9, -5.1), (5.7, -3.7), (7.0, -3.5), (-5.2, -6.3), (-5.2, -4.8), (-5.25, -3.1), (-5.25, -1.3),
+             (-5.2, .5), (-5.2, 2.3), (-4.9, 6.75), (-2.95, 6.75), (-1.05, 6.75), (.85, 6.75), (2.75, 6.75),
+             (ax0 - .2, ay0 - .25), (ax0 + .6, ay0 - .9), (-3.0, -6.4)):
+    shrub(H, x, y, 1.0, "bloom")
+for x, y in ((6.6, -5.7), (5.5, -4.5), (6.6, -3.0), (-5.3, -5.5), (-5.3, -2.2), (-5.3, 1.4), (-5.3, 4.1), (ax1 - .3, ay0 - .3),
+             (4.95, 3.4), (4.95, 2.4), (-1.6, -6.45), (-4.4, -6.45)):
+    shrub(H, x, y, 1.15)
 
 # ---- Join per building and material, export ------------------------------------------------
 for (b, m), objs in parts.items():

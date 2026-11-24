@@ -43,16 +43,30 @@ describe("Business Operations HQ in the Financial District corner", () => {
     expect(Object.keys(FINANCE_PLAN.buildings)).toEqual(expect.arrayContaining([financialKey("budget"), financialKey("records")]));
   });
 
-  it("fits the HQ, forecourt, walkway and annex on the plot without touching the buildings that stay", () => {
+  it("fits the HQ, annex, yard, garage and planting on the plot without touching the buildings that stay", () => {
     const f = businessHqFootprints(drawn.businessHq!), fd = drawn.financial!;
     for (const b of fd.buildings) {
       const dim = financialDimensions(b.id), r = { x: fd.x + b.x, z: fd.z + b.z, w: dim.w, d: dim.d };
-      for (const part of [f.hq, f.annex]) expect(overlaps(part, r), b.id).toBe(false);
+      for (const part of [f.hq, f.annex, f.site]) expect(overlaps(part, r), b.id).toBe(false);
     }
     // East of the Investment Operations Center, inside the perimeter railway, north of the district street.
-    const rail = Math.max(...planned.communityRail!.loop!.route.map(([x]) => x));
+    const route = planned.communityRail!.loop!.route, rail = Math.max(...route.map(([x]) => x));
+    // The loop's north straight, sampled across the lot (its corner curve is covered by the east check below).
+    const railZ = (x: number) => route.flatMap(([x0, z0], i) => {
+      const [x1, z1] = route[(i + 1) % route.length];
+      return (x - x0) * (x - x1) <= 0 && x0 !== x1 ? [z0 + ((x - x0) / (x1 - x0)) * (z1 - z0)] : [];
+    }).filter((z) => z < f.site.z);
+    const samples = [0, 0.25, 0.5, 0.75].map((t) => f.site.x - f.site.w / 2 + t * f.site.w).flatMap(railZ);
+    expect(samples.length).toBeGreaterThan(2);
+    const northRail = Math.max(...samples);
     expect(f.annex.x + f.annex.w / 2).toBeLessThan(rail - 1);
+    expect(f.site.x + f.site.w / 2).toBeLessThan(rail - 0.5);
+    expect(f.site.z - f.site.d / 2).toBeGreaterThan(northRail + 0.8);
     expect(f.hq.z + f.hq.d / 2).toBeLessThan(fd.street[0][1] - 0.4);
+    expect(f.site.z + f.site.d / 2).toBeLessThan(fd.street[0][1] - 0.4);
+    // No tree or shrub from the rest of the map stands on the lot.
+    const on = (p: { x: number; z: number }) => Math.abs(p.x - f.site.x) < f.site.w / 2 && Math.abs(p.z - f.site.z) < f.site.d / 2;
+    expect([...drawn.trees, ...drawn.bushes].filter(on)).toEqual([]);
     expect(f.annex.w * f.annex.d).toBeLessThan((f.hq.w * f.hq.d) / 3);
     expect(f.annex.y1).toBeLessThan(f.hq.y1 / 3);
   });
@@ -60,7 +74,7 @@ describe("Business Operations HQ in the Financial District corner", () => {
   it("ships a light Blender-built model", () => {
     const glb = "public/models/map/business-operations-hq.glb";
     expect(existsSync(glb)).toBe(true);
-    expect(statSync(glb).size).toBeLessThan(300_000);
+    expect(statSync(glb).size).toBeLessThan(450_000);
     expect(existsSync("assets/business-operations-hq/business-operations-hq.blend")).toBe(true);
   });
 });

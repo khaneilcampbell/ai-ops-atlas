@@ -7,7 +7,7 @@ import {test,expect,type Page} from '@playwright/test';import {writeFileSync,mkd
  */
 const out=process.env.SHOT_DIR??'artifacts/business-hq';
 test.skip(!process.env.BOH_SHOTS,'Screenshots on request only (BOH_SHOTS=1).');
-const VIEWS:[string,number[],number[]][]=[['street',[22,14,4],[36,3,-11]],['bay',[56,18,6],[36,3,-11]],['top',[36,40,-9.5],[36,0,-9.6]]];
+const VIEWS:[string,number[],number[]][]=[['street',[22,14,4],[36,3,-11]],['bay',[56,18,6],[36,3,-11]],['top',[36,40,-9.5],[36,0,-9.6]],['yard',[54,15,-27],[39,1,-13]]];
 async function shoot(page:Page,prefix:string){
  const shots=await page.evaluate(async(views)=>{
   const source=await(await fetch('/src/views/map3d/HillsCommunity.tsx')).text(),url=source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)?.[1];if(!url)throw new Error('Fiber import not found');

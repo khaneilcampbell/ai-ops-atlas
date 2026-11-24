@@ -32,6 +32,8 @@ export const BOH_MODEL={
  forecourt:3.1,
  annex:{dx:9.7,dz:1.2,w:3.4,d:3.2,h:1.72},
  walkway:{y:.7,h:.72},
+ /** Service yard, loading dock, parking garage, visitor lot and planting around both buildings: map offsets from the HQ centre. */
+ site:{x0:-6.1,x1:13.55,z0:-6.95,z1:6.7},
 } as const;
 
 /** The HQ's floors, ground up: what each one holds. */
@@ -56,17 +58,18 @@ export function planBusinessHq(scene:Pick<Scene3D,'dealership'>):BusinessHqPlan|
  return {x,z,annex:{x:x+BOH_MODEL.annex.dx,z:z+BOH_MODEL.annex.dz}};
 }
 
-/** Footprints a click or the camera frames: the HQ with its forecourt, and the annex with its walkway. */
+/**
+ * Footprints a click or the camera frames: the HQ with its forecourt and the annex. `site` is the whole
+ * landscaped lot (yard, garage, visitor lot, planting) that no other tree or shrub may stand on.
+ */
 export function businessHqFootprints(p:BusinessHqPlan){
- const {podium,annex,forecourt,crown}=BOH_MODEL;
+ const {podium,annex,forecourt,crown,site}=BOH_MODEL;
  return {
   hq:{x:p.x,z:p.z+forecourt/2,w:podium.w,d:podium.d+forecourt,y1:crown},
   annex:{x:p.annex.x,z:p.annex.z,w:annex.w,d:annex.d,y1:annex.h},
+  site:{x:p.x+(site.x0+site.x1)/2,z:p.z+(site.z0+site.z1)/2,w:site.x1-site.x0,d:site.z1-site.z0},
  };
 }
-
-/** The covered walkway between the HQ podium and the annex. */
-function walkway(p:BusinessHqPlan){const x0=p.x+BOH_MODEL.podium.w/2,x1=p.annex.x-BOH_MODEL.annex.w/2;return {x:(x0+x1)/2,z:p.annex.z,w:x1-x0,d:.9};}
 
 /**
  * The scene as drawn: the cleared corner objects left out and the HQ added. The planned scene is not
@@ -75,8 +78,8 @@ function walkway(p:BusinessHqPlan){const x0=p.x+BOH_MODEL.podium.w/2,x1=p.annex.
 export function presentBusinessHq<S extends Scene3D>(scene:S):S{
  const hq=planBusinessHq(scene);if(!hq)return scene;
  const gone=new Set(CLEARED_FOR_BOH);
- // Trees and shrubs planted on the cleared plot would stand inside the HQ or its forecourt.
- const f=businessHqFootprints(hq),inside=(p:{x:number;z:number})=>[f.hq,f.annex,walkway(hq)].some(r=>Math.abs(p.x-r.x)<r.w/2+.35&&Math.abs(p.z-r.z)<r.d/2+.35);
+ // Trees and shrubs planted on the cleared plot would stand inside the HQ, its yard or its garage.
+ const {site}=businessHqFootprints(hq),inside=(p:{x:number;z:number})=>Math.abs(p.x-site.x)<site.w/2+.2&&Math.abs(p.z-site.z)<site.d/2+.2;
  const fd=scene.financial,financial=fd&&{...fd,buildings:fd.buildings.filter(b=>!gone.has(financialKey(b.id))),perimeterTrees:fd.perimeterTrees.filter(([x,z])=>!inside({x:fd.x+x,z:fd.z+z}))};
  return {...scene,...(financial?{financial}:{}),dealership:gone.has(DEALERSHIP_KEY)?undefined:scene.dealership,businessHq:hq,
   trees:scene.trees.filter(t=>!inside(t)),bushes:scene.bushes.filter(b=>!inside(b))};
