@@ -147,6 +147,30 @@ describe("placeLabels", () => {
   });
 });
 
+describe("placeLabels: a marker stacked over a nameplate", () => {
+  // The nameplate sits from 70 to 100; the marker is lifted 32 above it, from 10 to 38.
+  const plate = { id: "plate", x: 0, top: 70, bottom: 100, w: 120, priority: 3, alts: [-16] };
+  const marker = { id: "occ", x: 0, top: 10, bottom: 38, w: 90, priority: 3.01, over: { id: "plate", drop: 62 } };
+  it("floats just above its nameplate when both fit", () => {
+    const shown = placeLabels([plate, marker]);
+    expect(shown.get("plate")).toBe(0);
+    expect(shown.get("occ")).toBe(0);
+  });
+  it("moves up with its nameplate when that one is nudged", () => {
+    const blocker = { id: "other", x: 0, top: 95, bottom: 120, w: 120, priority: 1 };
+    const shown = placeLabels([blocker, plate, marker]);
+    expect(shown.get("plate")).toBe(-16);
+    expect(shown.get("occ")).toBe(-16);
+  });
+  it("takes its nameplate's spot over the roof when the nameplate can't be shown", () => {
+    const blocker = { id: "other", x: 0, top: 40, bottom: 66, w: 400, priority: 1 };
+    const tall = { ...plate, alts: [] };
+    const shown = placeLabels([blocker, { ...tall, top: 50, bottom: 100 }, marker]);
+    expect(shown.has("plate")).toBe(false);
+    expect(shown.get("occ")).toBe(62);
+  });
+});
+
 describe("walkways", () => {
   it("connects every island in the default map to the street grid", () => {
     const layout = layoutMap(catalog);

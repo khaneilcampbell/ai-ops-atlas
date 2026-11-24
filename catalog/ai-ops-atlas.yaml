@@ -22,10 +22,13 @@ agents:
     owned_by: atlas-release-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
-    trigger: Push, pull request or manual
+    trigger: Push, pull request or manual; the dependency audit also runs daily on main
     source: .github/workflows/ci.yml
     observe:
       github_workflow: ci.yml
+    links:
+      - label: 'GitHub workflow: Advisory watch (daily dependency audit on main)'
+        url: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/.github/workflows/advisory-watch.yml
     last_run: null
     permissions:
       - 'GITHUB_TOKEN: contents read for the test and audit jobs'

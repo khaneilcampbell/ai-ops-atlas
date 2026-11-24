@@ -13,6 +13,8 @@ import { planAgentCommutes } from "./agentCommutes";
 import { planNamedAgents } from "./namedAgentPlan";
 import { CityRoutes, planCityPlaces, routineEnv } from "./routinePlaces";
 import { routinePose, type DrawnPose } from "./routinePose";
+import { indoorsAt } from "./occupancy";
+import { financialKey } from "./financialPlan";
 import { buildScene } from "./scene";
 import { GOLD_JET_NAME, goldJetLive, goldJetState } from "./goldJetPlan";
 import type { Segment } from "../../routine/routine";
@@ -73,6 +75,13 @@ describe("drawing the routine", () => {
       const closed = poseAt(r, a.personaId, i, t)!;
       expect(closed.figure).toBe(false);
       expect(closed.badge).toEqual(places.agents.get(a.personaId)!.doorBadge);
+      // With the roof's "agents inside" marker standing for it, no second badge on the facade.
+      const seg = segmentAt(r, t)!;
+      expect(routinePose(seg, { routes, places, personaId: a.personaId, slot: i, open: new Set(), wall: t, scale: FIGURE_SCALE, roofMarker: true })).toMatchObject({ figure: false, badge: null, marked: true });
+      // Open in Inside there is no marker, so the facade badge still shows while it waits off the open floor.
+      pickFloor(desk.towerKey, desk.floor === 1 ? 2 : desk.floor - 1);
+      expect(routinePose(seg, { routes, places, personaId: a.personaId, slot: i, open: new Set([desk.towerKey]), wall: t, scale: FIGURE_SCALE, roofMarker: true })).toMatchObject({ figure: false, badge: desk.marker });
+      pickFloor(desk.towerKey, desk.floor);
       // The walk to the desk starts at the door and ends at the chair.
       const toDesk = r.segments.find((s) => s.kind === "inside" && s.phase === "to_desk")!;
       const end = poseAt(r, a.personaId, i, toDesk.t1 - 1, new Set([desk.towerKey]))!;
@@ -197,6 +206,45 @@ describe("drawing the routine", () => {
     } finally {
       Object.assign(goldJetLive, saved);
     }
+  });
+});
+
+describe("one sign per agent indoors", () => {
+  it("drops the door badge at the arena and the terminal when the map marks the building instead", () => {
+    const a = named.agents[0], i = 0;
+    for (const at of ["arena", "flight"]) {
+      if (!places.spots.has(at)) continue;
+      const seg: Segment = { kind: "stay", t0: NOW - MIN, t1: NOW + MIN, at, activity: "visiting", phase: null, note: at };
+      const ctx = { routes, places, personaId: a.personaId, slot: i, open: new Set<string>(), wall: NOW, scale: FIGURE_SCALE };
+      expect(routinePose(seg, ctx)?.badge, at).not.toBeNull();
+      expect(routinePose(seg, { ...ctx, roofMarker: true })).toMatchObject({ figure: false, badge: null, marked: true });
+    }
+  });
+});
+
+describe("the map and the agents-inside markers agree all day", () => {
+  it("counts an agent inside a building exactly when its figure is indoors, and every such building is on the map", () => {
+    const spot = (id: string) => places.spots.get(id);
+    let indoors = 0;
+    named.agents.forEach((a, i) => {
+      const mine = places.agents.get(a.personaId)!;
+      const r = planRoutine({ personaId: a.personaId, ops: running(a.personaId, NOW - 10 * MIN), env: routineEnv(routes, a.personaId, () => NOW)!, now: NOW });
+      for (let t = r.segments[0].t0; t < NOW + 12 * 60 * MIN; t += 4 * MIN) {
+        const seg = segmentAt(r, t);
+        if (!seg || t >= seg.t1) continue;
+        const pose = routinePose(seg, { routes, places, personaId: a.personaId, slot: i, open: new Set(), wall: t, scale: FIGURE_SCALE });
+        const at = indoorsAt(seg, t, spot, mine.home.id);
+        // Drawn outdoors (a body on the map) is never counted inside, and counted inside is never drawn outdoors.
+        if (pose?.figure) expect(at, `${a.personaId} ${seg.note}`).toBeNull();
+        // Hidden or a badge only, and not on a ride (train carriage, jet): it is inside a building.
+        const riding = seg.kind === "ride" && (seg.option.kind === "train" || !at);
+        if (pose && !pose.figure && !riding) expect(at, `${a.personaId} ${seg.note}`).not.toBeNull();
+        if (at) indoors++;
+        // Home is a Team Residence Towers building the map draws (its marker has a roof to sit on).
+        if (at?.where.kind === "home") expect(scene.financial?.buildings.some((b) => financialKey(b.id) === financialKey(jobs.find((j) => j.agentId === a.personaId)!.home.building))).toBe(true);
+      }
+    });
+    expect(indoors).toBeGreaterThan(0);
   });
 });
 

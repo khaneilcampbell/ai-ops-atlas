@@ -619,6 +619,11 @@ export interface LabelBox {
   priority: number;
   /** Vertical offsets to try, in order, when the preferred spot is taken. */
   alts?: number[];
+  /**
+   * Stacked over another label (placed before it, by priority): it moves with that label when that
+   * one is nudged, and drops into that label's own spot (by `drop`) when that one couldn't be shown.
+   */
+  over?: { id: string; drop: number };
 }
 
 /**
@@ -644,7 +649,8 @@ export function placeLabels(boxes: LabelBox[], pad = 4, prev?: ReadonlyMap<strin
     Math.abs(a.x - b.x) * 2 < a.w + b.w + gap * 2 && a.top < b.bottom + gap && b.top < a.bottom + gap;
   for (const b of [...boxes].sort((p, q) => p.priority - q.priority)) {
     const was = prev?.get(b.id);
-    const spots = [0, ...(b.alts ?? [])];
+    const base = b.over ? (shown.has(b.over.id) ? shown.get(b.over.id)! : b.over.drop) : 0;
+    const spots = [...new Set([base, 0, ...(b.alts ?? [])])];
     for (const dy of was === undefined ? spots : [was, ...spots.filter((s) => s !== was)]) {
       const c = { ...b, top: b.top + dy, bottom: b.bottom + dy };
       const keys = cells(c);
