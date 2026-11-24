@@ -330,3 +330,6 @@ function Select({ label, value, onChange, options, all = true }: { label: string
     </label>
   );
 }
+
+/** The page tabs, read by the guide (Intel → Overview) so it lists the same tabs. */
+export { SUBS as PAGE_TABS };
