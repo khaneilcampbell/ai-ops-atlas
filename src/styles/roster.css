@@ -30,7 +30,7 @@ table.roster { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .roster-seg .live { background: var(--good); }
 .roster-seg .paused { background: var(--warn); }
 .roster-seg .manual { background: var(--sage-300); }
-@media (max-width: 1100px) { .agents-split.roster-split, .agents-split.roster-split:has(.reg-inspector) { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 1280px) { .agents-split.roster-split, .agents-split.roster-split:has(.reg-inspector) { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) {
   /* Phones: each row becomes a card; details open in the sheet. */
   table.roster thead { display: none; }
@@ -39,4 +39,8 @@ table.roster { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   .roster tr { padding: 10px 12px; border-bottom: 1px solid var(--sage-200); }
   .roster td { border: 0; padding: 3px 0; white-space: normal; }
   .roster td:not(:first-child) { display: inline-flex; margin-right: 12px; }
+}
+/* The details panel stays in view while the roster scrolls; long profiles scroll inside it. */
+@media (min-width: 1281px) {
+  .roster-split > .reg-inspector, .roster-split > .empty { position: sticky; top: 12px; max-height: calc(100vh - 96px); overflow-y: auto; overscroll-behavior: contain; }
 }
