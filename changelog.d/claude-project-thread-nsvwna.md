@@ -1,0 +1,1 @@
+- 2026-11-24 · Automations now opens on a Board: every automation sits under the agent who runs it, with failures and drafts waiting to publish listed under Needs you (#PR)

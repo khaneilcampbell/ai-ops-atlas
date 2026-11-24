@@ -6,7 +6,7 @@ import {openAtlas,goTo,settle} from './atlas';
 test.use({deviceScaleFactor:1});
 for(const width of [1512,390]) test(`Agents own their automations ${width}`,async({page})=>{
  await page.setViewportSize({width,height:900});
- await openAtlas(page,{storage:{'registry-prefs-agents':{view:'all'}}}); // flat list; Essential roles is the default since 2026-11-17
+ await openAtlas(page,{storage:{'registry-prefs-agents':{view:'all'},'registry-prefs-automations':{sub:'directory',board:true}}}); // flat list; Essential roles is the default since 2026-11-17
  mkdirSync('docs/agent-owners',{recursive:true});
  await goTo(page,'Agents');
  // Since 2026-11-14 the Production Coordinator runs Merge Flow; Senior Engineering Reviewer's six were deleted or moved.

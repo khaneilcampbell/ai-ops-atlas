@@ -1,0 +1,77 @@
+/* Automations Board (src/views/agents/Board.tsx): lanes by owning agent, KPIs, Needs you. Tokens only. */
+.board-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-6); margin-top: var(--space-4); }
+.board-kpi { padding: var(--space-7) var(--space-8); }
+.board-kpi .num { font-family: var(--serif); font-size: var(--text-6xl); line-height: 1; margin-top: var(--space-4); }
+.board-kpi .num .na { font-family: var(--sans); vertical-align: middle; }
+.board-kpi .sub { font-size: var(--text-sm); color: var(--ink-3); margin-top: var(--space-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.board-kpi.bad { border-color: var(--bad); }
+.board-kpi.bad .num { color: var(--bad); }
+
+.board-chips { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: var(--space-8) 0 var(--space-7); }
+.board-chips button { border: 1px solid var(--sage-200); background: var(--white); color: var(--ink-2); border-radius: var(--radius-pill); padding: var(--space-3) var(--space-6); font-size: var(--text-sm); }
+.board-chips button.on { background: var(--forest-800); border-color: var(--forest-800); color: var(--on-dark); }
+
+.board-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--space-9); align-items: start; }
+.board-lanes { display: flex; flex-direction: column; gap: var(--space-6); min-width: 0; }
+.board-lane { padding: var(--space-7) var(--space-8); }
+.board-lane header { display: flex; align-items: center; gap: var(--space-6); margin-bottom: var(--space-6); }
+.board-owner { display: flex; align-items: center; gap: var(--space-5); min-width: 0; }
+.board-owner > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.board-owner b { font-family: var(--serif); font-weight: 500; font-size: var(--text-xl); }
+.board-lane-counts { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); text-align: right; }
+.board-health { display: flex; gap: var(--space-1); width: 150px; height: 5px; border-radius: var(--radius-pill); overflow: hidden; }
+.board-health .ok { background: var(--good); }
+.board-health .bad { background: var(--bad); }
+.board-health .warn { background: var(--sage-300); }
+
+.board-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-5); }
+.board-card { display: flex; flex-direction: column; gap: var(--space-4); text-align: left; border: 1px solid var(--sage-200); background: var(--sage-50); border-radius: var(--radius-sm); padding: var(--space-5) var(--space-6); min-width: 0; color: inherit; }
+.board-card:hover { border-color: var(--gold); }
+.board-card.tone-failing { border-color: var(--bad); }
+.board-card-title { display: flex; align-items: center; gap: var(--space-3); font-weight: 600; font-size: var(--text-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.board-card-meta { display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-xs); white-space: nowrap; overflow: hidden; }
+.board-card-meta .rt { background: var(--sage-100); color: var(--ink-2); border-radius: var(--space-2); padding: 0 var(--space-3); flex: none; }
+.board-card-meta .muted { overflow: hidden; text-overflow: ellipsis; }
+.board-card-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-4); font-size: var(--text-xs); }
+.dot-verified { background: var(--good); }
+.dot-failing { background: var(--bad); }
+.dot-draft { background: var(--warn); }
+.dot-configured, .dot-unknown, .dot-planned { background: var(--unknown); }
+
+.spark { display: flex; align-items: flex-end; gap: var(--space-1); height: 18px; }
+.spark i { width: 5px; height: 14px; border-radius: var(--space-1); background: var(--good); }
+.spark i.bad { background: var(--bad); }
+.spark.none { width: 70px; height: 0; border-top: 2px dashed var(--sage-300); }
+
+.board-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-6); padding: var(--space-5) var(--space-8); text-align: left; color: inherit; }
+.board-row:hover { border-color: var(--gold); }
+.board-row .board-owner b { font-family: var(--sans); font-weight: 600; font-size: var(--text-md); }
+
+.board-needs { padding: var(--space-7) var(--space-8); position: sticky; top: var(--space-6); }
+.board-needs-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3); }
+.board-need { display: flex; gap: var(--space-5); padding: var(--space-5) 0; border-top: 1px solid var(--sage-100); }
+.board-need:first-of-type { border-top: 0; }
+.board-need > i { width: 26px; height: 26px; flex: none; display: grid; place-items: center; border-radius: var(--radius-sm); font-style: normal; background: var(--sage-100); color: var(--warn); }
+.board-need.bad > i { color: var(--bad); }
+.board-need > span { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); min-width: 0; }
+.board-need .text-btn { padding: 0; color: var(--ink); font-weight: 600; text-align: left; }
+.board-need .btn { text-decoration: none; color: var(--ink); padding: var(--space-1) var(--space-5); font-size: var(--text-xs); margin-top: var(--space-2); }
+
+@media (max-width: 1180px) {
+  .board-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .board-grid { grid-template-columns: 1fr; }
+  .board-needs { position: static; order: -1; }
+}
+@media (max-width: 760px) {
+  .board-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .board-lane header { flex-wrap: wrap; }
+  .board-lane-counts { margin-left: 0; align-items: flex-start; text-align: left; order: 3; width: 100%; }
+  .board-cards { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  /* Five tabs don't fit a phone: scroll them sideways instead of spilling out of the bar. */
+  .seg[aria-label="Registry views"] { max-width: 100%; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .seg[aria-label="Registry views"] button { white-space: nowrap; flex: none; }
+  .board-kpi { padding: var(--space-5) var(--space-6); }
+  .board-kpi .num { font-size: var(--text-5xl); }
+}

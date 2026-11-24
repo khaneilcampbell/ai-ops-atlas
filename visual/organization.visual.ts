@@ -4,7 +4,7 @@ import {openAtlas,goTo,settle} from './atlas';
 test.use({deviceScaleFactor:1});
 for(const width of [1512,390]) test(`Separated agents and automations ${width}`,async({page})=>{
  await page.setViewportSize({width,height:900});
- await openAtlas(page,{storage:{'registry-prefs-agents':{classification:'B',view:'all'}}});
+ await openAtlas(page,{storage:{'registry-prefs-agents':{classification:'B',view:'all'},'registry-prefs-automations':{sub:'directory',board:true}}});
  await goTo(page,'Agents');
  await expect(page.getByRole('heading',{name:'Agents',exact:true})).toBeVisible();
  await expect(page.locator('.reg-row')).toHaveCount(22);

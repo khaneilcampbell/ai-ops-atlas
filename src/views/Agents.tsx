@@ -9,6 +9,7 @@ import { buildRegistry, filterEntries, GROUP_LABEL, groupEntries, runtimeOf, SOR
 import { OPERATIONAL_LABEL } from "../registry/telemetry";
 import { CATEGORIES, CATEGORY_LABEL, CLASSIFICATION_INFO, CLASSIFICATIONS, type Operational } from "../registry/types";
 import { useAtlas } from "../state";
+import { Board } from "./agents/Board";
 import { Goals } from "./agents/Goals";
 import { Inspector } from "./agents/Inspector";
 import { Manage } from "./agents/Manage";
@@ -23,8 +24,9 @@ import { identityFor } from "../registry/identity";
 import { catalog as bundledCatalog } from "../catalog";
 import { agentStatuses, type IdentityStatus } from "../registry/agentStatus";
 
-type Sub = "directory" | "portfolio" | "goals" | "manage";
+type Sub = "board" | "directory" | "portfolio" | "goals" | "manage";
 const SUBS: { id: Sub; label: string }[] = [
+  { id: "board", label: "Board" },
   { id: "directory", label: "Directory" },
   { id: "portfolio", label: "Portfolio" },
   { id: "goals", label: "Goals & performance" },
@@ -41,6 +43,8 @@ interface Prefs {
   runtime: string;
   /** Agents tab only: essential roles (default), Inactive, Archived, or the flat list of all agents. */
   view: RoleView | "all";
+  /** Set once Automations has opened on the Board, so a tab picked later is kept. */
+  board?: boolean;
 }
 const DEFAULT_PREFS: Prefs = { view: "roles", sub: "directory", group: "none", sort: "title", category: "", classification: "", operational: "", runtime: "" };
 
@@ -55,8 +59,9 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
     // A saved filter from the former mixed directory must not hide the newly separated list.
     const types = kind === "agents" ? ["A", "F"] : ["B", "C", "D", "E"];
     // Manage moved from Agents to Automations (2026-11-18): the managed GitHub workflows are automations.
-    const sub = saved.sub === "manage" && kind === "agents" ? "directory" : saved.sub;
-    return { ...saved, sub, classification: types.includes(saved.classification) ? saved.classification : "" };
+    // The Board (2026-11-24) is Automations only, and where Automations opens.
+    const sub = kind === "agents" ? (saved.sub === "manage" || saved.sub === "board" ? "directory" : saved.sub) : saved.board ? saved.sub : "board";
+    return { ...saved, sub, board: kind === "automations" || saved.board, classification: types.includes(saved.classification) ? saved.classification : "" };
   });
   const set = (p: Partial<Prefs>) => setPrefs((x) => ({ ...x, ...p }));
   useEffect(() => save(`registry-prefs-${kind}`, prefs), [prefs, kind]);
@@ -121,7 +126,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
           {kind === "agents" && <RegistryRefresh />}
         </div>
         <div className="seg" role="tablist" aria-label="Registry views">
-          {SUBS.filter((s) => s.id !== "manage" || kind === "automations").map((s) => (
+          {SUBS.filter((s) => (s.id !== "manage" && s.id !== "board") || kind === "automations").map((s) => (
             <button key={s.id} role="tab" aria-selected={prefs.sub === s.id} className={prefs.sub === s.id ? "on" : ""} onClick={() => set({ sub: s.id })}>
               {s.label}
             </button>
@@ -129,6 +134,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
         </div>
       </div>
 
+      {prefs.sub === "board" && kind === "automations" && <Board entries={entries} agents={allCatalog.agents} owns={owns} open={open} />}
       {prefs.sub === "portfolio" && <Portfolio entries={entries} summary={summary} open={open} />}
       {prefs.sub === "goals" && <Goals entries={rows} open={open} />}
       {prefs.sub === "manage" && kind === "automations" && <Manage open={open} />}
