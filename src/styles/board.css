@@ -147,3 +147,56 @@
   .live-table td:nth-child(3), .live-table td:nth-child(4) { display: none; }
   .live-table td:nth-child(5), .live-table td:nth-child(6) { justify-self: end; }
 }
+
+/* Flows: flow list, diagram, selected step, then the lifecycle board. */
+.flows-main { display: grid; grid-template-columns: 230px minmax(0, 1fr) 300px; gap: var(--space-7); align-items: start; }
+.flows-list { padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-2); }
+.flows-list button { display: flex; align-items: center; gap: var(--space-4); text-align: left; padding: var(--space-4) var(--space-5); border-radius: var(--radius-sm); border: 1px solid transparent; background: none; color: var(--ink); cursor: pointer; font: inherit; }
+.flows-list button > span { display: flex; flex-direction: column; min-width: 0; }
+.flows-list button b { font-size: var(--text-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.flows-list button:hover { background: var(--sage-50); }
+.flows-list button.on { background: var(--gold-soft); border-color: var(--gold); }
+.flows-noowner { width: 26px; height: 26px; border-radius: 50%; border: 1px dashed var(--sage-300); flex: none; }
+.flows-canvas { padding: var(--space-7); min-width: 0; display: flex; flex-direction: column; gap: var(--space-5); }
+.flows-canvas-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-4); }
+.flows-scroll { overflow: auto; background: var(--sage-50); border-radius: var(--radius-sm); padding: var(--space-6); }
+.flows-stage { position: relative; }
+.flows-stage svg { position: absolute; inset: 0; overflow: visible; }
+.flows-stage svg path { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
+.flows-stage svg .flows-arrow { fill: var(--ink-3); stroke: none; }
+.flows-stage svg g.gate path { stroke: var(--gold); stroke-dasharray: 5 4; stroke-width: 2; }
+.flows-stage svg text { font-size: var(--text-2xs); fill: var(--gold-deep); font-weight: 600; }
+.flows-node { position: absolute; display: flex; flex-direction: column; justify-content: center; gap: var(--space-1); text-align: left; padding: var(--space-4) var(--space-5); background: var(--white); border: 1px solid var(--sage-200); border-radius: var(--radius-sm); color: var(--ink); cursor: pointer; font: inherit; overflow: hidden; }
+.flows-node b { font-size: var(--text-sm); display: flex; align-items: center; gap: var(--space-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.flows-node > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.flows-node.st-failing { border-color: var(--bad); }
+.flows-node.on { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-soft); }
+.flows-legend { display: flex; flex-wrap: wrap; gap: var(--space-6); }
+.flows-legend .gold { color: var(--gold-deep); }
+.flows-step { padding: var(--space-8); position: sticky; top: var(--space-6); display: flex; flex-direction: column; gap: var(--space-5); }
+.flows-step h2 { font-size: var(--text-3xl); }
+.flows-rows { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; }
+.flows-rows div { display: grid; grid-template-columns: 96px 1fr; gap: var(--space-4); font-size: var(--text-sm); border-top: 1px solid var(--sage-100); padding-top: var(--space-3); }
+.flows-rows dt { font-size: var(--text-2xs); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); padding-top: 2px; }
+.flows-rows dd { margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); overflow-wrap: anywhere; }
+.flows-rows dd .text-btn { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+.flows-board { margin-top: var(--space-7); padding: var(--space-7); }
+.flows-board-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-5); margin-bottom: var(--space-6); }
+.flows-cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-6); }
+.flows-col { background: var(--sage-50); border-radius: var(--radius-sm); padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.flows-col-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: var(--text-sm); }
+.flows-card { display: flex; flex-direction: column; gap: var(--space-1); text-align: left; background: var(--white); border: 1px solid var(--sage-200); border-radius: var(--radius-sm); padding: var(--space-4) var(--space-5); color: var(--ink); font: inherit; cursor: pointer; min-width: 0; }
+.flows-card b { font-size: var(--text-sm); display: flex; align-items: center; gap: var(--space-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.flows-card:disabled { cursor: default; opacity: 0.75; }
+.flows-more { padding-left: var(--space-2); }
+
+@media (max-width: 1180px) {
+  .flows-main { grid-template-columns: 1fr; }
+  .flows-list { flex-direction: row; overflow-x: auto; }
+  .flows-list button { flex: none; }
+  .flows-step { position: static; }
+  .flows-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .flows-cols { grid-template-columns: 1fr; }
+}
