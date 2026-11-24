@@ -33,11 +33,10 @@ for (const width of [1512, 390])
     await page.getByRole("tab", { name: /^Archived/ }).click();
     await expect(page.getByRole("list", { name: "Archived entries" }).getByRole("button")).toHaveCount(11);
     await page.screenshot({ path: `${out}/archived-${width}.png` });
-    await page.getByRole("tab", { name: /^Inactive/ }).click();
-    // Only the Career Execution Agent is inactive: an unpublished n8n draft until Khaneil approves it.
-    const inactive = page.getByRole("list", { name: "Inactive entries" }).getByRole("button");
-    await expect(inactive).toHaveCount(1);
-    await expect(inactive.first()).toHaveAttribute("data-id", "career-execution");
+    // Inactive: the Atlas Task Writer (n8n draft, #506) and the Atlas Executive (paused until its
+    // n8n workflows are published, #508).
+    await page.getByRole("tab", { name: /^Inactive 2/ }).click();
+    await expect(page.getByRole("list", { name: "Inactive entries" }).locator('[data-id="atlas-executive"]')).toHaveCount(1);
     await page.getByRole("tab", { name: "All entries" }).click();
     await expect(page.locator(".reg-row").first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);

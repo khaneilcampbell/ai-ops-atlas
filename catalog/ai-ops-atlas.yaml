@@ -22,10 +22,13 @@ agents:
     owned_by: atlas-release-manager            # owning agent, added at Khaneil's request 2026-11-13
     runtime: GitHub-hosted runner
     status: active
-    trigger: Push, pull request or manual
+    trigger: Push, pull request or manual; the dependency audit also runs daily on main
     source: .github/workflows/ci.yml
     observe:
       github_workflow: ci.yml
+    links:
+      - label: 'GitHub workflow: Advisory watch (daily dependency audit on main)'
+        url: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/.github/workflows/advisory-watch.yml
     last_run: null
     permissions:
       - 'GITHUB_TOKEN: contents read for the test and audit jobs'
@@ -82,6 +85,7 @@ agents:
         audit_log: GitHub Actions run history
         approval: Khaneil approves the macos-signing environment for each main build
         credential_owner: Khaneil (protected GitHub macos-signing environment)
+        kill_switch: 'Reject the waiting "Sign validated main build" deployment in the Actions run: nothing is signed or published without that approval. To stop every build, disable the CI workflow in Actions. A bad update is undone by reverting its pull request; never edit latest.json. See docs/runbooks/stop-and-rollback.md#merging-and-signing-in-atlas.'
       docs:
         technical: README.md
         runbook: docs/runbooks/ai-ops-atlas.md#atlas-ci
@@ -401,6 +405,7 @@ agents:
         data_sensitivity: internal
         approval: Native macOS confirmation and Touch ID for every merge
         credential_owner: Khaneil (one fine-grained token per repository in the macOS Keychain)
+        kill_switch: 'Untick Merge pull requests in Atlas Settings → Actions (off by default), or untick the repository or remove its merge token there; revoking the token on GitHub also stops it. See docs/runbooks/stop-and-rollback.md#merging-and-signing-in-atlas.'
         risk: high
         audit_log: audit.jsonl in the app data folder, shown in the Activity Center
       docs:
@@ -414,6 +419,88 @@ agents:
           - Count merges and refusals by reason from audit.jsonl
         last_review: 2026-10-28
 
+  - id: atlas-executive
+    name: Atlas Executive
+    purpose: >-
+      Central orchestrator in Atlas Headquarters. Takes a goal Khaneil writes in Mission Control, turns it into a checked plan from a fixed template, assigns each task to a registered agent by capability, health, workload and reliability, dispatches outside work through one n8n workflow, and marks the goal complete only after Atlas itself verifies the result. Bounded: at most 8 tasks, 5 open goals, 10 dispatches a day and a $1 default budget per goal; level 4 actions (publish, spend, send, merge, delete) always wait for Khaneil.
+    model: None of its own; research tasks use claude-sonnet-5-5 inside the n8n dispatch workflow
+    framework: Atlas server engine (Cloudflare Pages Functions + PostgreSQL) + n8n dispatch
+    owned_by: agent-operations-lead            # same owner as Atlas Step Runner, the other goal-to-n8n bridge
+    runtime: Atlas web site functions; n8n Cloud for dispatched tasks
+    status: paused
+    trigger: 'Goal from Khaneil in Mission Control, once its n8n workflows are published; both are drafts today (Atlas · Executive Dispatch, Atlas · Executive Schedule every 30 minutes)'
+    source: server/executive/engine.ts
+    links:
+      - label: 'n8n workflow: Atlas · Executive Dispatch (draft, runs dispatched tasks)'
+        url: https://khancam15.app.n8n.cloud/workflow/uNF4qBQDwVb37ygb
+      - label: 'n8n workflow: Atlas · Executive Schedule (draft, reconciles every 30 minutes)'
+        url: https://khancam15.app.n8n.cloud/workflow/J1bzNxcwUTPC9yw9
+    last_run: null
+    permissions:
+      - Create goals, plans and tasks in the Atlas database
+      - File approval requests (cannot approve its own)
+      - Call the n8n Atlas · Executive Dispatch webhook with the bridge key
+    history:
+      - at: 2026-11-22
+        event: Built. Needs migration 0002 on the Atlas database and the two n8n workflows published before its first real run
+    registry:
+      title: Central AI Orchestrator
+      version: 1.0.0
+      tier: central
+      category: engineering
+      subcategory: Orchestration
+      automation_category: intelligence
+      classification:
+        type: B
+        confidence: verified
+        evidence: Atlas's own taxonomy makes this AI-assisted, not an AI agent yet. The engine itself is deterministic (template plans, rule-based agent choice, code-checked results); the only model call is the research step inside n8n Atlas · Executive Dispatch. Server engine in server/executive/, state in atlas.exec_* tables (db/migrations/0002_executive.sql), tests in server/executive/executive.test.ts
+      mission:
+        problem: Goals need several agents working in order, and nothing tied a goal to the agents, runs, costs and checked results behind it.
+        outcomes:
+          - Each goal has a checked plan, assigned agents and a visible state
+          - A goal completes only when Atlas verified its result
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks: [Check goals and plans, Assign registered agents, Dispatch approved work to n8n, Verify results, Report blocked work and costs]
+        tools: [Atlas database, Agent Registry]
+        dependencies: [benjaire-product-lab-research]
+        outputs: [Goal timeline, Verified opportunity report, Approval requests]
+        inputs:
+          - Goals Khaneil writes in Mission Control
+          - Agent Registry on main
+          - Results posted back by n8n
+        limitations:
+          - Plans come from fixed templates only; today one template, an opportunity report
+          - Never publishes, spends, sends, merges or deletes on its own
+          - Stops dispatching while the emergency stop is on
+      goals:
+        objective: Turn a goal into verified results without skipping a check or going over budget.
+        review_frequency: Monthly
+        kpis:
+          - name: Goals completed with verified results
+            kind: quality
+            target: Every completed goal passed verification
+            basis: The engine refuses completion without it
+          - name: Budget overruns
+            kind: cost
+            target: Zero goals over budget
+            basis: Budget is reserved before each dispatch
+      execution:
+        trigger_type: manual
+        environment: Atlas web site functions and n8n Cloud
+        stages: [Validate goal, Plan from template, Check plan, Create tasks, Assign agents, Authorize, Dispatch, Monitor, Verify, Complete]
+      governance:
+        autonomy: 2
+        autonomy_note: Level 2 Safe Execution by default. Budgeted research runs without asking; anything that publishes, spends or changes an outside system waits for Khaneil's approval.
+        risk: medium
+        credential_owner: Khaneil (n8n bridge keys, Anthropic key in n8n)
+      cost:
+        budget: $1 per goal by default (at most $5), 10 dispatches a day, one task per agent at a time.
+      docs:
+        technical: docs/executive-agent.md
+        runbook: docs/runbooks/ai-ops-atlas.md#atlas-executive
+        last_review: 2026-11-22
   - id: atlas-production-coordinator
     name: Atlas Production Coordinator
     purpose: >-

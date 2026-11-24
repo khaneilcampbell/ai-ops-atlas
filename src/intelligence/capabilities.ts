@@ -26,7 +26,7 @@ export interface Capability {
   /** Plain words: what access running it needs. */
   permissions: string[];
   /** What actually carries it out. "none" means Atlas has no way to run it. */
-  adapter: "atlas" | "n8n-step-runner" | "anthropic-web-search" | "github-touchid" | "none";
+  adapter: "atlas" | "n8n-step-runner" | "n8n-executive" | "anthropic-web-search" | "github-touchid" | "none";
   sideEffect: SideEffect;
   timeoutMs: number;
   retry: { max: number; backoff: "none" | "exponential"; onlyTransient: boolean };
@@ -44,6 +44,9 @@ export const CAPABILITIES: readonly Capability[] = [
   { id: "memory.write_working", name: "Note working memory", description: "Save an intermediate finding for this workflow. Expires in 7 days.", input: { title: "string", content: "string", scope: "MemoryScope" }, output: { id: "string" }, permissions: ["Write working memory in own building or workflow"], adapter: "atlas", sideEffect: "internal_write", timeoutMs: 5_000, retry: { max: 0, backoff: "none", onlyTransient: true }, intents: ["note", "finding", "working-memory"] },
   { id: "memory.propose_operational", name: "Report an operational lesson", description: "Record a failure pattern or recovery step, unverified until Khaneil verifies it.", input: { title: "string", content: "string" }, output: { id: "string" }, permissions: ["Write unverified operational memory"], adapter: "atlas", sideEffect: "internal_write", timeoutMs: 5_000, retry: { max: 0, backoff: "none", onlyTransient: true }, intents: ["lesson", "failure-pattern", "recovery"] },
   { id: "research.web_search", name: "Web search", description: "Anthropic web search inside the step runner, at most 5 searches a run.", input: { query: "string" }, output: { results: "link[]" }, permissions: ["Anthropic web search (n8n credential)"], adapter: "anthropic-web-search", sideEffect: "spend", timeoutMs: 2 * MIN, retry: { max: 1, backoff: "exponential", onlyTransient: true }, intents: ["research", "web", "demand-signals", "competitors", "customers"] },
+  // Atlas Executive (server control plane): one web-search research run in the n8n Executive Dispatch workflow.
+  { id: "research.opportunity_report", name: "Opportunity research report", description: "One Claude run with web search (at most 5 searches) in the n8n Executive Dispatch workflow, returning a 7-section report with linked sources.", input: { objective: "string" }, output: { report: "OpportunityReport" }, permissions: ["Anthropic web search (n8n credential)", "Executive callback key (site)"], adapter: "n8n-executive", sideEffect: "spend", timeoutMs: 5 * MIN, retry: { max: 2, backoff: "exponential", onlyTransient: true }, intents: ["research", "opportunity", "market", "competitors", "report"] },
+  { id: "executive.verify", name: "Verify and summarise results", description: "Atlas's own checks on a returned report (sections, sources, links) and a plain summary. No model.", input: { report: "OpportunityReport" }, output: { verification: "Verification" }, permissions: ["Read the goal's results in the Atlas database"], adapter: "atlas", sideEffect: "internal_write", timeoutMs: 10_000, retry: { max: 0, backoff: "none", onlyTransient: true }, intents: ["verify", "summarise", "review"] },
   { id: "model.light", name: "Lightweight model call", description: "Tier 1: classification, extraction or a short summary.", input: { prompt: "string" }, output: { text: "string" }, permissions: ["Model budget for the step"], adapter: "n8n-step-runner", sideEffect: "spend", timeoutMs: 2 * MIN, retry: { max: 2, backoff: "exponential", onlyTransient: true }, intents: ["classify", "extract", "summarise"] },
   { id: "model.advanced", name: "Advanced model call", description: "Tier 2: research synthesis, scoring, planning or root-cause analysis.", input: { prompt: "string" }, output: { text: "string" }, permissions: ["Model budget for the step"], adapter: "n8n-step-runner", sideEffect: "spend", timeoutMs: 5 * MIN, retry: { max: 2, backoff: "exponential", onlyTransient: true }, intents: ["synthesise", "score", "plan", "root-cause", "research"] },
   { id: "handoff.report", name: "Report a step result", description: "Return the step's schema-checked output and artifact links to Atlas.", input: { output: "StepOutput" }, output: { accepted: "boolean" }, permissions: ["Step runner callback key (site)"], adapter: "n8n-step-runner", sideEffect: "internal_write", timeoutMs: 30_000, retry: { max: 3, backoff: "exponential", onlyTransient: true }, intents: ["handoff", "report", "artifact"] },
@@ -62,12 +65,14 @@ const ENGINEERING_READ = ["memory.retrieve", "memory.write_working", "status.rea
 /** What each agent in a saved plan may use (Benjaire launch, Phase 8 executive plans). An agent not listed has no capabilities through Atlas. */
 export const AGENT_GRANTS: Readonly<Record<string, readonly string[]>> = {
   "agent-operations-lead": ["memory.retrieve", "memory.write_working", "memory.propose_operational", "tasks.delegate", "decision.record", "improvement.propose", "status.read"],
-  "benjaire-product-lab-research": RESEARCHER,
+  "benjaire-product-lab-research": [...RESEARCHER, "research.opportunity_report"],
   "benjaire-product-lab-customers": RESEARCHER,
   "benjaire-product-lab-competitors": RESEARCHER,
   "benjaire-product-lab-scoring": ["memory.retrieve", "memory.write_working", "model.advanced", "handoff.report", "decision.record", "improvement.propose"],
   "benjaire-product-lab-brief": ["memory.retrieve", "memory.write_working", "model.light", "model.advanced", "handoff.report", "improvement.propose"],
   "benjaire-product-lab": ["memory.retrieve", "memory.write_working", "memory.propose_operational", "model.advanced", "handoff.report", "decision.record", "improvement.propose"],
+  // Atlas Executive (server control plane, 2026-11-22): plans, delegates and verifies. It runs no model itself.
+  "atlas-executive": ["tasks.delegate", "status.read", "decision.record", "executive.verify"],
   // Phase 8 executive plans: read-only status work. None of these may change a repository through Atlas.
   "repo-intelligence": ENGINEERING_READ,
   "atlas-ci": ENGINEERING_READ,

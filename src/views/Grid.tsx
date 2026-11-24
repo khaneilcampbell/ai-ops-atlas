@@ -55,8 +55,9 @@ export function GridView() {
     <div className="page">
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">Compact grid</div>
+          <div className="eyebrow">Grid</div>
           <h1>Every project, side by side.</h1>
+          <p className="lede">Each project's repositories, agents and checks in one compact grid.</p>
         </div>
         <label className="field">
           <label htmlFor="grid-sort">Sort</label>

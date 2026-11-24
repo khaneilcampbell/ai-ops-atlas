@@ -143,3 +143,14 @@
 .db-focus { background: var(--gold-soft); border-radius: var(--radius-sm); }
 @media (max-width: 1180px) { .db-grid { grid-template-columns: minmax(0, 1fr); } .db-list { max-height: none; } }
 .db-list .list-row .meta { white-space: normal; }
+
+/* Agent memory (migration 0003): Task Center database card and the agent page's Operations tab. */
+.db-memory { border-top: 1px solid var(--sage-200); padding: var(--space-5) 12px 12px; }
+.db-memory .section-title { padding: 0 8px; }
+.db-memory .db-counts { padding: 0 8px var(--space-4); }
+.db-memory .db-pad { padding: 0 8px var(--space-4); }
+.db-pad-list { padding: 0; }
+.db-counts.flush { padding: 0 0 var(--space-4); }
+.agent-memory { margin-top: var(--space-8); }
+.agent-memory .db-list { max-height: none; }
+.agent-memory .section-title { margin-top: var(--space-5); }

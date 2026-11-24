@@ -102,6 +102,10 @@
 .lib-preview img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
 .lib-preview.pdf { padding: 0; max-height: none; }
 .lib-preview.pdf iframe { display: block; width: 100%; height: 420px; border: 0; }
+.lib-preview-mac { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+.lib-preview-mac p { margin: 0; }
+.lib-mac-note { margin: var(--space-3) 0 0; }
+.lib-mac-note.bad { color: var(--bad); }
 .lib-preview pre { margin: 0; font-family: var(--mono); font-size: var(--text-sm); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
 .lib-preview table { border-collapse: collapse; font-size: var(--text-sm); width: 100%; }
 .lib-preview th, .lib-preview td { border-bottom: 1px solid var(--lib-line); padding: var(--space-2) var(--space-4); text-align: left; white-space: nowrap; }
@@ -126,8 +130,10 @@
 .lib-dot.s-pending { background: var(--warn); }
 
 /* The toolbar's Library button. */
-.map-controls .map-library-btn { display: inline-flex; gap: var(--space-3); }
+.map-controls .map-library-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-3); }
 .map-controls .map-library-btn .lbl { font-size: var(--text-sm); }
+/* Same icon size as the Agents button beside it. */
+.map-controls .map-library-btn svg { width: auto; height: auto; display: inline-block; flex: none; }
 
 @media (max-width: 700px) {
   .lib-head { padding: var(--space-7) var(--space-8) var(--space-5); }
@@ -137,9 +143,7 @@
   .lib-filters label:last-child { grid-column: span 2; }
   .lib-facts { grid-template-columns: 96px minmax(0, 1fr); }
   .map-controls .map-library-btn .lbl { display: none; }
-  /* The phone toolbar scrolls sideways; keep Library pinned at its right edge so it's always in view. */
-  .map-controls .map-library-btn { position: sticky; right: 0; z-index: 1; background: var(--sage-50); box-shadow: -8px 0 8px -6px rgba(0, 0, 0, 0.18); }
-  .map-controls .map-library-btn.on { background: var(--forest-700); }
+  /* Library sits beside Agents at the start of the toolbar, so it is in view without pinning. */
 }
 @media (prefers-reduced-motion: no-preference) {
   .lib-drawer { animation: lib-in 160ms ease-out; }

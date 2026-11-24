@@ -3,6 +3,7 @@ mod export;
 mod github;
 mod handoff;
 mod intel;
+mod library;
 mod live;
 mod local_usage;
 mod power;
@@ -87,6 +88,12 @@ pub fn run() {
             live::registry_refresh,
             live::live_security,
             live::live_health,
+            live::live_data_overview,
+            library::library_list,
+            library::library_output,
+            library::library_file,
+            library::library_save,
+            library::library_open,
             live::live_inquiry_reply,
             export::save_pdf,
             export::save_backup,

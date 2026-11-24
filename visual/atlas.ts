@@ -59,11 +59,26 @@ export async function settle(page: Page, steps = 3) {
   }
 }
 
-export async function goTo(page: Page, label: string) {
-  // On a phone the tab bar shows four sections; the rest sit behind More (views.visual.ts).
-  const tab = page.locator(".nav-item", { hasText: label }).first();
-  if (await tab.isVisible()) await tab.click();
-  else {
+/** Pages that sit as a tab inside a section, and the section that holds them. */
+const SECTION_OF: Record<string, string> = { Activity: "Intel", API: "Intel", Intelligence: "Intel", "Engineering Review": "Intel", Repositories: "Intel", Connections: "Settings", Preferences: "Settings" };
+
+/** Pages whose sidebar label differs from the name tests use. */
+const RENAMED: Record<string, string> = { "Task Center": "Tasks", Automations: "Auto", Workspace: "Hub" };
+
+export async function goTo(page: Page, name: string) {
+  const label = RENAMED[name] ?? name;
+  // The sidebar, the top switch (Map, Mission Control, Business) and a section's page tabs.
+  // Match from the start: the Grid button's "Compare repositories" must not match "Repositories".
+  const start = new RegExp(`^\\s*${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+  const tab = page.locator(".nav-item:visible, .view-switch button:visible, .section-tabs button:visible", { hasText: start }).first();
+  // A short label still finds its page ("Repos" opens Intel, then Repositories).
+  const parent = Object.entries(SECTION_OF).find(([page]) => page.startsWith(label))?.[1];
+  if (await tab.count()) await tab.click();
+  else if (parent) {
+    await goTo(page, parent);
+    await page.locator(".section-tabs button", { hasText: start }).first().click();
+  } else {
+    // On a phone the tab bar shows four sections; the rest sit behind More (views.visual.ts).
     await page.getByRole("button", { name: "More sections" }).click();
     await page.locator(".more-list button", { hasText: label }).first().click();
   }

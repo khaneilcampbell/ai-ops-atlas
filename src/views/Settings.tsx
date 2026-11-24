@@ -17,17 +17,21 @@ import { SyncSettings } from "./SyncSettings";
 import { BackupSetting } from "./BackupSetting";
 import "../styles/production.css";
 
-export function SettingsView() {
+/** Settings in two pages: Connections (accounts, keys, sync, write access) and Preferences. */
+export function SettingsView({ part }: { part: "connections" | "preferences" }) {
   const { settings, setSettings, clearCache, catalog, manifestIssues, refresh, usage } = useAtlas();
   return (
-    <div className="page" style={{ maxWidth: 860 }}>
+    <div className="page">
       <div className="page-head">
         <div className="grow">
-          <div className="eyebrow">Local preferences</div>
-          <h1>Settings</h1>
+          <div className="eyebrow">Settings · {part === "connections" ? "Connections" : "Preferences"}</div>
+          <h1>{part === "connections" ? "Connections" : "Preferences"}</h1>
+          <p className="lede">{part === "connections" ? "GitHub access, keys, sync and write access." : "Time zone, power, map navigation, data and catalog."}</p>
         </div>
       </div>
 
+
+      {part === "connections" ? <>
       <section className="card" style={{ marginBottom: 16 }}>
         <div className="card-head">
           <h2 className="grow">GitHub access</h2>
@@ -39,15 +43,15 @@ export function SettingsView() {
         <UsageSetting usage={usage} />
       </section>
 
-      <TimeZoneSetting />
-      <PowerSetting />
-      <NavigationSetting />
-
       <IntelSettings />
 
       <SyncSettings />
 
       <ActionsSettings />
+      </> : part === "preferences" ? <>
+      <TimeZoneSetting />
+      <PowerSetting />
+      <NavigationSetting />
 
       <section className="card" style={{ marginBottom: 16 }}>
         <div className="card-head">
@@ -128,7 +132,21 @@ export function SettingsView() {
           )}
         </div>
       </section>
+      </> : null}
     </div>
+  );
+}
+
+/** The GitHub request budget on its own card, for the Claude & GitHub page under Intel → API. */
+export function GitHubRequests() {
+  const { usage } = useAtlas();
+  return (
+    <section className="card" style={{ marginTop: 16 }}>
+      <div className="card-head">
+        <h2 className="grow">GitHub requests</h2>
+      </div>
+      <UsageSetting usage={usage} />
+    </section>
   );
 }
 

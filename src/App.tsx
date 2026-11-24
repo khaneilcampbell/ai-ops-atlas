@@ -1,10 +1,11 @@
 import {financialBuildingMatches,financialBuildingAliases,financialDisplayName,landmarkMatches} from './lib/financialSearch';
 import { isHostedWeb, isTauri } from "./lib/env";
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { AtlasMark, Icon, type IconName } from "./components/Icon";
 import { DetailPanel } from "./components/DetailPanel";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAtlas, type View } from "./state";
+import { SECTIONS, sectionEntry, sectionOf, SIDEBAR_SECTIONS, tabOf, type Section } from "./lib/sections";
 import { attentionItems, ciSummary } from "./lib/derive";
 import { agentMatches, repoMatches, repoRows, prioritizeExact } from "./lib/search";
 import { relative } from "./lib/time";
@@ -18,6 +19,8 @@ import { ReposView } from "./views/Repos";
 import { MapView } from "./views/Map";
 import { SettingsView } from "./views/Settings";
 import { IntelligenceView } from "./views/Intelligence";
+import { ProjectsView } from "./views/Projects";
+import { AtlasApiView, AtlasIntelligenceView } from "./views/AtlasIntelligence";
 import { UsageView } from "./views/Usage";
 import { TaskCenterView } from "./views/tasks/TaskCenter";
 import { WorkflowIntelligenceView } from "./views/workflows/WorkflowIntelligence";
@@ -38,25 +41,24 @@ import { ensureWorkspace } from "./views/product/ensureWorkspace";
 // Workspace and administration load only when opened, so the map's first paint doesn't wait on them.
 const WorkspaceView = lazy(() => import("./views/product/Workspace").then((m) => ({ default: m.WorkspaceView })));
 
-const NAV: { view: View; label: string; icon: IconName }[] = [
-  { view: "map", label: "Projects", icon: "map" },
-  { view: "tasks", label: "Task Center", icon: "tasks" },
-  { view: "business", label: "Business", icon: "briefcase" },
+/** On a phone the bar holds these four plus More; the other sections open from the More sheet. */
+const PHONE_BAR: { view: View; label: string; icon: IconName }[] = [
+  { view: "map", label: "Map", icon: "map" },
   { view: "agents", label: "Agents", icon: "agents" },
-  { view: "automations", label: "Automations", icon: "network" },
-  { view: "repos", label: "Repositories", icon: "repos" },
   { view: "overview", label: "Mission", icon: "overview" },
-  { view: "activity", label: "Activity", icon: "pulse" },
+  // Intel, as in the sidebar; Activity is one of its tabs.
   { view: "intel", label: "Intel", icon: "spark" },
-  { view: "usage", label: "API Usage", icon: "usage" },
-  { view: "workspace", label: "Workspace", icon: "compass" },
 ];
 
-/** Workflow Intelligence opens from Mission Control, so Mission stays highlighted there. */
-const onSection = (view: View, nav: View) => view === nav || (nav === "overview" && view === "workflows");
-
-/** On a phone the bar holds these four plus More; the rest open from the More sheet. */
-export const PHONE_TABS: View[] = ["map", "agents", "overview", "activity"];
+/** The page a section opens on remembers the tab used last this session. */
+function useSectionNav() {
+  const { view, setView } = useAtlas();
+  const last = useRef<Partial<Record<string, View>>>({});
+  useEffect(() => {
+    last.current[sectionOf(view).id] = tabOf(view);
+  }, [view]);
+  return (section: Section) => setView(sectionEntry(section, last.current));
+}
 
 export default function App() {
   const { view, setView, catalog, repos, uncataloged, manifestIssues, refreshing, refresh, selection } = useAtlas();
@@ -84,6 +86,8 @@ export default function App() {
   ].join("");
   const ci = ciSummary([...trackedRepositories], repos);
   const platform = isTauri() ? "Desktop" : isHostedWeb() ? "Hosted web" : "Local preview";
+  const section = sectionOf(view);
+  const openSection = useSectionNav();
 
   return (
     <div className="shell">
@@ -100,7 +104,7 @@ export default function App() {
           </div>
         </div>
         <div className="spacer" />
-        <ViewSwitch />
+        <ViewSwitch badge={attention.length + alerts.length} />
         <GlobalSearch />
         <div className={`refresh${syncFailing ? " sync-failing" : ""}`} title={syncTitle}>
           <button className="icon-btn" onClick={() => void refresh(true)} aria-label="Refresh GitHub data" disabled={refreshing}>
@@ -138,23 +142,29 @@ export default function App() {
         />
       ) : (
         <nav className="sidebar" aria-label="Sections">
-          {NAV.map((n) => (
-            <button key={n.view} className={`nav-item ${onSection(view, n.view) ? "active" : ""}`} onClick={() => setView(n.view)} aria-label={n.label} title={n.label} aria-current={onSection(view, n.view) ? "page" : undefined}>
-              <Icon name={n.icon} size={20} />
-              <span className={n.label.length > 9 ? "nav-label-long" : undefined}>{n.label}</span>
-              {n.view === "overview" && attention.length + alerts.length > 0 && <span className="badge">{attention.length + alerts.length}</span>}
-            </button>
+          {SIDEBAR_SECTIONS.map((s) => (
+            <Fragment key={s.id}>
+              {s.id === "settings" && <div className="grow" />}
+              <button className={`nav-item ${section.id === s.id ? "active" : ""}`} onClick={() => openSection(s)} aria-label={s.label} title={s.label} aria-current={section.id === s.id ? "page" : undefined}>
+                <Icon name={s.icon} size={20} />
+                <span className={s.label.length > 8 ? "nav-label-long" : undefined}>{s.label}</span>
+              </button>
+            </Fragment>
           ))}
-          <div className="grow" />
-          <button className={`nav-item ${view === "settings" ? "active" : ""}`} onClick={() => setView("settings")}>
-            <Icon name="settings" size={20} />
-            <span>Settings</span>
-          </button>
         </nav>
       )}
 
       <main className="main">
         <InstallHint />
+        {section.tabs.length > 1 && (
+          <nav className="section-tabs tabs" aria-label={`${section.label} pages`}>
+            {section.tabs.map((t) => (
+              <button key={t.view} className={tabOf(view) === t.view ? "on" : undefined} aria-current={tabOf(view) === t.view ? "page" : undefined} onClick={() => setView(t.view)}>
+                {t.label}
+              </button>
+            ))}
+          </nav>
+        )}
         {/* Keep one graphics context across navigation; MapView pauses while hidden. */}
         <div className={`projects-host${view === "map" ? "" : " inactive"}`} aria-hidden={view !== "map"} ref={el => { if (el) el.inert = view !== "map"; }}>
           <ErrorBoundary><MapView active={view === "map"}/></ErrorBoundary>
@@ -166,18 +176,24 @@ export default function App() {
           {view === "workflows" && <WorkflowIntelligenceView />}
           {view === "business" && <BusinessView />}
           {view === "grid" && <GridView />}
+          {view === "projects" && <ProjectsView />}
           {view === "activity" && <ActivityView />}
           {view === "agents" && <AgentsView key="agents" kind="agents" />}
           {view === "automations" && <AgentsView key="automations" kind="automations" />}
-          {view === "repos" && <ReposView />}
-          {view === "intel" && <IntelligenceView />}
+          {/* Intel → Repositories: repository intelligence, then the repositories read from GitHub. */}
+          {view === "repos" && <><IntelligenceView /><ReposView /></>}
+          {view === "intel" && <AtlasIntelligenceView />}
+          {view === "intel-api" && <AtlasApiView />}
+          {view === "review" && <IntelligenceView only="review" />}
           {view === "usage" && <UsageView />}
+          {(view === "api-costs" || view === "api-github") && <IntelligenceView only="costs" />}
           {view === "workspace" && (
             <Suspense fallback={<div className="page muted">Loading…</div>}>
               <WorkspaceView />
             </Suspense>
           )}
-          {view === "settings" && <SettingsView />}
+          {view === "settings" && <SettingsView part="connections" />}
+          {view === "preferences" && <SettingsView part="preferences" />}
         </ErrorBoundary>
       </main>
 
@@ -197,9 +213,14 @@ interface PhoneStatus { sync: string; coverage: string; failing: boolean; ci: st
 function PhoneNav({ attention, status }: { attention: number; status: PhoneStatus }) {
   const { view, setView } = useAtlas();
   const [open, setOpen] = useState(false);
-  const tabs = PHONE_TABS.map((v) => NAV.find((n) => n.view === v)!);
-  const more = [...NAV.filter((n) => !PHONE_TABS.includes(n.view)), { view: "settings" as View, label: "Settings", icon: "settings" as IconName }];
-  const inMore = more.some((n) => n.view === view);
+  const openSection = useSectionNav();
+  // The bar tab for this page: its own tab, else the bar tab of its section. None means More.
+  const current = PHONE_BAR.find((b) => b.view === tabOf(view)) ?? PHONE_BAR.find((b) => b.view === sectionOf(view).tabs[0].view);
+  // A section stays in More unless the bar opens it on its first page.
+  // Phones hide the top switch, so Business (a top-switch page) is listed here with the sidebar sections.
+  const business = SECTIONS.find((s) => s.id === "business")!;
+  const more = [...SIDEBAR_SECTIONS.slice(0, -1), business, ...SIDEBAR_SECTIONS.slice(-1)].filter((s) => !PHONE_BAR.some((b) => b.view === s.tabs[0].view));
+  const inMore = !current;
   const go = (v: View) => {
     setView(v);
     setOpen(false);
@@ -213,8 +234,8 @@ function PhoneNav({ attention, status }: { attention: number; status: PhoneStatu
   return (
     <>
       <nav className="sidebar phone-tabs" aria-label="Sections">
-        {tabs.map((n) => (
-          <button key={n.view} className={`nav-item ${onSection(view, n.view) && !open ? "active" : ""}`} onClick={() => go(n.view)} aria-label={n.label} aria-current={onSection(view, n.view) ? "page" : undefined}>
+        {PHONE_BAR.map((n) => (
+          <button key={n.view} className={`nav-item ${current === n && !open ? "active" : ""}`} onClick={() => go(n.view)} aria-label={n.label} aria-current={current === n ? "page" : undefined}>
             <Icon name={n.icon} size={20} />
             <span>{n.label}</span>
             {n.view === "overview" && attention > 0 && <span className="badge">{attention}</span>}
@@ -222,7 +243,7 @@ function PhoneNav({ attention, status }: { attention: number; status: PhoneStatu
         ))}
         <button className={`nav-item ${inMore || open ? "active" : ""}`} onClick={() => setOpen((o) => !o)} aria-label="More sections" aria-expanded={open} aria-haspopup="dialog">
           <Icon name="more" size={20} />
-          <span>{inMore && !open ? (more.find((n) => n.view === view)?.label ?? "More") : "More"}</span>
+          <span>{inMore && !open ? sectionOf(view).label : "More"}</span>
           {status.failing && <span className="badge warn" aria-label="Sync problem">!</span>}
         </button>
       </nav>
@@ -237,8 +258,8 @@ function PhoneNav({ attention, status }: { attention: number; status: PhoneStatu
             </div>
             <ul className="more-list">
               {more.map((n) => (
-                <li key={n.view}>
-                  <button className={onSection(view, n.view) ? "active" : undefined} onClick={() => go(n.view)} aria-current={onSection(view, n.view) ? "page" : undefined}>
+                <li key={n.id}>
+                  <button className={sectionOf(view).id === n.id ? "active" : undefined} onClick={() => { openSection(n); setOpen(false); }} aria-current={sectionOf(view).id === n.id ? "page" : undefined}>
                     <Icon name={n.icon} size={18} />
                     <span>{n.label}</span>
                     <span className="more-go" aria-hidden>›</span>

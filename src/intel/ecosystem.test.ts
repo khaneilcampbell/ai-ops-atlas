@@ -58,6 +58,14 @@ describe("engineering review context", () => {
     expect(delivery.kill_switch).toMatch(/customer_emails_paused/);
   });
 
+  it("gives every irreversible Atlas action and high-risk agent a documented kill switch", () => {
+    const of = (id: string) => ctx.agents.find((a) => a.id === id)!;
+    expect(of("atlas-merge-pr").kill_switch).toMatch(/Merge pull requests/);
+    expect(of("atlas-ci").kill_switch).toMatch(/Reject/);
+    const missing = ctx.agents.filter((a) => a.status !== "retired" && a.risk === "high" && !a.kill_switch).map((a) => a.id);
+    expect(missing).toEqual([]);
+  });
+
   it("keeps review runs and repository runs apart", () => {
     const runs = [run({ id: "a" }), run({ id: "b", kind: "ecosystem", repo: "ecosystem" })];
     expect(runs.filter(isReviewRun).map((r) => r.id)).toEqual(["b"]);

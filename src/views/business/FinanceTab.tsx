@@ -51,7 +51,7 @@ export function FinanceTab({ data, o, filter }: { data: BusinessData; o: Overvie
       )) : <Empty title="Nothing recorded for this period"><p className="muted">Record sales and expenses to see revenue, costs and estimated profit. Nothing is shown as zero until there are records.</p></Empty>}
 
       <section className="card card-pad">
-        <div className="section-head"><div className="section-title">AI cost on Task Center runs</div><button className="text-btn small" onClick={() => setView("usage")}>API Usage</button></div>
+        <div className="section-head"><div className="section-title">AI cost on Task Center runs</div><button className="text-btn small" onClick={() => setView("usage")}>Provider usage</button></div>
         <p className="small">{st.ai.tasks ? `$${st.ai.usd.toFixed(2)} across ${st.ai.tasks} tasks${st.ai.estimated ? " (part estimated from published prices)" : ""}` : "No AI cost reported on tasks in this period."} · {st.ai.perCompletedTaskUsd === null ? "No completed tasks" : `$${st.ai.perCompletedTaskUsd.toFixed(4)} per completed task`}</p>
         <p className="muted small">{METRIC_DEFINITIONS.taskAi}</p>
         {st.testRecordsIgnored > 0 && <p className="muted small">{st.testRecordsIgnored} test records in this period were left out.</p>}

@@ -104,3 +104,67 @@ test("unreachable database shows the error", async ({ page }) => {
   await expect(card.getByRole("alert")).toContainText("couldn't reach the database");
   await card.screenshot({ path: join(OUT, "unreachable-1512.png") });
 });
+
+// The Mac app: the same card through the desktop bridge (a stand-in window.__TAURI_INTERNALS__ that
+// answers live_data_overview like the Rust shell does after asking the site with the sync key).
+async function openMac(page: Page, overviewAnswer: unknown) {
+  await page.exposeFunction("__atlasGithub", (path: string) => answer(path) ?? null);
+  await page.addInitScript(
+    ({ overviewAnswer }) => {
+      let id = 1;
+      const answers: Record<string, unknown> = { vault_status: { state: "unlocked" }, vault_unlock: { state: "unlocked" }, live_data_overview: overviewAnswer };
+      (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
+        metadata: { currentWindow: { label: "main" }, currentWebview: { windowLabel: "main", label: "main" } },
+        transformCallback: () => id++,
+        unregisterCallback: () => undefined,
+        convertFileSrc: (p: string) => p,
+        invoke: async (cmd: string, args: Record<string, unknown> = {}) => {
+          if (cmd === "github_get") {
+            const body = await (window as unknown as { __atlasGithub: (p: string) => Promise<unknown> }).__atlasGithub(String(args.path));
+            return { status: body == null ? 404 : 200, etag: null, authed: true, rate: null, body };
+          }
+          if (cmd.startsWith("plugin:event|")) return id++;
+          return cmd in answers ? answers[cmd] : null;
+        },
+      };
+    },
+    { overviewAnswer },
+  );
+  await page.addInitScript(() => {
+    localStorage.clear();
+    for (const [k, v] of Object.entries({ mapMode: "2d", installHintDismissed: true, timeZone: "UTC" })) localStorage.setItem(`atlas:${k}`, JSON.stringify(v));
+  });
+  // The Mac app waits a moment before asking for Touch ID (VaultGate), so let that timer run.
+  await page.clock.install({ time: NOW });
+  await page.goto("/");
+  await page.clock.fastForward(1000);
+  await expect(page.locator(".nav-item").first()).toBeVisible();
+  await settle(page);
+  await goTo(page, "Task Center");
+  const card = page.locator(".db-card");
+  await card.scrollIntoViewIfNeeded();
+  await settle(page, 1);
+  return card;
+}
+
+for (const width of [1512, 390]) {
+  test(`Mac app reads the database ${width}`, async ({ page }) => {
+    mkdirSync(OUT, { recursive: true });
+    await page.setViewportSize({ width, height: 900 });
+    const card = await openMac(page, overview());
+    await expect(card.getByRole("status").first()).toContainText("Connected · schema v1 · 1 agent key");
+    await expect(card).toContainText("Approve or reject this on the Atlas web page.");
+    await expect(card.getByRole("button", { name: "Approve" })).toHaveCount(0);
+    await card.screenshot({ path: join(OUT, `mac-connected-${width}.png`) });
+    expect(await noHorizontalScroll(page)).toBe(true);
+  });
+
+  test(`Mac app without website sync ${width}`, async ({ page }) => {
+    mkdirSync(OUT, { recursive: true });
+    await page.setViewportSize({ width, height: 900 });
+    const card = await openMac(page, null);
+    await expect(card.getByRole("status").first()).toContainText("Not connected");
+    await expect(card).toContainText("Settings → Website sync");
+    await card.screenshot({ path: join(OUT, `mac-sync-off-${width}.png`) });
+  });
+}

@@ -18,6 +18,7 @@ pub const N8N_PATH: &str = "/api/hooks/n8n";
 pub const REGISTRY_REFRESH_PATH: &str = "/api/hooks/registry-refresh";
 pub const SECURITY_PATH: &str = "/api/hooks/security";
 pub const HEALTH_PATH: &str = "/api/hooks/health";
+pub const DATA_OVERVIEW_PATH: &str = "/api/hooks/data-overview";
 pub const N8N_STEPS_PATH: &str = "/api/hooks/n8n-steps";
 pub const N8N_SALES_PATH: &str = "/api/hooks/n8n-sales";
 pub const N8N_START_PATH: &str = "/api/hooks/n8n-start";
@@ -27,7 +28,7 @@ const PROPERTY_DOMAINS: &[&str] = &["benjaire.com", "khaneilcampbell.com"];
 const REPORT_AGENTS: &[&str] = &["github-opportunity-scout", "benjaire-product-lab"];
 const MAX_EVENTS: usize = 50;
 
-async fn refused(r: reqwest::Response, path: &str) -> String {
+pub(crate) async fn refused(r: reqwest::Response, path: &str) -> String {
     let code = r.status().as_u16();
     let msg = r
         .json::<serde_json::Value>()
@@ -325,6 +326,34 @@ pub async fn live_health(
             .await
             .map(Some)
             .map_err(|e| format!("The site's health report wasn't readable: {e}")),
+        Ok(r) => Err(refused(r, "/api/hooks/*").await),
+        Err(e) => Err(format!("Couldn't reach the site: {e}")),
+    }
+}
+
+/// The Task Center's Atlas database overview (server/data/api.ts forApp), or `None` when website
+/// sync isn't set up. The site reads the database through its own Hyperdrive binding; the app only
+/// sends its sync key, so no database password or key is ever in the app. Read-only: the site's
+/// route can only answer the overview.
+#[tauri::command]
+pub async fn live_data_overview(
+    sync: tauri::State<'_, UsageSync>,
+) -> Result<Option<serde_json::Value>, String> {
+    let (Some(url), Some(key)) = (sync.url(), secrets::read_usage_sync_key()) else {
+        return Ok(None);
+    };
+    match sync
+        .http()
+        .get(format!("{url}{DATA_OVERVIEW_PATH}"))
+        .bearer_auth(key)
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r
+            .json::<serde_json::Value>()
+            .await
+            .map(Some)
+            .map_err(|e| format!("The site's database overview wasn't readable: {e}")),
         Ok(r) => Err(refused(r, "/api/hooks/*").await),
         Err(e) => Err(format!("Couldn't reach the site: {e}")),
     }

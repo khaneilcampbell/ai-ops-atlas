@@ -29,9 +29,9 @@ concurrency:
 
 jobs:
   visual:
-    name: Visual checks (screenshots ${{ matrix.shard }}/10)
+    name: Visual checks (screenshots ${{ matrix.shard }}/12)
     runs-on: ubuntu-latest
-    # The whole set (about 275 tests, about 3.5 hours of software WebGL) runs as 10 shards side by side.
+    # The whole set (about 300 tests, about 4 hours of software WebGL) runs as 12 shards side by side.
     # visual/shards.mjs splits the spec files by measured time (visual/shard-times.json), about 20
     # minutes each; Playwright's own --shard split by test count and put the slow files in one shard.
     # A shard that still hits 35 minutes is a real slowdown, not noise (the blank map after #148).
@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON(inputs.specs && '[1]' || '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]') }}
+        shard: ${{ fromJSON(inputs.specs && '[1]' || '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -62,7 +62,7 @@ jobs:
           SPECS: ${{ inputs.specs }}
         run: |
           if [ -n "$SPECS" ]; then echo "args=$SPECS" >> "$GITHUB_OUTPUT";
-          else echo "args=$(node visual/shards.mjs ${{ matrix.shard }} 10)" >> "$GITHUB_OUTPUT"; fi
+          else echo "args=$(node visual/shards.mjs ${{ matrix.shard }} 12)" >> "$GITHUB_OUTPUT"; fi
       - name: Compare with baselines
         if: steps.mode.outputs.record != '1'
         env:

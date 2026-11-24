@@ -91,7 +91,11 @@ import { planAgentCommutes } from "./agentCommutes";
 import { planNamedAgents, type NamedAgentPlan } from "./namedAgentPlan";
 import { NamedAgents } from "./NamedAgents";
 import { CityRoutes, planCityPlaces, type CityPlaces } from "./routinePlaces";
-import { agentPositions, followedAgent, setFollowedAgent } from "./agentFollow";
+import { agentPositions, followedAgent, setFollowedAgent, viewOffice } from "./agentFollow";
+import { busiestFloor, insideNow, occupancySignature, officeBuildingOf, type InsideAgent } from "./occupancy";
+import { occupancyMarker, useTick, type MarkerFace } from "./OccupancyMarker";
+import { routineOverride, useRoutines } from "../../routine/useRoutineOps";
+import { buildingDisplayName } from "../../modules/names";
 import { catalog as fullCatalog } from "../../catalog";
 import { ENTER_MS, LEAVE_MS, useOffice } from "../office/store";
 import { useBuildingActivity, type Illumination } from "../office/activity";
@@ -272,6 +276,56 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   }, [scene, jobs, namedAgents]);
   const anchors = useMemo(() => anchorsOf(scene, layout), [scene, layout]);
   const [hover, setHover] = useState<string | null>(null);
+  // "Agents inside": which buildings have named agents inside right now, from their routines
+  // (occupancy.ts explains the source of truth). Re-read every 10 seconds and whenever the routines change.
+  const routines = useRoutines();
+  const tick = useTick(10_000);
+  const officeKeys = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const a of namedAgents?.agents ?? []) {
+      const job = jobs?.find((j) => j.agentId === a.personaId);
+      const key = job && officeBuildingOf(job.work, scene.towers, scene.agency ? { key: AGENCY_KEY, name: AGENCY_NAME } : null);
+      if (key) m.set(a.personaId, key);
+    }
+    return m;
+  }, [namedAgents, jobs, scene]);
+  // Homes in Team Residence Towers (Financial District buildings), the same ones the routine walks agents into.
+  const homeKeys = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const a of namedAgents?.agents ?? []) {
+      const job = jobs?.find((j) => j.agentId === a.personaId);
+      const b = job && scene.financial?.buildings.find((x) => x.id === job.home.building && x.approach.length > 0);
+      if (b) m.set(a.personaId, financialKey(b.id));
+    }
+    return m;
+  }, [namedAgents, jobs, scene]);
+  // An agent whose office has a roof marker gets no facade badge as well while it works there (routinePose.ts).
+  const roofMarked = useCallback((id: string) => officeKeys.has(id), [officeKeys]);
+  const faces = useMemo(() => new Map<string, MarkerFace>((namedAgents?.agents ?? []).map((a) => [a.personaId, { name: a.identity.name, initials: a.identity.initials, accent: a.identity.accent, portrait: a.identity.portrait }])), [namedAgents]);
+  const occupiedNow = useMemo(
+    () =>
+      insideNow(
+        routines,
+        Date.now(),
+        (id, where) => (where.kind === "office" ? officeKeys.get(id) ?? null : where.kind === "home" ? homeKeys.get(id) ?? null : where.spot === "arena" && scene.stadium ? STADIUM_KEY : where.spot === "flight" && scene.airport ? AIRPORT_KEY : null),
+        namedAgents?.agents.map((a) => a.personaId) ?? [],
+        routineOverride,
+        (spot) => city?.places.spots.get(spot),
+        (id) => city?.places.agents.get(id)?.home.id ?? null,
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tick re-reads the clock
+    [routines, officeKeys, homeKeys, namedAgents, city, scene, tick],
+  );
+  const occupiedSig = occupancySignature(occupiedNow);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only a real change in who is inside rebuilds the labels
+  const occupied = useMemo<ReadonlyMap<string, InsideAgent[]>>(() => occupiedNow, [occupiedSig]);
+  // A first tap on a marker on a touch screen shows who is inside; it closes on its own after a few seconds.
+  const [peek, setPeek] = useState<string | null>(null);
+  useEffect(() => {
+    if (!peek) return;
+    const id = window.setTimeout(() => setPeek(null), 5000);
+    return () => window.clearTimeout(id);
+  }, [peek]);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; sub: string } | null>(null);
   const [near, setNear] = useState<"far" | "mid" | "near">("far");
   // Headquarters open in the Inside view: their nameplates sit on the open floor, not the old roof.
@@ -468,9 +522,53 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     if(scene.stadium)plaque({id:STADIUM_KEY,select:STADIUM_KEY,name:STADIUM_NAME,x:scene.stadium.x+scene.stadium.w/2,roof:TERRACE_H+stadiumCrown(),z:scene.stadium.z+scene.stadium.d/2,priority:2,mark:PLANNED,title:`${STADIUM_NAME} · Planned venue`});
     if(scene.airport)for(const b of AIRPORT_BUILDINGS.filter(b=>mapLabelVisible("detail",near,selKey===airportBuildingKey(b.id),hover===airportBuildingKey(b.id),selKey===AIRPORT_KEY)))plaque({id:airportBuildingKey(b.id),select:airportBuildingKey(b.id),name:b.name,x:airportPoint(scene.airport,b.x,b.z)[0],roof:TERRACE_H+b.h,z:scene.airport.z+b.z,priority:7,mark:PLANNED,title:`${b.name} · Planned workspace`});
     if(scene.airport)plaque({id:AIRPORT_KEY,select:AIRPORT_KEY,name:"Atlas Airport",x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],roof:TERRACE_H+3.4,z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,priority:2,mark:PLANNED,title:"Atlas Airport · Planned visual district"});
+    // "Agents inside" markers: one over each building with named agents inside right now, floating
+    // just above its nameplate (occupancy.ts, OccupancyMarker.tsx). A building open in the Inside view
+    // already shows them at their desks, so it has none.
+    for (const [key, inside] of occupied) {
+      if (openSet.has(key)) continue;
+      const t = scene.towers.find((x) => x.key === key);
+      // The same roof point as each building's own nameplate above.
+      const fin = scene.financial, home = fin?.buildings.find((x) => financialKey(x.id) === key);
+      const at = (name: string, x: number, roof: number, z: number) => ({ key, name: buildingDisplayName(key, name), x, roof, z });
+      const b = t
+        ? at(t.name, t.x, roofOf(t), t.z)
+        : key === AGENCY_KEY && scene.agency
+          ? at(AGENCY_NAME, scene.agency.cx, TERRACE_H + AGENCY.eastHigh + 0.25, scene.agency.cz)
+          : key === STADIUM_KEY && scene.stadium
+            ? at(STADIUM_NAME, scene.stadium.x + scene.stadium.w / 2, TERRACE_H + stadiumCrown(), scene.stadium.z + scene.stadium.d / 2)
+            : key === AIRPORT_KEY && scene.airport
+              ? at("Atlas Airport", airportPoint(scene.airport, AIRPORT_LAYOUT.terminalX, AIRPORT_LAYOUT.terminalZ)[0], TERRACE_H + 3.4, scene.airport.z + AIRPORT_LAYOUT.terminalZ)
+              : home && fin
+                ? at(home.name, fin.x + home.x, TERRACE_H + home.height + 1.2, fin.z + home.z)
+                : null;
+      if (!b) continue;
+      const plate = out.find((l) => l.key === key && l.className.includes("m3-plaque"));
+      out.push(
+        occupancyMarker({
+          building: b,
+          ...(plate ? { plaqueId: plate.id } : {}),
+          agents: inside,
+          faces,
+          plaqueH: plate?.h ?? 0,
+          priority: plate?.priority ?? 2,
+          peeking: peek === key,
+          onPeek: () => setPeek(key),
+          onEnter: () => {
+            setPeek(null);
+            // A headquarters opens in the Inside view on its busiest floor, the way "View office" does;
+            // with one agent inside, Atlas also locates and follows it. Other buildings (homes, the
+            // arena, the airport, the Marketing Agency) are selected, which opens their own panel.
+            if (!t) return select(key);
+            const floor = busiestFloor(inside.map((a) => city?.places.agents.get(a.personaId)?.desk?.floor));
+            viewOffice({ towerKey: key, projectId: t.projectId, ...(inside.length === 1 ? { personaId: inside[0].personaId } : {}), ...(floor !== undefined ? { floor } : {}) });
+          },
+        }),
+      );
+    }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- select only reads anchors and onSelect
-  }, [scene, layout, props.displayNeighborhoods, props.landmarkMarks, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf]);
+  }, [scene, layout, props.displayNeighborhoods, props.landmarkMarks, near, showAgentLabels, selKey, selectedDistrict, hover, hoverDistrict, focus, anchors, onSelect, healthFor, net.focusSet, roofOf, occupied, faces, peek, openSet, city]);
 
   const pick: PickHandlerSet = {
     of: (keys) => ({
@@ -562,6 +660,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
         <World
           drawing={drawing}
           namedAgents={namedAgents}
+          roofMarked={roofMarked}
           city={city}
           power={power}
           light={props.light}
@@ -623,9 +722,10 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
             title={l.title}
             style={{ width: l.w }}
             role={l.onClick?"button":undefined}
+            aria-label={l.ariaLabel}
             tabIndex={l.onClick?0:undefined}
             onKeyDown={e=>{if(l.onClick&&(e.key==="Enter"||e.key===" ")){e.preventDefault();e.stopPropagation();l.onClick();}}}
-            onClick={l.onClick}
+            onClick={l.onClick ? (e) => l.onClick!(e) : undefined}
             onMouseEnter={l.onClick ? () => setHover(l.key) : undefined}
             onMouseLeave={l.onClick ? () => setHover(null) : undefined}
           >
@@ -666,7 +766,7 @@ function FirstMapFrame({ready}:{ready:()=>void}) {
 }
 
 function World({
-  drawing,namedAgents,city,
+  drawing,namedAgents,roofMarked,city,
   power,
   light: lightMode,
   health,
@@ -703,7 +803,7 @@ function World({
   cover,
   surface,
 }: {
-  drawing:boolean;namedAgents?: NamedAgentPlan;city?: { places: CityPlaces; routes: CityRoutes };
+  drawing:boolean;namedAgents?: NamedAgentPlan;roofMarked?: (personaId: string) => boolean;city?: { places: CityPlaces; routes: CityRoutes };
   power: PowerProfile;
   light: LightMode;
   health: Map<string, Health>;
@@ -1285,9 +1385,9 @@ function World({
       v.copy(l.pos).project(camera);
       if (v.z > 1 || v.x < -1.1 || v.x > 1.1 || v.y < -1.1 || v.y > 1.1) continue;
       const x = ((v.x + 1) / 2) * size.width;
-      const y = ((1 - v.y) / 2) * size.height;
+      const y = ((1 - v.y) / 2) * size.height - (l.lift ?? 0);
       screen.set(l.id, { x, y });
-      boxes.push({ id: l.id, x, top: y - l.h, bottom: y, w: l.w, priority: l.priority, alts: [-(l.h * 0.55), -(l.h + 6)] });
+      boxes.push({ id: l.id, x, top: y - l.h, bottom: y, w: l.w, priority: l.priority, alts: [-(l.h * 0.55), -(l.h + 6)], ...(l.over ? { over: { id: l.over, drop: l.lift ?? 0 } } : {}) });
     }
     const shown = placeLabels(boxes, 10, lastShown.current);
     lastShown.current = shown;
@@ -1303,6 +1403,13 @@ function World({
       el.style.visibility = "visible";
       el.style.transform = `translate(${Math.round(s.x - l.w / 2)}px, ${Math.round(s.y + dy - l.h)}px)`;
       el.style.setProperty("--stem", `${Math.max(0, -dy)}px`);
+      // A label with a tooltip (the "agents inside" marker) keeps it inside the map: below the label
+      // near the top edge, and nudged in from the sides.
+      if (l.lift !== undefined) {
+        const top = s.y + dy - l.h, half = Math.min(130, size.width / 2 - 8);
+        el.toggleAttribute("data-tip-below", top < 190);
+        el.style.setProperty("--tip-x", `${Math.round(THREE.MathUtils.clamp(s.x, half + 8, size.width - half - 8) - s.x)}px`);
+      }
     }
   });
 
@@ -1397,7 +1504,7 @@ function World({
       {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
       {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
       {detailsReady && <CommunityRail plan={scene.communityRail} travel={travel} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} land={scene.land} walks={railWalks} bothSides={harbourStop} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
-      {detailsReady && namedAgents && <NamedAgents plan={namedAgents} places={city?.places} routes={city?.routes} open={insideOpen} moving={!reduced} drawing={drawing} />}
+      {detailsReady && namedAgents && <NamedAgents plan={namedAgents} places={city?.places} routes={city?.routes} open={insideOpen} moving={!reduced} drawing={drawing} roofMarked={roofMarked} />}
       {detailsReady && <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>}
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}

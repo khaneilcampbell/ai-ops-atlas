@@ -104,6 +104,17 @@ describe("fetchRepo", () => {
     expect(snap.workflowRuns["ci.yml"].at(-1)?.branch).toBe("main");
   });
 
+  it("looks past Dependabot's update jobs for the repository's own default-branch runs", async () => {
+    const jobs = Array.from({ length: 30 }, (_, i) => run({ name: `pip in /. - Update #${i}`, event: "dynamic", path: "dynamic/dependabot", created_at: `2026-10-27T08:${String(10 + i).padStart(2, "0")}:00Z` }));
+    responses = {
+      "/repos/o/r/actions/runs?per_page=30&branch=main": { workflow_runs: [...jobs.slice(0, 5), run({ created_at: "2026-10-20T09:00:00Z" })] },
+      "/repos/o/r/actions/runs": { workflow_runs: jobs },
+    };
+    const snap = await fetchRepo("o/r", [], { meta, runsEveryMs: 0, now });
+    expect(calls).toContain("/repos/o/r/actions/runs?per_page=30&branch=main");
+    expect(snap.runs.map((r) => r.name)).toEqual(["CI"]);
+  });
+
   it("asks only for a workflow the run list doesn't show", async () => {
     await fetchRepo("o/r", ["codeql.yml"], { meta, runsEveryMs: 0, now });
     expect(calls).toContain("/repos/o/r/actions/workflows/codeql.yml/runs?per_page=5");

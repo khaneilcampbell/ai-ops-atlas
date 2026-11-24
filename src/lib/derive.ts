@@ -33,6 +33,29 @@ export function latestPerWorkflow(runs: WorkflowRun[]): WorkflowRun[] {
   return [...seen.values()];
 }
 
+/** Conclusions that say nothing about the code: the run was never meant to run, or a newer one replaced it. */
+const NOT_A_RESULT = new Set(["skipped", "cancelled", "neutral", "stale"]);
+
+export interface CiSuccess {
+  ok: number;
+  /** Finished runs with a real result: passed, failed, timed out or needed action. */
+  counted: number;
+  /** Skipped, cancelled or superseded runs, left out of the rate and shown beside it. */
+  ignored: number;
+}
+
+/**
+ * Pass rate of the repository's own workflow runs on the default branch. A skipped run (a
+ * workflow whose condition said "not this time") or a cancelled one (superseded by a newer
+ * push) didn't fail, so it isn't counted against the rate. Dependabot's update jobs aren't
+ * the repository's CI either.
+ */
+export function ciSuccess(runs: WorkflowRun[]): CiSuccess {
+  const done = runs.filter((r) => r.status === "completed" && !isDependabotJob(r));
+  const counted = done.filter((r) => !NOT_A_RESULT.has(r.conclusion ?? ""));
+  return { ok: counted.filter((r) => r.conclusion === "success").length, counted: counted.length, ignored: done.length - counted.length };
+}
+
 export function ciHealth(snap: RepoSnapshot | undefined): HealthIndicator {
   if (!snap) return { key: "ci", label: "CI", value: "Not loaded", health: "unknown" };
   const latest = latestPerWorkflow(snap.runs);
@@ -57,13 +80,17 @@ export function repoHealth(snap: RepoSnapshot | undefined, linkedAgents: number)
       key: "issues",
       label: "Open issues + PRs",
       value: snap ? String(snap.openIssues) : "–",
-      health: !snap ? "unknown" : snap.openIssues > 10 ? "warn" : "good",
+      // Open pull requests are work in progress, not a problem, so the count is shown but never
+      // turns a project to "Needs a look" (Khaneil, 2026-11-23).
+      health: snap ? "good" : "unknown",
     },
     {
       key: "license",
       label: "License",
       value: snap ? snap.license ?? "None" : "–",
-      health: !snap ? "unknown" : snap.license ? "good" : "warn",
+      // Some repositories are deliberately unlicensed (all rights reserved), so a missing license
+      // is neutral, like zero linked agents, rather than a warning (Khaneil, 2026-11-23).
+      health: snap?.license ? "good" : "unknown",
     },
     {
       key: "agents",

@@ -49,3 +49,34 @@
   .exec-brief { padding: 12px; }
   .exec-brief-grid, .exec-facts { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Mission Control > Atlas Executive (server engine). Existing tokens only. */
+.exec-ctl { margin-bottom: 20px; }
+.exec-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.exec-kpi { border: 1px solid var(--sage-200); border-radius: var(--radius-sm); padding: 8px 10px; background: var(--white); min-width: 0; }
+.exec-kpi.warn { background: var(--gold-soft); border-color: var(--gold); }
+.exec-kpi-num { font-size: var(--text-2xl); font-weight: 600; color: var(--ink); }
+.exec-kpi-label { font-size: var(--text-2xs); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+.exec-graph { display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch; }
+.exec-node-wrap { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.exec-arrow { color: var(--ink-3); }
+.exec-node { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--sage-200); border-left: 3px solid var(--sage-300); border-radius: var(--radius-sm); padding: 6px 8px; background: var(--white); min-width: 0; max-width: 320px; overflow-wrap: anywhere; }
+.exec-node.good { border-left-color: var(--good); }
+.exec-node.warn { border-left-color: var(--warn); }
+.exec-node.bad { border-left-color: var(--bad); }
+.exec-why { color: var(--gold-deep); }
+.exec-node.bad .exec-why { color: var(--bad); }
+.chip.good { border-color: var(--good); }
+.chip.bad { border-color: var(--bad); color: var(--bad); }
+.exec-section p { margin: 0 0 6px; overflow-wrap: anywhere; }
+.exec-sources { margin: 4px 0 0; padding-left: 18px; overflow-wrap: anywhere; }
+.exec-problems { margin: 0; padding-left: 18px; color: var(--bad); }
+.exec-timeline .meta { overflow-wrap: anywhere; }
+.exec-form textarea { font: inherit; }
+@media (max-width: 1080px) { .exec-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px) {
+  .exec-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .exec-node { max-width: 100%; }
+  .exec-node-wrap { width: 100%; }
+}
+.exec-ctl .chips .chip { white-space: normal; text-align: left; max-width: 100%; }

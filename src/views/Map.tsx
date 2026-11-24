@@ -1343,6 +1343,18 @@ export function MapView({active=true}:{active?:boolean}) {
               <span className="lbl">Agents</span>
               <span className="count">{agentCount}</span>
             </button>
+            {/* The Output Library sits beside Agents: the team, then what the team produced. */}
+            <button
+              type="button"
+              className={`icon-btn text map-library-btn ${libraryOpen ? "on" : ""}`}
+              onClick={() => (libraryOpen ? closeLibrary() : openLibrary())}
+              aria-pressed={libraryOpen}
+              aria-label="Output Library"
+              title={libraryOpen ? "Close the Output Library" : "Output Library: every report and file your agents produced"}
+            >
+              <Icon name="briefcase" size={16} />
+              <span className="lbl">Library</span>
+            </button>
             <span className="sep" />
             {/* One menu for the city's view. "By district" brings back the district names as well as the
                 quiet infrastructure lines, so picking it always changes something you can see. */}
@@ -1441,18 +1453,6 @@ export function MapView({active=true}:{active?:boolean}) {
             </button>
             <button className="icon-btn" onClick={() => zoomBy(0.8)} aria-label="Zoom out" title="Zoom out (−)">
               <Icon name="minus" size={17} />
-            </button>
-            <span className="sep" />
-            <button
-              type="button"
-              className={`icon-btn text map-library-btn ${libraryOpen ? "on" : ""}`}
-              onClick={() => (libraryOpen ? closeLibrary() : openLibrary())}
-              aria-pressed={libraryOpen}
-              aria-label="Output Library"
-              title={libraryOpen ? "Close the Output Library" : "Output Library: every report and file your agents produced"}
-            >
-              <Icon name="briefcase" size={16} />
-              <span className="lbl">Library</span>
             </button>
           </div>
 

@@ -1,6 +1,7 @@
 // Small stroke icon set (24px grid, Lucide-style) so the app ships without an icon dependency.
 const PATHS: Record<string, string> = {
-  overview: "M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z",
+  // Mission Control: a control-room screen with a rising trend line, distinct from Grid's four squares.
+  overview: "M3 4h18v12H3zM8 20h8M12 16v4M6.5 12l3-3 2.5 2 5-4.5",
   agents: "M12 8V4H8M4 8h16v12H4zM2 14h2M20 14h2M15 13v2M9 13v2",
   repos: "M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 9a9 9 0 0 1-9 9",
   map: "M14.1 5.9 9 3 3 5.9v15l6-2.9 5.1 2.9 6-2.9v-15zM9 3v15M15 6v15",
@@ -47,6 +48,8 @@ const PATHS: Record<string, string> = {
   // Two people: the map's City agents roster.
   people: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M16 3.1a4 4 0 0 1 0 7.8M22 21v-1a6 6 0 0 0-4-5.6",
   // Crosshair: locate on the map.
+  // Projects directory: stacked layers, a collection of projects.
+  layers: "M12 3l9 5-9 5-9-5zM3 13l9 5 9-5M3 17.5l9 5 9-5",
   locate: "M12 19a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM12 2v3M12 19v3M2 12h3M19 12h3M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z",
 };
 

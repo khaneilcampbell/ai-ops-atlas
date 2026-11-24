@@ -2,6 +2,7 @@
 //
 //   /api/data/*        Khaneil, signed in through Cloudflare Access (checked by the middleware)
 //   /api/hooks/data/*  n8n and agents, each with its own key from ATLAS_DATA_KEYS (checked here)
+//   /api/hooks/data-overview  the Mac app, with its website sync key: GET overview only (read-only)
 //
 //   GET  status                       is the database set up and reachable (no secrets, no rows)
 //   GET  overview                     recent runs, pending approvals, linked records (Khaneil only)
@@ -13,6 +14,16 @@
 //   POST approvals                    ask Khaneil before something consequential
 //   GET  approvals/<id>               has Khaneil decided (agents: only their own requests)
 //   POST approvals/<id>/decision      approve or reject (Khaneil only)
+//
+// Agent memory (migration 0003, server/memory/service.ts; docs/agent-memory.md):
+//   POST memory/prepare               before a job runs: create, update, skip, wait, resume, retry,
+//                                     backoff or escalate, with the job's history and bounded memory
+//   GET  memory/search?taskKey=&workflow=&project=&agent=&q=   prior runs and memory
+//   POST memory                       working or operational memory (Idempotency-Key header)
+//   POST memory/<id>/review           verify, dispute, revise or retire (Khaneil only)
+//   GET  memory/agents/<agentId>      one agent's memory, runs and performance
+//   POST feedback                     a run's checks against its success criteria, and a lesson
+//   POST maintenance/sweep            mark stale runs timed out, expire working memory (Khaneil only)
 //
 // Every write runs in one transaction. Agents never change a record Khaneil created or confirmed:
 // the change is filed as a pending "fact_change" approval and applied only when he approves it.
@@ -38,13 +49,17 @@ import {
   type Values,
 } from "../../src/data/records";
 import { reply } from "../http";
+import { bearerOk } from "../live";
 import { logEvent, type Sink } from "../log";
 import { connectionStringOf, DbUnavailable, withDb, type Db, type DbEnv } from "./db";
+import { agentMemory, memoryOverview, memoryReady, NOT_MIGRATED, prepare, reviewMemory, search, sweep, writeFeedback, writeMemory, type MemoryCtx } from "../memory/service";
 import { agentFor, areasOf, canRead, canWrite, documentCategoriesOf, inArea, ownerActor, parseKeys, type Actor } from "./policy";
 
 export interface DataEnv extends DbEnv {
   /** "key-id:key" pairs for agent callers; ids must be listed in server/data/policy.ts. */
   ATLAS_DATA_KEYS?: string;
+  /** The website sync key the Mac app already holds (Settings → Website sync); reads the overview only. */
+  USAGE_SYNC_TOKEN?: string;
 }
 
 export const MAX_BODY_BYTES = 64 * 1024;
@@ -81,6 +96,21 @@ export async function forAgent(req: Request, env: DataEnv, path: string, deps: D
     return reply(401, { message: "The key isn't one of the site's ATLAS_DATA_KEYS." });
   }
   return handle(req, env, actor, path, deps);
+}
+
+/**
+ * /api/hooks/data-overview: the Task Center overview for the Mac app, which has no Access session.
+ * It sends the website sync key it already keeps in the Keychain. Read-only: this entry point only
+ * ever runs the overview route, so the app can see approvals but decides them on the web page.
+ */
+export async function forApp(req: Request, env: DataEnv, deps: Deps = {}): Promise<Response> {
+  if (req.method.toUpperCase() !== "GET") return reply(405, { message: "Read-only." });
+  if (!env.USAGE_SYNC_TOKEN) return reply(503, { message: "Website sync isn't set up on the site yet (USAGE_SYNC_TOKEN missing)." });
+  if (!bearerOk(req, env.USAGE_SYNC_TOKEN)) {
+    log(deps, { event: "data.auth_denied", severity: "warn", status: 401, path: "app/overview" });
+    return reply(401, { message: "The sync key doesn't match the site's USAGE_SYNC_TOKEN." });
+  }
+  return handle(req, env, ownerActor("Atlas Mac app"), "overview", deps);
 }
 
 export interface Deps {
@@ -188,8 +218,13 @@ function failure(e: unknown): Answer {
     case "22007":
     case "22008":
       return no(400, "A value has the wrong format.");
-    case "23505":
+    case "23505": {
+      // Two workers racing past the API's own checks meet the unique indexes from migration 0003.
+      const constraint = typeof e === "object" && e ? String((e as { constraint_name?: string; constraint?: string }).constraint_name ?? (e as { constraint?: string }).constraint ?? "") : "";
+      if (constraint === "agent_runs_one_live") return no(409, "Another run already holds this job. Don't start a second one.");
+      if (constraint === "tasks_one_open_per_key") return no(409, "An open task already has this dedupe_key; nothing was filed.");
       return no(409, "That record already exists.");
+    }
     case "40001":
     case "40P01":
       return no(503, "The database was busy. Try again.");
@@ -235,6 +270,16 @@ function routeOf(method: string, p: string[]): Route | null {
   }
   if (method === "POST" && a === "runs" && !b) return { name: "run.write", run: writeRun };
   if (method === "POST" && a === "notes" && !b) return { name: "note.write", idempotent: true, run: writeNote };
+  const mem = (name: string, run: (c: MemoryCtx) => Promise<Answer>, extra: Partial<Route> = {}): Route => ({ name, ...extra, run: async (c) => ((await memoryReady(c.db)) ? run(c) : NOT_MIGRATED) });
+  if (a === "memory") {
+    if (method === "POST" && b === "prepare" && !c) return mem("memory.prepare", prepare);
+    if (method === "GET" && b === "search" && !c) return mem("memory.search", search);
+    if (method === "GET" && b === "agents" && c && !d) return mem("memory.agent", agentMemory);
+    if (method === "POST" && !b) return mem("memory.write", writeMemory, { idempotent: true });
+    if (method === "POST" && b && c === "review" && !d) return mem("memory.review", reviewMemory, { ownerOnly: true, idempotent: true });
+  }
+  if (method === "POST" && a === "feedback" && !b) return mem("feedback.write", writeFeedback, { idempotent: true });
+  if (method === "POST" && a === "maintenance" && b === "sweep" && !c) return mem("maintenance.sweep", async ({ db, actor }) => ok({ result: "swept", ...(await sweep(db, actor.name)) }), { ownerOnly: true });
   if (a === "approvals") {
     if (method === "POST" && !b) return { name: "approval.request", idempotent: true, run: requestApproval };
     if (method === "GET" && b && !c) return { name: "approval.read", run: readApproval };
@@ -402,9 +447,19 @@ async function writeRecord(c: Ctx): Promise<Answer> {
   const [existing] = w.id ? await db.query<Record<string, unknown>>(`${selectOf(table)} WHERE id = $1 FOR UPDATE`, [w.id]) : [];
   const by = actor.kind === "owner" ? "owner" : actor.id;
 
+  if (w.fields.dedupe_key !== undefined && !(await memoryReady(db))) return NOT_MIGRATED;
   if (!existing) {
     const full = checkFields(table, w.fields, "create");
     if (!full.ok) return no(400, full.error);
+    // Recurring work: an open task with the same dedupe key is answered, not filed again. (A worker
+    // racing this one hits the unique index and gets 409.)
+    if (table === "tasks" && full.value.dedupe_key) {
+      const [open] = await db.query<{ id: string }>("SELECT id FROM atlas.tasks WHERE dedupe_key = $1 AND status IN ('queued', 'running', 'blocked', 'awaiting_approval') LIMIT 1", [full.value.dedupe_key]);
+      if (open) {
+        const record = await findVisible(db, actor, table, open.id);
+        return ok({ result: "duplicate", record, message: "An open task already has this dedupe_key; nothing was filed." });
+      }
+    }
     const values = { ...full.value };
     if (table === "documents" && actor.kind === "agent" && !values.access_category) values.access_category = "internal";
     if (table === "tasks" && actor.kind === "agent" && !values.source) values.source = "agent";
@@ -477,6 +532,8 @@ async function writeRun({ db, actor, body }: Ctx): Promise<Answer> {
     if (id && !(await findVisible(db, actor, table, id))) return no(422, `The linked ${table.replace(/s$/, "")} doesn't exist, or this key can't see it.`);
   }
   const final = FINAL_RUN_STATUSES.includes(r.status);
+  const v3 = await memoryReady(db);
+  if (!v3 && (r.taskKey !== undefined || r.attempt !== undefined || r.leaseMinutes !== undefined)) return NOT_MIGRATED;
   const inserted = await db.query("INSERT INTO atlas.agent_runs (idempotency_key, agent_id, status) VALUES ($1, $2, $3) ON CONFLICT (idempotency_key) DO NOTHING RETURNING id", [r.idempotencyKey, r.agentId, r.status]);
   const [cur] = await db.query<{ id: string; agent_id: string; status: string }>("SELECT id, agent_id, status FROM atlas.agent_runs WHERE idempotency_key = $1 FOR UPDATE", [r.idempotencyKey]);
   if (cur.agent_id !== r.agentId) return no(409, "This idempotencyKey belongs to another agent's run.");
@@ -503,8 +560,26 @@ async function writeRun({ db, actor, body }: Ctx): Promise<Answer> {
   set("input_tokens", r.inputTokens);
   set("output_tokens", r.outputTokens);
   set("cost_usd", r.costUsd);
+  if (v3) {
+    if (r.taskKey !== undefined && r.taskKey !== null && !final) {
+      // One live run per agent and job: a second worker is told who holds it, and its insert is undone.
+      const [holder] = await db.query<{ id: string; external_run_id: string | null; attempt: number }>(
+        "SELECT id, external_run_id, attempt FROM atlas.agent_runs WHERE agent_id = $1 AND task_key = $2 AND status IN ('queued', 'running') AND id <> $3 LIMIT 1",
+        [r.agentId, r.taskKey, cur.id],
+      );
+      if (holder) return { status: 409, body: { message: `Another run already holds this job (${holder.external_run_id ? `#${holder.external_run_id}` : holder.id}, attempt ${holder.attempt}). Don't start a second one.`, holder: holder.id } };
+    }
+    set("task_key", r.taskKey);
+    set("attempt", r.attempt);
+    if (!final) sets.push("heartbeat_at = now()");
+    if (r.leaseMinutes !== undefined && !final) {
+      params.push(r.leaseMinutes);
+      sets.push(`lease_until = now() + make_interval(mins => $${params.length}::int)`);
+    }
+    if (final) sets.push("lease_until = NULL");
+  }
   if (final) sets.push("finished_at = now()");
-  const [run] = await db.query(`UPDATE atlas.agent_runs SET ${sets.join(", ")} WHERE id = $1 RETURNING ${RUN_COLUMNS}`, params);
+  const [run] = await db.query(`UPDATE atlas.agent_runs SET ${sets.join(", ")} WHERE id = $1 RETURNING ${RUN_COLUMNS}${v3 ? ", task_key, attempt, heartbeat_at, lease_until" : ""}`, params);
   return ok({ result: inserted.length ? "recorded" : "updated", run }, inserted.length ? 201 : 200);
 }
 
@@ -587,11 +662,15 @@ async function decideApproval({ db, actor, parts, body }: Ctx): Promise<Answer> 
 
 // ---- Overview (the Task Center card) --------------------------------------------------------------
 
-async function overview({ db, env }: Ctx): Promise<Answer> {
+async function overview({ db, env, actor }: Ctx): Promise<Answer> {
   await expireOld(db);
   const status = await statusOf(env, db);
   if (status.state !== "ok") return no(503, status.state === "error" ? status.message : status.need);
-  const runs = await db.query("SELECT id, agent_id, workflow_id, status, result_summary, error, goal_id, project_id, task_id, cost_usd::text AS cost_usd, started_at, finished_at FROM atlas.agent_runs ORDER BY started_at DESC LIMIT 15");
+  const v3 = await memoryReady(db);
+  if (v3) await sweep(db, actor.name);
+  const runs = await db.query(
+    `SELECT id, agent_id, workflow_id, external_run_id, status, result_summary, error, goal_id, project_id, task_id, cost_usd::text AS cost_usd, started_at, finished_at${v3 ? ", task_key, attempt" : ""} FROM atlas.agent_runs ORDER BY started_at DESC LIMIT 15`,
+  );
   const approvals = await db.query(`SELECT ${APPROVAL_COLUMNS} FROM atlas.approvals WHERE status = 'pending' ORDER BY created_at DESC LIMIT 20`);
   const records = await db.query(
     `(SELECT id, 'goals' AS "table", title AS label, status, area, updated_at FROM atlas.goals WHERE status IN ('proposed', 'active', 'paused') ORDER BY updated_at DESC LIMIT 10)
@@ -610,6 +689,7 @@ async function overview({ db, env }: Ctx): Promise<Answer> {
     approvals: (approvals as { payload: unknown }[]).map((a) => ({ ...a, payload: a.payload == null ? null : parse(a.payload) })) as never,
     records: records as never,
     counts: { runs24h: Number(counts.runs24h), runsFailed24h: Number(counts.failed24h), approvalsPending: Number(counts.pending), tasksOpen: Number(counts.open) },
+    memory: v3 ? await memoryOverview(db) : null,
   };
   return ok(answer);
 }
