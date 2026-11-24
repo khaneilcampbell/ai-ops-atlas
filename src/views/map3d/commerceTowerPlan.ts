@@ -22,8 +22,8 @@ export const COMMERCE={
  refSize:2.944,
  /** Plinth half-size: nothing may stand outside it. Same share of the footprint as Benjaire HQ's. */
  plinth:1.67,
- /** Points round every plan outline. */
- ring:56,
+ /** Points round every plan outline (fine enough for the gold valley's curved walls). */
+ ring:112,
  /** Teardrop: the round end's radius, the point's radius, and how far apart their centres are. */
  round:.52,tip:.15,length:.92,
  /** The way the point faces (radians, 0 = +x, turning toward +z); the round end's centre sits
@@ -38,11 +38,16 @@ export const COMMERCE={
  /** The roof's cut: the round end's roof stands this share of the height below the point's. */
  slope:.1,
  /** Fins stand out this far and run on above the glass by this much at the top. */
- finDepth:.05,finEvery:2,screen:.22,
+ finDepth:.04,finEvery:2,screen:.22,
  /** Floor bands every this much of the height, as thin ledges. */
  floor:.24,
- /** The gold ribbon: how many outline points wide, and how far it winds round the plan. */
- ribbon:{width:7,wind:.07},
+ /**
+  * The gold ribbon (realism pass, 2026-11-24): no longer a stripe painted on the skin but a
+  * valley cut into the tower, splitting it into two silver blades with warm gold glass curving
+  * between them, as on the reference board. How many outline points wide, how far it winds
+  * round the plan, how deep the valley is cut, and how far the white lip trims stand out.
+  */
+ ribbon:{width:17,wind:.07,depth:.11,lip:.055},
  podium:{
   /** Storey heights bottom up: a double-height lobby, then three office floors (about a fifth of the tower). */
   floors:[.44,.26,.26,.26] as number[],
@@ -117,7 +122,7 @@ export function planAt(t:number,k=1,grow=0):Pt[]{
  * full height and the roof falls toward the round end.
  */
 export function roofShare(i:number,n:number=COMMERCE.ring){
- const f=Math.min(i,n-i)/(n/2);
+ const w=((i%n)+n)%n,f=Math.min(w,n-w)/(n/2);
  return 1-COMMERCE.slope*Math.sin(f*Math.PI/2)**1.5;
 }
 
@@ -146,6 +151,12 @@ export function ribbonWindow(t:number,n:number=COMMERCE.ring){
  return out;
 }
 
+/**
+ * How far the gold valley is cut in at a point across it: x runs -1..1 lip to lip. A round
+ * scoop, so the lips meet the blades square and the gold curves away between them.
+ */
+export const valleyInset=(x:number)=>COMMERCE.ribbon.depth*Math.sqrt(Math.max(0,1-x*x));
+
 /** Floor band heights up the tower. */
 export function floorHeights(k=1,height=COMMERCE.height*k){
  const step=COMMERCE.floor*k,n=Math.floor(height*(1-COMMERCE.slope)/step);
@@ -156,10 +167,12 @@ export function floorHeights(k=1,height=COMMERCE.height*k){
 export const podiumTop=(level:number,k=1)=>COMMERCE.podium.floors.slice(0,level+1).reduce((a,b)=>a+b,0)*k;
 export const podiumHeight=(k=1)=>podiumTop(COMMERCE.podium.floors.length-1,k);
 
+/** The podium keeps the coarser outline: its curves are gentle and it is seen from above. */
+export const PODIUM_RING=56;
 /** The podium's outline: the full teardrop, unturned by the twist; `grow` pushes it out (negative pulls it in). */
 export function podiumRing(k=1,grow=0):Pt[]{
  const p=COMMERCE.podium,a=COMMERCE.heading;
- return teardrop(p.round+grow,p.tip+grow,p.length).map(([x,z])=>{const [rx,rz]=rot([x,z],a);return [(rx+p.centre[0])*k,(rz+p.centre[1])*k] as Pt;});
+ return teardrop(p.round+grow,p.tip+grow,p.length,PODIUM_RING).map(([x,z])=>{const [rx,rz]=rot([x,z],a);return [(rx+p.centre[0])*k,(rz+p.centre[1])*k] as Pt;});
 }
 
 /** The pool's outline on the podium roof, lying along the axis beyond the tower. */
@@ -184,7 +197,7 @@ export function frontIndex(){
  const ring=podiumRing();let best=0;ring.forEach(([,z],i)=>{if(z>ring[best][1])best=i;});return best;
 }
 /** The canopy's outline span [first, last] (may run past the ring's end; wrap with modulo). */
-export function canopySpan(n:number=COMMERCE.ring):[number,number]{
+export function canopySpan(n:number=PODIUM_RING):[number,number]{
  const c=frontIndex(),h=Math.round(COMMERCE.canopy.span*n/2);return [c-h,c+h];
 }
 

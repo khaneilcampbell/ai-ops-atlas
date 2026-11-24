@@ -24,6 +24,9 @@ async function views(page:import('@playwright/test').Page,list:(c:{x:number;z:nu
 // camera looks in along an axis between them rather than across a corner.
 const VIEWS=({x,z}:{x:number;z:number}):View[]=>[
  ['front',[x,3,z],[x+1.6,5.5,z+10.5]],
+ // Eye level from the street, then the crown, for the realism pass (2026-11-24).
+ ['hero',[x,4.6,z+.4],[x+3.4,2.4,z+10.5]],
+ ['crown',[x,7.5,z],[x+3.2,10.5,z+8]],
  ['close',[x,1.4,z+.6],[x+1.4,2.2,z+5.2]],
  ['podium',[x+.3,1.2,z+.3],[x+1.8,4.6,z+5.4]],
  ['side',[x,2.6,z],[x+9.5,4,z+.6]],

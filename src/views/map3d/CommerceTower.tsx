@@ -1,5 +1,5 @@
 import {useEffect,useMemo} from 'react';
-import type {ThreeEvent} from '@react-three/fiber';
+import {useThree,type ThreeEvent} from '@react-three/fiber';
 import * as THREE from 'three';
 import {Instanced,type Inst,type Pick,type useGeometries,type useMaterials} from './models';
 import type {Tower} from './scene';
@@ -11,6 +11,22 @@ import {useQualityLevel} from '../../lib/governor';
 import {packNormals} from './packGeometry';
 
 const noRaycast=()=>null;
+
+/**
+ * A soft sky for the glass to reflect (realism pass, 2026-11-24): pale blue overhead, a bright
+ * haze at the horizon and the green city below, prefiltered once per renderer. Reflection only,
+ * not a light, so the rest of the map's lighting is untouched.
+ */
+const skies=new WeakMap<THREE.WebGLRenderer,THREE.Texture>();
+function skyReflection(gl:THREE.WebGLRenderer){
+ const hit=skies.get(gl);if(hit)return hit;
+ const scene=new THREE.Scene(),sphere=new THREE.SphereGeometry(10,32,16);
+ const mat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,vertexShader:'varying vec3 vP;void main(){vP=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+  fragmentShader:'varying vec3 vP;void main(){float h=vP.y;vec3 sky=mix(vec3(.66,.74,.78),vec3(.2,.32,.46),smoothstep(.02,.7,h));vec3 ground=mix(vec3(.34,.4,.34),vec3(.12,.17,.13),smoothstep(0.,-.4,h));vec3 c=h>0.?sky:ground;c+=vec3(1.,.93,.8)*pow(max(0.,1.-abs(h)*8.),3.)*.3;gl_FragColor=vec4(c,1.);}'});
+ scene.add(new THREE.Mesh(sphere,mat));
+ const pm=new THREE.PMREMGenerator(gl),tex=pm.fromScene(scene,.02).texture;
+ pm.dispose();sphere.dispose();mat.dispose();skies.set(gl,tex);return tex;
+}
 
 /** The lobby wordmark: plain warm letters, no reference signage. */
 function wordmark(text:string){
@@ -30,24 +46,29 @@ export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
  const height=commerceTop(k,t.customHeight);
  const geo=useMemo(()=>packNormals(commerceGeometry(k,height)),[k,height]);
  useEffect(()=>()=>{for(const v of Object.values(geo))if(v instanceof THREE.BufferGeometry)v.dispose();},[geo]);
+ const gl=useThree(s=>s.gl);
  const mats=useMemo(()=>{
-  // Sage-green glass in place of the silver-blue, like the city artwork (2026-11-17); the gold bands stay.
-  const silver=glassTexture('#8aa898','#d6e4da','#5e7a6b',73),gold=glassTexture('#d7b06c','#f7e6bd','#b98d4f',89);
-  const glass=(tex:{map:THREE.Texture;glow:THREE.Texture},emissive:string)=>focusable(new THREE.MeshStandardMaterial({map:tex.map,emissiveMap:tex.glow,emissive,emissiveIntensity:0,roughness:.18,metalness:.25}));
+  // Sage-green glass in place of the silver-blue, like the city artwork (2026-11-17); the gold valley stays warm.
+  // Realism pass (2026-11-24): the glass and metal now reflect a soft sky, so the curved blades pick up light like real curtain wall.
+  const env=skyReflection(gl);
+  const silver=glassTexture('#8aa898','#d6e4da','#5e7a6b',73),gold=glassTexture('#c48a3c','#e8c078','#8a6430',89);
+  const glass=(tex:{map:THREE.Texture;glow:THREE.Texture},emissive:string,metal:number,shine:number)=>focusable(new THREE.MeshStandardMaterial({map:tex.map,emissiveMap:tex.glow,emissive,emissiveIntensity:0,roughness:.12,metalness:metal,envMap:env,envMapIntensity:shine}));
   return {
    textures:[silver.map,silver.glow,gold.map,gold.glow],
-   glass:glass(silver,'#dbe7ff'),gold:glass(gold,'#ffc978'),
-   fin:focusable(new THREE.MeshStandardMaterial({color:'#e6ebee',roughness:.35,metalness:.5,side:THREE.DoubleSide})),
+   glass:glass(silver,'#dbe7ff',.4,.65),gold:glass(gold,'#ffc978',.4,.45),
+   fin:focusable(new THREE.MeshStandardMaterial({color:'#d9dfdc',roughness:.3,metalness:.55,envMap:env,envMapIntensity:.6,side:THREE.DoubleSide})),
    roof:focusable(new THREE.MeshStandardMaterial({color:'#8f989c',roughness:.85})),
    white:focusable(new THREE.MeshStandardMaterial({color:'#f2f3f1',roughness:.45,metalness:.2})),
    rail:focusable(new THREE.MeshStandardMaterial({color:'#cfe3ec',roughness:.1,metalness:.2,transparent:true,opacity:.45,depthWrite:false})),
    canopy:focusable(new THREE.MeshStandardMaterial({color:'#f6f7f6',roughness:.3,metalness:.35,emissive:'#ffe2a8',emissiveIntensity:0})),
    pool:focusable(new THREE.MeshStandardMaterial({color:'#5fb3cc',roughness:.1,metalness:.1,emissive:'#3b84a0',emissiveIntensity:0})),
   };
- },[]);
+ },[gl]);
  useEffect(()=>{
   mats.glass.emissiveIntensity=night?.7:0;mats.gold.emissiveIntensity=night?1.15:0;
   mats.canopy.emissiveIntensity=night?.3:0;mats.pool.emissiveIntensity=night?.65:0;
+  // The reflected sky is a daytime one: after dark it dims, so the lit windows read.
+  mats.glass.envMapIntensity=night?.12:.65;mats.gold.envMapIntensity=night?.1:.45;mats.fin.envMapIntensity=night?.15:.6;
  },[mats,night]);
  useEffect(()=>()=>{for(const v of Object.values(mats))if(v instanceof THREE.Material)v.dispose();for(const x of mats.textures)x.dispose();},[mats]);
  const signs=useMemo(()=>{
