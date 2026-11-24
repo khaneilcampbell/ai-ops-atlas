@@ -71,14 +71,22 @@ export const COMMERCE={
   * The grounds round the podium, after the reference site plan (Khaneil, 2026-11-24: "add the
   * area surround from the pictures"): a pale stone forecourt following the teardrop, a drop-off
   * lane curving past the entrance, striped car-park ramps down the long side, and the square
-  * plinth's open corners planted as lawns with trees, all inside the plinth. Widths are offsets
-  * from the podium's outline; `edge` is how far inside the plinth's rim everything stops.
+  * plinth's open corners planted as lawns with trees. Widths are offsets from the podium's
+  * outline; `edge` is how far inside the plinth's rim everything stops (negative: the grounds run
+  * a little past it onto the level district plaza, which is wider than the plinth).
   */
- site:{forecourt:.16,lane:.15,laneSpan:20,ramp:[13,6] as [number,number],grid:.2,treeEvery:2,edge:.05},
+ site:{forecourt:.16,lane:.15,laneSpan:20,ramp:[13,6] as [number,number],grid:.2,treeEvery:2,edge:-.08},
  lobby:{core:-.16,desk:[.42,.075,.09] as [number,number,number],deskBack:.42,columnEvery:4,columnInset:.13,column:.022,soffit:.035},
 } as const;
 
 export const isCommerceTower=(projectId:string)=>projectId===COMMERCE.projectId;
+/**
+ * Floor level (Khaneil, 2026-11-24: "integrated with Atlas street design and flooring level"): the
+ * tower's forecourt is a thin slab this thick on the district plaza, not the 0.15 plinth the plain
+ * towers stand on, so the lobby floor, forecourt and drop-off lane sit level with the city's
+ * plaza paving and sidewalks and people walk straight in. World units above TERRACE_H.
+ */
+export const COMMERCE_FLOOR=.035;
 /**
  * With the district's tool offices gone there is open plaza round the plinth, so the whole
  * building, plinth included, stands this much bigger than its lot size (Khaneil, 2026-11-24:

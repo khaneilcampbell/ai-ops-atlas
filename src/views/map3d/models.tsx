@@ -22,7 +22,7 @@ import { laPlanting } from "./laPlanting";
 import { PLAZA } from "./plazaPlan";
 import { airportSidewalkPalms, calmLawnPalms, clearForAvenues, palmZones, planStreetPalms } from "./streetPalms";
 import { LOBBY_DOOR, RIBBON, isRibbonTower, podiumRing, ribbonTop } from "./ribbonTowerPlan";
-import { COMMERCE, COMMERCE_GROW, commerceFront, commerceScale, commerceTop, isCommerceTower } from "./commerceTowerPlan";
+import { COMMERCE, COMMERCE_FLOOR, COMMERCE_GROW, commerceFront, commerceScale, commerceTop, isCommerceTower } from "./commerceTowerPlan";
 import { GITHUB_TOWER, githubTowerTop, isGithubTower } from "./githubTowerPlan";
 import { INTELLIGENCE_HUB, intelligenceHubTop, isIntelligenceHub } from "./intelligenceHubPlan";
 import { PORTFOLIO_SITE, isPortfolioSite, portfolioSiteTop } from "./portfolioSitePlan";
@@ -787,7 +787,7 @@ export function fitDoor(door: Door): Door {
 /** Commerce's lobby doors: sliding glass set flush in the lobby's clear glass, inside CommerceTower's gold portal. */
 function commerceDoor(t: Tower): Door {
   const k = commerceScale(t.size), f = commerceFront(k);
-  return { p: [t.x + f.x, FLOOR_BASE, t.z + f.wall - 0.02 * k], s: [0.6 * k, 0.36 * k, 0.025], flush: true };
+  return { p: [t.x + f.x, TERRACE_H + COMMERCE_FLOOR, t.z + f.wall - 0.02 * k], s: [0.6 * k, 0.36 * k, 0.025], flush: true };
 }
 
 export function towerTop(t: Tower) {
@@ -796,7 +796,7 @@ export function towerTop(t: Tower) {
   // Benjaire HQ is drawn by RibbonTower: a hollow crown, no hip roof or finial.
   if (isRibbonTower(t.projectId)) return FLOOR_BASE + ribbonTop(t.size / RIBBON.refSize, t.customHeight) + 0.04;
   // Commerce Pipeline is drawn by CommerceTower: the fin screen above its sloped roof is the top.
-  if (isCommerceTower(t.projectId)) return FLOOR_BASE + commerceTop(commerceScale(t.size), t.customHeight) + COMMERCE.screen * commerceScale(t.size) + 0.04;
+  if (isCommerceTower(t.projectId)) return TERRACE_H + COMMERCE_FLOOR + commerceTop(commerceScale(t.size), t.customHeight) + COMMERCE.screen * commerceScale(t.size) + 0.04;
   // The GitHub HQ is drawn by GithubTower: a roof garden and the core's crown, no board.
   if (isGithubTower(t.projectId)) return FLOOR_BASE + githubTowerTop(t.customHeight ?? t.height) + 0.04;
   // The Intelligence Hub is drawn by IntelligenceHub: a parapet and a roof garden, no board.
@@ -862,7 +862,7 @@ function towerParts(towers: Tower[], strays: StrayBuilding[]): TowerParts {
     const r = (k: string) => hash(`${t.key}:${k}`);
 
     const plinth = s * 1.14 * (isCommerceTower(t.projectId) ? COMMERCE_GROW : 1);
-    P.plain.push({ p: [t.x, TERRACE_H, t.z], s: [plinth, 0.15, plinth], c: t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) ? "#d8d1c1" : (isGithubTower(t.projectId) || isIntelligenceHub(t.projectId) || isPortfolioSite(t.projectId) || isSocLab(t.projectId)) ? "#cfcdc6" : style === "tech" ? "#5d666e" : "#8d8a80" });
+    P.plain.push({ p: [t.x, TERRACE_H, t.z], s: [plinth, isCommerceTower(t.projectId) ? COMMERCE_FLOOR : 0.15, plinth], c: t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) ? "#d8d1c1" : (isGithubTower(t.projectId) || isIntelligenceHub(t.projectId) || isPortfolioSite(t.projectId) || isSocLab(t.projectId)) ? "#cfcdc6" : style === "tech" ? "#5d666e" : "#8d8a80" });
     // Atlas HQ, Benjaire HQ, Commerce and the GitHub HQ keep their plinths; the buildings are AtlasHq, RibbonTower, CommerceTower and GithubTower.
     if (t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) || isGithubTower(t.projectId) || isIntelligenceHub(t.projectId) || isPortfolioSite(t.projectId) || isSocLab(t.projectId)) continue;
     for (let i = 0; i < t.floors; i++) {

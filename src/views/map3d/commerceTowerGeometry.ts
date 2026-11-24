@@ -193,7 +193,7 @@ function soffit(k:number){
  * in vertex colours, a hair above the plinth.
  */
 function siteGround(k:number){
- const S=COMMERCE.site,pos:number[]=[],col:number[]=[],y=.004*k,n=PODIUM_RING,f=frontIndex();
+ const S=COMMERCE.site,pos:number[]=[],col:number[]=[],y=.003,n=PODIUM_RING,f=frontIndex();
  const band=(a:number,b:number,yy:number,from:number,to:number,colour:(i:number)=>string)=>{
   const [inner,outer]=siteBand(a,b);
   for(let s=from;s<to;s++){const i=((s%n)+n)%n,j=(i+1)%n,c=new THREE.Color(colour(s-from)),m=pos.length;
@@ -201,12 +201,14 @@ function siteGround(k:number){
    for(let v=m;v<pos.length;v+=3)col.push(c.r,c.g,c.b);}
  };
  const F=S.forecourt,L=S.lane,h=Math.round(S.laneSpan/2);
- band(0,F,y,0,n,()=>'#e7e1d4');
- band(F-.012,F,y*1.4,0,n,()=>'#b9b2a4');
+ band(0,F,y,0,n,()=>'#dde1dc');
+ band(F-.012,F,y*1.4,0,n,()=>'#d9d5c9');
  // The drop-off lane past the entrance, with white lines along both edges.
- band(F,F+L,y,f-h,f+h,()=>'#55585a');
- band(F+.008,F+.018,y*1.6,f-h,f+h,()=>'#f1f1ec');
- band(F+L-.018,F+L-.008,y*1.6,f-h,f+h,()=>'#f1f1ec');
+ band(F,F+L,y,f-h,f+h,()=>'#424b50');
+ band(F+.008,F+.018,y*1.6,f-h,f+h,()=>'#f7f2df');
+ band(F+L-.018,F+L-.008,y*1.6,f-h,f+h,()=>'#f7f2df');
+ // A zebra crossing over the lane to the entrance doors, like the city's junction crossings.
+ band(F,F+L,y*1.8,f-2,f+2,i=>i%2?'#424b50':'#f7f2df');
  // Car-park ramps down the long side, striped like the plan's hatching.
  const [r0,len]=S.ramp;
  for(const start of [f+r0,f-r0-len])band(F,F+L*.8,y,start,start+len,i=>i%2?'#efe3bf':'#d4b45e');
