@@ -18,8 +18,9 @@ export interface RosterRow {
   /** The persona name (Yusuf Demir), or the agent name when it has none. */
   person: string;
   role: string;
-  /** Set for an agent that works as one step of another agent (Product Lab research steps). */
-  parent: string | null;
+  /** Skills that run inside this agent (Product Lab research steps). They are part of this agent, not
+   *  agents of their own, so they get no row; the lead row lists them instead. */
+  skills: string[];
   operational: Operational;
   inactive: boolean;
   automations: { live: number; paused: number; manual: number };
@@ -37,8 +38,15 @@ export function buildRoster(agents: Agent[], entries: ReadonlyMap<string, Regist
   const roleName = new Map(ESSENTIAL_ROLES.map((r) => [r.id, r.name]));
   const parentOf = new Map(ESSENTIAL_ROLES.flatMap((r) => r.agents.slice(1).filter((id) => id.startsWith(`${r.id}-`)).map((id) => [id, r.id] as const)));
   const owned = ownership({ agents }).owned;
-  return agents
-    .filter((a) => isAiAgent(a) && !isArchived(a))
+  const current = agents.filter((a) => isAiAgent(a) && !isArchived(a));
+  const ids = new Set(current.map((a) => a.id));
+  const skillsOf = new Map<string, string[]>();
+  for (const a of current) {
+    const lead = parentOf.get(a.id);
+    if (lead && ids.has(lead)) skillsOf.set(lead, [...(skillsOf.get(lead) ?? []), a.name]);
+  }
+  return current
+    .filter((a) => !(parentOf.has(a.id) && ids.has(parentOf.get(a.id)!)))
     .map((a) => {
       const e = entries.get(a.id);
       const autos = owned.get(a.id) ?? [];
@@ -54,7 +62,7 @@ export function buildRoster(agents: Agent[], entries: ReadonlyMap<string, Regist
         name: a.name,
         person: identityFor(a.id, agents).name,
         role: roleName.get(roles.get(a.id) ?? "") ?? "No owning role",
-        parent: parentOf.get(a.id) ?? null,
+        skills: skillsOf.get(a.id) ?? [],
         operational,
         inactive,
         automations,
@@ -69,7 +77,7 @@ export function buildRoster(agents: Agent[], entries: ReadonlyMap<string, Regist
 export function filterRoster(rows: RosterRow[], f: RosterFilter, query = ""): RosterRow[] {
   const q = query.trim().toLowerCase();
   return rows.filter((r) => {
-    if (q && !`${r.person} ${r.name} ${r.role} ${r.id}`.toLowerCase().includes(q)) return false;
+    if (q && !`${r.person} ${r.name} ${r.role} ${r.id} ${r.skills.join(" ")}`.toLowerCase().includes(q)) return false;
     if (f === "needs") return r.needs;
     if (f === "verified") return r.operational === "verified";
     if (f === "unverified") return r.operational !== "verified";
@@ -84,7 +92,7 @@ export function rosterCounts(rows: RosterRow[]): Record<RosterFilter, number> {
 
 const total = (r: RosterRow) => r.automations.live + r.automations.paused + r.automations.manual;
 
-/** Sorted rows; a step agent always follows its lead so the group stays together. */
+/** Sorted rows. */
 export function sortRoster(rows: RosterRow[], by: RosterSort, desc = false): RosterRow[] {
   const cmp = (a: RosterRow, b: RosterRow): number => {
     switch (by) {
@@ -95,6 +103,5 @@ export function sortRoster(rows: RosterRow[], by: RosterSort, desc = false): Ros
       default: return a.person.localeCompare(b.person);
     }
   };
-  const leads = rows.filter((r) => !r.parent || !rows.some((x) => x.id === r.parent)).sort((a, b) => (desc ? -cmp(a, b) : cmp(a, b)));
-  return leads.flatMap((l) => [l, ...rows.filter((r) => r.parent === l.id)]);
+  return [...rows].sort((a, b) => (desc ? -cmp(a, b) : cmp(a, b)));
 }

@@ -17,11 +17,11 @@ table.roster { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .roster tbody tr:hover td { background: var(--sage-100); }
 .roster tr.on td { background: #fbf6ea; }
 .roster tr.on td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
-.roster tr.roster-step td:first-child { padding-left: 30px; }
 .roster tr.dim { opacity: 0.6; }
 .roster-who { all: unset; display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .roster-who b { display: block; font-weight: 600; font-size: 13px; }
 .roster-who .muted { display: block; }
+.roster-skills { max-width: 34ch; white-space: normal; line-height: 1.35; margin-top: 2px; }
 .roster-who:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
 .roster-health { display: inline-flex; align-items: center; gap: 6px; }
 .roster-autos { display: inline-flex; align-items: center; gap: 6px; }
@@ -39,6 +39,4 @@ table.roster { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   .roster tr { padding: 10px 12px; border-bottom: 1px solid var(--sage-200); }
   .roster td { border: 0; padding: 3px 0; white-space: normal; }
   .roster td:not(:first-child) { display: inline-flex; margin-right: 12px; }
-  .roster tr.roster-step { padding-left: 26px; }
-  .roster tr.roster-step td:first-child { padding-left: 0; }
 }

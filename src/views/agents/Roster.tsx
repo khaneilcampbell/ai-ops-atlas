@@ -94,11 +94,15 @@ export function Roster({ agents, entries, statuses, query, setQuery, prefs, setP
               {rows.map((r) => {
                 const who = identityFor(r.id, agents);
                 return (
-                  <tr key={r.id} data-id={r.id} className={`${r.id === current ? "on" : ""} ${r.parent ? "roster-step" : ""} ${r.inactive ? "dim" : ""}`} onClick={() => pick(r.id)}>
+                  <tr key={r.id} data-id={r.id} className={`${r.id === current ? "on" : ""} ${r.inactive ? "dim" : ""}`} onClick={() => pick(r.id)}>
                     <td>
                       <button className="roster-who" onClick={(e) => { e.stopPropagation(); pick(r.id); }}>
-                        <AgentAvatar identity={who} size={r.parent ? 24 : 30} status={statuses.get(r.id)?.status} />
-                        {r.parent ? <span><b>{r.name}</b><span className="muted small">Step run by {who.name}</span></span> : <span><b>{who.name}</b><span className="muted small">{who.name === r.name ? "" : r.name}</span></span>}
+                        <AgentAvatar identity={who} size={30} status={statuses.get(r.id)?.status} />
+                        <span>
+                          <b>{who.name}</b>
+                          <span className="muted small">{who.name === r.name ? "" : r.name}</span>
+                          {r.skills.length > 0 && <span className="muted small roster-skills" title={r.skills.join(" · ")}>{r.skills.length} skills: {r.skills.join(", ")}</span>}
+                        </span>
                       </button>
                     </td>
                     <td className="small">{r.role}</td>

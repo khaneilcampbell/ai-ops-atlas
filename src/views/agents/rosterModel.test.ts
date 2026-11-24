@@ -8,8 +8,9 @@ const entries = new Map(buildRegistry(catalog, {}, null).map((e) => [e.profile.i
 const rows = buildRoster(catalog.agents, entries);
 
 describe("Agents > Roster", () => {
-  it("has one row per current AI agent", () => {
-    expect(rows.length).toBe(roleDirectory(catalog.agents).counts.aiAgents);
+  it("has one row per current AI agent, with skills folded into the agent that runs them", () => {
+    const skills = rows.reduce((n, r) => n + r.skills.length, 0);
+    expect(rows.length + skills).toBe(roleDirectory(catalog.agents).counts.aiAgents);
     expect(new Set(rows.map((r) => r.id)).size).toBe(rows.length);
   });
 
@@ -22,15 +23,13 @@ describe("Agents > Roster", () => {
     }
   });
 
-  it("keeps the Product Lab steps under Leila Haddad's row whatever the sort", () => {
-    const steps = rows.filter((r) => r.parent === "benjaire-product-lab");
-    expect(steps).toHaveLength(5);
-    for (const by of ["name", "role", "health", "automations", "verified"] as const) {
-      const ids = sortRoster(rows, by, by === "name").map((r) => r.id);
-      const lead = ids.indexOf("benjaire-product-lab");
-      expect(ids.slice(lead + 1, lead + 6).sort()).toEqual(steps.map((s) => s.id).sort());
-      expect(ids).toHaveLength(rows.length);
-    }
+  it("lists the Product Lab steps as Leila Haddad's skills, not as rows of their own", () => {
+    const lab = rows.find((r) => r.id === "benjaire-product-lab")!;
+    expect(lab.person).toBe("Leila Haddad");
+    expect(lab.skills).toHaveLength(5);
+    expect(rows.some((r) => r.id.startsWith("benjaire-product-lab-"))).toBe(false);
+    expect(filterRoster(rows, "all", "competitor").map((r) => r.id)).toEqual(["benjaire-product-lab"]);
+    for (const by of ["name", "role", "health", "automations", "verified"] as const) expect(sortRoster(rows, by)).toHaveLength(rows.length);
   });
 
   it("filters add up and Needs you means failing, paused automations or inactive", () => {
