@@ -48,6 +48,8 @@ landmarks:
   "service:financial:investments":
     map_name: Robin Exchange
     module: integration-exchange
+    project: ai-ops-atlas
+    agents: [investment-operations, trading-risk-limits, trade-journal, trading-reporting]
   "service:atlas-galleria":
     map_name: Atlas Galleria
     module: integration-exchange

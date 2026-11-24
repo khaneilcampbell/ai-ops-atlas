@@ -10,7 +10,7 @@ describe("city figures", () => {
   it("gives exactly the agents with an identity one figure, keyed by their stable id", () => {
     const ids = identities(catalog.agents).map((i) => i.personaId).sort();
     expect(Object.keys(CITY_FIGURES).sort()).toEqual(ids);
-    expect(ids).toHaveLength(17);
+    expect(ids).toHaveLength(19);
   });
 
   it("uses valid colours and never the avatar's accent circle for skin or clothes", () => {
