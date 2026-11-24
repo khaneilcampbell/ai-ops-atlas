@@ -11,9 +11,9 @@ schema: atlas/buildings-v1
 
 buildings:
   "service:benjaire-marketing":
-    display_name: Growth & Marketing Studio
+    display_name: Product & Growth Studio
     organization: Benjaire
-    former_names: [Benjaire Marketing Agency]
+    former_names: [Benjaire Marketing Agency, Growth & Marketing Studio]
   # Nov 11: every Financial District building belongs to Benjaire. Each is one of Benjaire's
   # finance and operations buildings; the fictional brands they used to carry stay in former_names
   # so search still finds them. What Benjaire data each building holds: catalog/workspace/finance.yaml.

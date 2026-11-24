@@ -68,3 +68,31 @@ landmarks:
   "service:airport-building:cargo":
     map_name: Atlas · Cargo
     module: model-intelligence-lab
+
+# Buildings folded into one of the eight core buildings (Khaneil, 2026-11-24: "consolidate the map into
+# 8 core buildings"). The key is the folded building's stable id, the value the building that now houses
+# it. A folded building is not drawn on its own: its modules, agents and records stay exactly as they
+# are and show inside the host's panel, so a host can hold several modules. Nothing here is deleted;
+# remove a line to put the building back on the map.
+merged:
+  # AI Engineering & Research Center (Development Hub)
+  "service:financial:financial-planning": "project:github-profile"
+  # Business Operations HQ: the Financial District towers, Vendor & Supplier and Commerce
+  "service:financial-district": "project:benjaire-site"
+  "service:financial:banks": "project:benjaire-site"
+  "service:financial:records": "project:benjaire-site"
+  "service:financial:investments": "project:benjaire-site"
+  "service:financial:residence": "project:benjaire-site"
+  "service:financial:business-finance": "project:benjaire-site"
+  "service:financial:budget": "project:benjaire-site"
+  "service:financial:insurance": "project:benjaire-site"
+  "service:financial:harbor-residence": "project:benjaire-site"
+  "service:atlas-galleria": "project:benjaire-site"
+  "project:commerce-pipeline": "project:benjaire-site"
+  # Product & Growth Studio (Growth & Marketing Studio)
+  "service:atlas-marketplace": "service:benjaire-marketing"
+  # Security & Infrastructure Center (Security Operations Center)
+  "service:bmw-dealership": "project:soc-lab"
+  # Atlas Commons: the shared central area
+  "service:automation-plaza": "service:atlas-commons"
+  "service:skyline-stadium": "service:atlas-commons"

@@ -25,7 +25,7 @@ describe("workspace building names", () => {
 
   it("applies Khaneil's operational names, keeping each original organization as metadata", () => {
     const want: [string, string, string][] = [
-      [AGENCY_KEY, "Growth & Marketing Studio", "Benjaire"],
+      [AGENCY_KEY, "Product & Growth Studio", "Benjaire"],
       [financialKey("residence"), "Data Intelligence Center", "Benjaire"],
       [financialKey("banks"), "Financial Operations Tower", "Benjaire"],
       [financialKey("budget"), "Budget & Forecasting Center", "Benjaire"],
@@ -53,17 +53,17 @@ describe("workspace building names", () => {
   });
 
   it("renames catalog buildings in their manifests, keeping ids, modules and the old name as an alias", () => {
-    const want: [string, string, string | undefined, string][] = [
+    const want: [string, string, string | undefined, ...string[]][] = [
       ["ai-ops-atlas", "Atlas Command Center", "Atlas", "Atlas HQ"],
       ["benjaire-site", "Business Operations HQ", "Benjaire", "Benjaire HQ"],
       ["intelligence-hub", "Agent Operations Center", undefined, "Intelligence Hub"],
       ["commerce-pipeline", "Commerce Operations Center", undefined, "Commerce Pipeline"],
-      ["soc-lab", "Security Operations Center", undefined, "SOC Lab"],
-      ["portfolio-site", "Portfolio Web Studio", undefined, "Portfolio Site"],
+      ["soc-lab", "Security & Infrastructure Center", undefined, "SOC Lab", "Security Operations Center"],
+      ["portfolio-site", "Projects & Portfolio Studio", undefined, "Portfolio Site", "Portfolio Web Studio"],
     ];
-    for (const [id, name, organization, former] of want) {
+    for (const [id, name, organization, ...former] of want) {
       const p = catalog.projects.find((p) => p.id === id)!;
-      expect([p.name, p.organization, p.formerNames]).toEqual([name, organization, [former]]);
+      expect([p.name, p.organization, p.formerNames]).toEqual([name, organization, former]);
     }
   });
 
@@ -77,8 +77,8 @@ describe("workspace building names", () => {
 
   it("shows the display name on the map plaque and its title, without touching the plaque's keys", () => {
     const p = buildingPlaque({ id: AGENCY_KEY, select: AGENCY_KEY, name: AGENCY_NAME, x: 0, roof: 1, z: 0, priority: 1, mark: { kind: "unverified", label: "Planned" }, title: `${AGENCY_NAME} · Planned`, selKey: null, hover: null, onSelect: () => {} });
-    expect([p.id, p.key, p.title]).toEqual([AGENCY_KEY, AGENCY_KEY, "Growth & Marketing Studio · Planned"]);
-    expect(JSON.stringify(p.node)).toContain("Growth & Marketing Studio");
+    expect([p.id, p.key, p.title]).toEqual([AGENCY_KEY, AGENCY_KEY, "Product & Growth Studio · Planned"]);
+    expect(JSON.stringify(p.node)).toContain("Product & Growth Studio");
     expect(JSON.stringify(p.node)).not.toContain("…");
   });
 

@@ -83,6 +83,8 @@ import { isPortfolioSite } from "./portfolioSitePlan";
 import { SocLab } from "./SocLab";
 import { isSocLab } from "./socLabPlan";
 import { FLOOR_BASE, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
+import { presentScene } from "./consolidate";
+import { isMerged, onMapKey } from "../../modules/workspace";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D, type Tower } from "./scene";
 import type { AgentJob } from "../../catalog/agentJobs";
 import { planAgentCommutes } from "./agentCommutes";
@@ -254,7 +256,7 @@ const FOLLOW_DIST = 9;
 
 const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const { layout, jobs, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, showLocal } = props;
-  const scene = useMemo(() => buildScene(layout), [layout]);
+  const scene = useMemo(() => presentScene(buildScene(layout)), [layout]);
   const agentCommutes = useMemo(() => (jobs ? planAgentCommutes(scene, jobs) : undefined), [scene, jobs]);
   // The named team, one character per identity at its real workplace (namedAgentPlan.ts).
   const namedAgents = useMemo(() => (jobs ? planNamedAgents(scene, fullCatalog.agents, jobs, agentCommutes) : undefined), [scene, jobs, agentCommutes]);
@@ -344,7 +346,9 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     locate: (x, y, z) => api.current?.locate(x, y, z),
   }));
 
-  const select = (key: string) => {
+  const select = (raw: string) => {
+    // A folded building's key (an old link, a search hit) lands on the core building that houses it.
+    const key = onMapKey(raw);
     const a = anchors.get(key);
     onSelect(selOf(key), a?.project);
   };
@@ -494,6 +498,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     // gap above its roof, one look, and a status dot (planned places show the dashed one).
     // A landmark whose telemetry answered shows its real status instead of the planned dot.
     const plaque = (p: Omit<Parameters<typeof buildingPlaque>[0], "selKey" | "hover" | "onSelect">) => {
+      // A building folded into a core building (workspace.yaml `merged`) has no nameplate of its own.
+      if (isMerged(p.select)) return;
       const live = props.landmarkMarks?.[p.select];
       out.push(buildingPlaque({ ...p, ...(live ? { mark: live, title: `${p.name} · ${live.label}` } : {}), selKey, hover, onSelect: select }));
     };
