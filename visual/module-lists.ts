@@ -11,7 +11,7 @@ for(const [file,name,list,via=[]] of lists)test(`Module list: ${list}`,async({pa
  await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
  await selectBuilding(page,name);await settle(page,2);
  for(const stop of via){await page.getByRole('button',{name:`${stop} →`,exact:true}).click();await settle(page,2);}
- const details=page.getByRole('group',{name:list});await details.locator('summary').click();await details.scrollIntoViewIfNeeded();await settle(page,1);
+ const details=page.getByRole('group',{name:list}).first();await details.locator('summary').click();await details.scrollIntoViewIfNeeded();await settle(page,1);
  await page.screenshot({path:`${out}/list-${file}.png`});
  expect(errors).toEqual([]);
 });
