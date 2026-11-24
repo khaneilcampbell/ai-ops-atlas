@@ -5,7 +5,7 @@ for(const light of ['day','night'] as const)test(`Compact connected city: ${ligh
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await openAtlas(page,{light,storage:{powerMode:'saver'}});await waitForScene(page);await settle(page,2);
  await page.screenshot({path:`artifacts/compact-city/after-${light}.png`});
- await selectBuilding(page,'Business Operations Station');await settle(page,2);await page.screenshot({path:`artifacts/compact-city/financial-${light}.png`});
+ await selectBuilding(page,'Workflow Automation Hub');await page.getByRole('button',{name:'Business Operations Station →',exact:true}).click();await settle(page,2);await page.screenshot({path:`artifacts/compact-city/financial-${light}.png`});
  await settle(page,1);await expect(page.getByRole('heading',{name:'Business Operations Station',exact:true})).toBeVisible();
  await page.screenshot({path:`artifacts/compact-city/financial-station-${light}.png`});
  await page.getByRole('button',{name:'Workflow Automation Hub →',exact:true}).click();await settle(page,2);await expect(page.getByRole('heading',{name:'Workflow Automation Hub',exact:true})).toBeVisible();
@@ -16,7 +16,7 @@ for(const light of ['day','night'] as const)test(`Compact connected city: ${ligh
 });
 for(const light of ['day','night'] as const)test(`Final perimeter and local connections: ${light}`,async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await openAtlas(page,{light,storage:{powerMode:'saver'}});await waitForScene(page);await settle(page,2);await page.screenshot({path:`artifacts/compact-city/after-${light}.png`});
- await selectBuilding(page,'Business Operations Station');await settle(page,2);await page.screenshot({path:`artifacts/compact-city/financial-${light}.png`});
+ await selectBuilding(page,'Workflow Automation Hub');await page.getByRole('button',{name:'Business Operations Station →',exact:true}).click();await settle(page,2);await page.screenshot({path:`artifacts/compact-city/financial-${light}.png`});
  await settle(page,1);await page.screenshot({path:`artifacts/compact-city/financial-station-${light}.png`});
  await page.getByRole('button',{name:'Workflow Automation Hub →',exact:true}).click();await settle(page,2);await page.screenshot({path:`artifacts/compact-city/marketplace-connections-${light}.png`});expect(errors).toEqual([]);
 });

@@ -7,7 +7,7 @@ for(const width of [1512,390])for(const light of ['day','night'] as const)test(`
  await openAtlas(page,{light,storage:{powerMode:'saver'}});await waitForScene(page);
  await page.screenshot({path:`docs/perimeter-rail/after-${width}-${light}.png`});
  if(width===1512){
-  await selectBuilding(page,'Business Operations Station');await settle(page,2);
+  await selectBuilding(page,'Workflow Automation Hub');await page.getByRole('button',{name:'Business Operations Station →',exact:true}).click();await settle(page,2);
   for(const name of ['Business Operations Station','Workflow Automation Hub','Atlas Commons Station']){
    if(name!=='Business Operations Station'){await page.getByRole('button',{name:`${name} →`,exact:true}).click();await settle(page,2);}
    await expect(page.getByRole('heading',{name,exact:true})).toBeVisible();

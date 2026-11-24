@@ -23,7 +23,7 @@ for(const light of ['day','night'] as const)test(`BMW and Financial Park station
 test('BMW and station nameplates open their panels',async({page})=>{
  mkdirSync(out,{recursive:true});await openAtlas(page,{light:'day'});await waitForScene(page);await settle(page,2);
  await selectBuilding(page,'Security & Infrastructure Showroom');await settle(page,2);await expect(page.getByRole('heading',{name:'Security & Infrastructure Showroom',exact:true})).toBeVisible();await page.screenshot({path:`${out}/bmw-selected.png`});
- await selectBuilding(page,'Business Operations Station');await settle(page,3);await expect(page.getByRole('heading',{name:'Business Operations Station',exact:true})).toBeVisible();
+ await selectBuilding(page,'Workflow Automation Hub');await page.getByRole('button',{name:'Business Operations Station →',exact:true}).click();await settle(page,3);await expect(page.getByRole('heading',{name:'Business Operations Station',exact:true})).toBeVisible();
  await page.screenshot({path:`${out}/station-selected.png`});
 });
 test('BMW and Financial Park on a phone',async({page})=>{

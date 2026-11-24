@@ -6,7 +6,7 @@ const STATIONS=['Business Operations Station','Workflow Automation Hub','Atlas C
 const slug=(name:string)=>name.split(' ')[0].toLowerCase();
 const out=process.env.SHOT_DIR??'artifacts/financial-station';
 async function openStation(page:Page){
- await selectBuilding(page,'Business Operations Station');await settle(page,3);
+ await selectBuilding(page,'Workflow Automation Hub');await page.getByRole('button',{name:'Business Operations Station →',exact:true}).click();await settle(page,3);
  await expect(page.getByRole('heading',{name:'Business Operations Station',exact:true})).toBeVisible();
 }
 /** Close views around the camera target the station selection framed, rendered straight from the fiber root. */
