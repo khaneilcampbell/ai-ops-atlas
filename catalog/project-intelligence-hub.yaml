@@ -163,8 +163,10 @@ agents:
     runtime: n8n Cloud
     status: active
     trigger: Every 4 hours and the Agents tab's Refresh registry sheet button; Business Structure daily 7am ET; Top 10 Sundays 9am ET
-    last_run: 2026-11-15T14:00:00Z
+    last_run: 2026-11-20T14:30:53Z
     history:
+      - at: 2026-11-24
+        event: Published with its 4-hour schedule (checked in n8n); n8n doesn't keep successful runs for it, so the last run on record is the Nov 20 one
       - at: 2026-11-17
         event: Retired agents moved to their own Retired tab and off the Registry tab, at Khaneil's request (55 retired, 66 working)
       - at: 2026-11-12
