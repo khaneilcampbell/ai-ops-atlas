@@ -1,0 +1,3 @@
+- 2026-11-24 · Automations now opens on a Board: every automation sits under the agent who runs it, with failures and drafts waiting to publish listed under Needs you (#525)
+- 2026-11-24 · New Live tab in Automations: today's runs on a timeline, every automation in a table with failures and drafts first, and a details panel with its recent runs and an Open in n8n button (#525)
+- 2026-11-24 · New Flows tab in Automations: each agent's automations drawn as a diagram with the handoffs between them, steps that wait for your approval in gold, and a lifecycle board from draft to retired (#525)

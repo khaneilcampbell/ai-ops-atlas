@@ -145,9 +145,10 @@ function optionalNames(r: Reader, p: Raw): Pick<Project, "organization" | "forme
 }
 
 /** The manifest's `owned_by` agent id, present only when set. Checked against the catalog in buildCatalog. */
-function ownedByOf(r: Reader, ao: Raw, path: string): Pick<Agent, "ownedBy"> {
+function ownedByOf(r: Reader, ao: Raw, path: string): Pick<Agent, "ownedBy" | "feeds"> {
   const ownedBy = r.str(ao, "owned_by", path, false);
-  return ownedBy ? { ownedBy } : {};
+  const feeds = r.list(ao, "feeds", path).filter((f): f is string => typeof f === "string" && !!f.trim());
+  return { ...(ownedBy ? { ownedBy } : {}), ...(feeds.length ? { feeds } : {}) };
 }
 
 /** Merges manifests and reports duplicate ids across files. */
@@ -209,6 +210,14 @@ export function buildCatalog(files: Record<string, string>): { catalog: Catalog;
     else if (!owner) issues.push({ file, message: `${a.id}.owned_by: "${a.ownedBy}" is not an agent id` });
     else if (!isAiAgent(owner)) issues.push({ file, message: `${a.id}.owned_by: "${a.ownedBy}" is an automation, not an AI agent` });
   }
+  // A handoff (`feeds`) must name another automation in the catalog.
+  for (const a of catalog.agents)
+    for (const to of a.feeds ?? []) {
+      const file = catalog.projects.find((p) => p.id === a.projectId)?.file ?? a.projectId;
+      const target = catalog.agents.find((o) => o.id === to);
+      if (!target) issues.push({ file, message: `${a.id}.feeds: "${to}" is not an agent id` });
+      else if (to === a.id || isAiAgent(a) || isAiAgent(target)) issues.push({ file, message: `${a.id}.feeds: "${to}" must be another automation` });
+    }
   // A declared connection must point at something in the catalog; it is never guessed.
   for (const p of catalog.projects)
     for (const c of p.connections ?? [])

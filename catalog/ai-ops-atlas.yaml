@@ -20,6 +20,7 @@ agents:
     purpose: Runs frontend and Rust tests and dependency audits on every pull request and push. Validated pushes to main build the macOS app; Khaneil approves protected signing before a separate job publishes the update.
     framework: GitHub Actions
     owned_by: atlas-release-manager            # owning agent, added at Khaneil's request 2026-11-13
+    feeds: [github-merge-flow]   # verified 2026-11-24: Merge Lanes runs when a pull request's Atlas CI finishes
     runtime: GitHub-hosted runner
     status: active
     trigger: Push, pull request or manual; the dependency audit also runs daily on main
@@ -508,6 +509,7 @@ agents:
     model: Claude Code with sonnet for routine fixes and opus for test failures and repairs (aliases, set by ATLAS_ENGINEERING_MODELS)
     framework: Atlas Executive engine + GitHub Actions runner (Claude Code headless) + n8n dispatch
     owned_by: agent-operations-lead            # same owner as Atlas Executive, its supervisor
+    feeds: [atlas-qa]   # verified 2026-11-24: QA checks every change Engineering makes before a pull request exists
     runtime: GitHub Actions (.github/workflows/atlas-engineer.yml), started by n8n for Atlas
     status: paused
     trigger: 'CI failure on main picked up by Atlas, once switched on; Atlas · Engineering Dispatch is a draft, ATLAS_ENGINEERING_ENABLED is off and migration 0004 is not applied'

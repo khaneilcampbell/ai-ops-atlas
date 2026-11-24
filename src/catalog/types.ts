@@ -50,6 +50,9 @@ export interface Agent {
   /** Automations only: id of the AI agent that runs this automation as one of its fixed steps
    *  (manifest `owned_by`). Absent means no agent owns it yet; it is never guessed. */
   ownedBy?: string;
+  /** Automations only: the automations this one hands its output to (manifest `feeds`). Recorded
+   *  only where the link is verified in code or n8n; drawn on the Automations Flows tab. */
+  feeds?: string[];
   projectId: string;
   repository: string;
 }
