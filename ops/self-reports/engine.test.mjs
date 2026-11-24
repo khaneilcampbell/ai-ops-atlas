@@ -256,7 +256,7 @@ describe("one work report per agent for the Knowledge & Research Center", () => 
         const pdf = Buffer.from(f.base64, "base64").toString("latin1");
         expect(pdf.startsWith("%PDF-1.4")).toBe(true);
         expect(pdf).toContain("No data in window");
-        expect(pdf).toContain(`(${row.agent} · work report)`.replace("·", "\xb7"));
+        expect(pdf).toContain(`(${row.agent} \xb7 work report)`);
       }
     }
     expect(files.filter((f) => f.format === "pdf").map((f) => f.agentId)).toEqual(expect.arrayContaining(["on-request", "unreachable", "quiet-watcher"]));
