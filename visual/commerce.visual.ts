@@ -41,6 +41,8 @@ const VIEWS=({x,z}:{x:number;z:number}):View[]=>[
  ['podium',[x+.3,1.2,z+.3],[x+1.8,4.6,z+5.4]],
  ['side',[x,2.6,z],[x+9.5,4,z+.6]],
  ['district',[x,.8,z],[x+1.5,17,z+12]],
+ // The grounds round the podium (2026-11-24): forecourt, drop-off lane, ramps and corner lawns from above.
+ ['grounds',[x,.7,z+.2],[x+.6,11,z+5.5]],
  ['context',[x+1,1,z-1],[x+14,16,z+16]],
 ];
 for(const light of ['day','night'] as const)test(`Commerce district, ${light}`,async({page})=>{

@@ -74,7 +74,8 @@ describe('Commerce Pipeline teardrop tower',()=>{
  it('stays inside its performance budget: merged meshes, a few instances, no lights or frame loop',()=>{
   const g=commerceGeometry(1,COMMERCE.height*2);
   const meshes=Object.values(g).filter(v=>v&&typeof v==='object'&&'attributes' in v);
-  expect(meshes.length).toBeLessThanOrEqual(14);
+  // 15 since the grounds round the podium (2026-11-24) became one flat vertex-coloured mesh.
+  expect(meshes.length).toBeLessThanOrEqual(15);
   expect(commerceTriangles(g)).toBeLessThan(30000);
   const source=readFileSync(join(__dirname,'CommerceTower.tsx'),'utf8');
   expect(source).not.toMatch(/<(point|spot|directional|ambient|hemisphere|rectArea)Light/);expect(source).not.toMatch(/useFrame/);

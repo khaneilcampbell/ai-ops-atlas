@@ -4,7 +4,7 @@ import type {Pt} from './roads';
 import {compact,fins,lid,skin as skin2} from './atlasHqGeometry';
 import type {Pt3} from './atlasHqPlan';
 import {annulus,slab} from './ribbonTowerGeometry';
-import {COMMERCE,along,commerceFront,canopySpan,floorHeights,planAt,podiumRing,podiumTop,poolCentre,poolRing,ribbonCentre,roofShare,roofTrees,valleyInset} from './commerceTowerPlan';
+import {COMMERCE,along,commerceFront,canopySpan,floorHeights,planAt,podiumRing,podiumTop,poolCentre,poolRing,ribbonCentre,roofShare,roofTrees,siteBand,siteLawns,frontIndex,PODIUM_RING,valleyInset} from './commerceTowerPlan';
 
 /** Commerce Pipeline's teardrop tower: a few merged meshes, built once. See commerceTowerPlan for the design. */
 
@@ -186,6 +186,36 @@ function soffit(k:number){
  return geo(pos);
 }
 
+/**
+ * The grounds on the plinth (2026-11-24, after the reference site plan): a stone forecourt round
+ * the podium with a darker kerb, an asphalt drop-off lane with white edge lines past the entrance,
+ * two striped car-park ramps on the long side, and lawns in the plinth's corners. One flat mesh
+ * in vertex colours, a hair above the plinth.
+ */
+function siteGround(k:number){
+ const S=COMMERCE.site,pos:number[]=[],col:number[]=[],y=.004*k,n=PODIUM_RING,f=frontIndex();
+ const band=(a:number,b:number,yy:number,from:number,to:number,colour:(i:number)=>string)=>{
+  const [inner,outer]=siteBand(a,b);
+  for(let s=from;s<to;s++){const i=((s%n)+n)%n,j=(i+1)%n,c=new THREE.Color(colour(s-from)),m=pos.length;
+   quad(pos,[inner[i][0]*k,yy,inner[i][1]*k],[outer[i][0]*k,yy,outer[i][1]*k],[outer[j][0]*k,yy,outer[j][1]*k],[inner[j][0]*k,yy,inner[j][1]*k]);
+   for(let v=m;v<pos.length;v+=3)col.push(c.r,c.g,c.b);}
+ };
+ const F=S.forecourt,L=S.lane,h=Math.round(S.laneSpan/2);
+ band(0,F,y,0,n,()=>'#e7e1d4');
+ band(F-.012,F,y*1.4,0,n,()=>'#b9b2a4');
+ // The drop-off lane past the entrance, with white lines along both edges.
+ band(F,F+L,y,f-h,f+h,()=>'#55585a');
+ band(F+.008,F+.018,y*1.6,f-h,f+h,()=>'#f1f1ec');
+ band(F+L-.018,F+L-.008,y*1.6,f-h,f+h,()=>'#f1f1ec');
+ // Car-park ramps down the long side, striped like the plan's hatching.
+ const [r0,len]=S.ramp;
+ for(const start of [f+r0,f-r0-len])band(F,F+L*.8,y,start,start+len,i=>i%2?'#efe3bf':'#d4b45e');
+ for(const l of siteLawns(k)){const m=pos.length,hs=l.s/2;
+  quad(pos,[l.x-hs,y,l.z-hs],[l.x-hs,y,l.z+hs],[l.x+hs,y,l.z+hs],[l.x+hs,y,l.z-hs]);
+  const c=new THREE.Color(l.tree?'#7f9f62':'#8aa96c');for(let v=m;v<pos.length;v+=3)col.push(c.r,c.g,c.b);}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.computeVertexNormals();return g;
+}
+
 export function commerceGeometry(k=1,height=COMMERCE.height*k){
  const H=height,c=COMMERCE,n=c.ring;
  // Tower levels: a level every two floors up to where the roof's cut begins, then the sloped top.
@@ -219,7 +249,8 @@ export function commerceGeometry(k=1,height=COMMERCE.height*k){
   glass:smooth(glass),gold:smooth(gold),fins:smooth(finGeo),roof:roofLid,bands:smooth(merge(bands)),
   lobby:smooth(lobbyGlass),podiumGlass:smooth(podiumGlass),slabs:merge([slabs,poolRim,lobbyColumns(k)]),interior:lobbyInterior(k),ribs,rail:smooth(rail),lawn,
   pool:lid(at(pool,ptop+.016*k)),canopy:merge([canopy(k),soffit(k)]),
-  trees:roofTrees(k),
+  site:siteGround(k),
+  trees:roofTrees(k),siteTrees:siteLawns(k).filter(l=>l.tree),
  });
 }
 export type CommerceGeometry=ReturnType<typeof commerceGeometry>;

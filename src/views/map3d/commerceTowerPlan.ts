@@ -67,6 +67,14 @@ export const COMMERCE={
   * as a warm stone wall (grown in from the tower's base outline), a reception desk facing the
   * doors, slim white columns inside the glass line every this many podium points, and a lit soffit.
   */
+ /**
+  * The grounds round the podium, after the reference site plan (Khaneil, 2026-11-24: "add the
+  * area surround from the pictures"): a pale stone forecourt following the teardrop, a drop-off
+  * lane curving past the entrance, striped car-park ramps down the long side, and the square
+  * plinth's open corners planted as lawns with trees, all inside the plinth. Widths are offsets
+  * from the podium's outline; `edge` is how far inside the plinth's rim everything stops.
+  */
+ site:{forecourt:.16,lane:.15,laneSpan:20,ramp:[13,6] as [number,number],grid:.2,treeEvery:2,edge:.05},
  lobby:{core:-.16,desk:[.42,.075,.09] as [number,number,number],deskBack:.42,columnEvery:4,columnInset:.13,column:.022,soffit:.035},
 } as const;
 
@@ -204,6 +212,22 @@ export function roofTrees(k=1){
  const ring=podiumRing(1,-.13),tower=planAt(0,1,.1),pool=poolRing(1);
  const near=(p:Pt,poly:Pt[],d:number)=>poly.some(([x,z])=>Math.hypot(x-p[0],z-p[1])<d);
  return ring.filter((p,i)=>i%4===0&&!insidePoly(p,tower)&&!near(p,tower,.16)&&!near(p,pool,.12)).map(([x,z])=>({x:x*k,z:z*k,y:podiumHeight(k)}));
+}
+
+/** Keeps a ground point inside the plinth's rim. */
+const onPlinth=([x,z]:Pt):Pt=>{const e=COMMERCE.plinth-COMMERCE.site.edge;return [Math.max(-e,Math.min(e,x)),Math.max(-e,Math.min(e,z))];};
+/** A band of the podium's outline pushed out from `a` to `b`, clamped to the plinth (local, unscaled). */
+export function siteBand(a:number,b:number):[Pt[],Pt[]]{return [podiumRing(1,a).map(onPlinth),podiumRing(1,b).map(onPlinth)];}
+/** The open corners of the square plinth beyond the forecourt and lane: lawn tiles, with a tree on every other one. */
+export function siteLawns(k=1){
+ const S=COMMERCE.site,e=COMMERCE.plinth-S.edge,keep=podiumRing(1,S.forecourt+S.lane+.06),out:{x:number;z:number;s:number;tree:boolean}[]=[];
+ const n=Math.floor(2*e/S.grid);
+ for(let i=0;i<n;i++)for(let j=0;j<n;j++){
+  const x=-e+(i+.5)*S.grid,z=-e+(j+.5)*S.grid,h=S.grid/2;
+  if([[x-h,z-h],[x+h,z-h],[x-h,z+h],[x+h,z+h],[x,z]].some(p=>insidePoly(p as Pt,keep)))continue;
+  out.push({x:x*k,z:z*k,s:S.grid*.92*k,tree:(i+j)%S.treeEvery===0});
+ }
+ return out;
 }
 
 /** The outline point the lobby faces from: the podium's front (largest z), where the canopy is centred. */

@@ -96,6 +96,7 @@ export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
    // The lobby's clear glass: you see the stone floor, desk and lit core through it.
    clear:focusable(new THREE.MeshStandardMaterial({color:'#dfeee9',roughness:.05,metalness:.3,envMap:env,envMapIntensity:.7,transparent:true,opacity:.28,depthWrite:false})),
    interior:focusable(new THREE.MeshStandardMaterial({vertexColors:true,roughness:.55,metalness:.05,emissive:'#ffd59a',emissiveIntensity:0})),
+   site:focusable(new THREE.MeshStandardMaterial({vertexColors:true,roughness:.85,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-1})),
    pool:focusable(new THREE.MeshStandardMaterial({color:'#5fb3cc',roughness:.1,metalness:.1,emissive:'#3b84a0',emissiveIntensity:0})),
   };
  },[gl]);
@@ -121,6 +122,11 @@ export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
    trunks.push({p:[t.x+tr.x,base+tr.y,t.z+tr.z],s:[.025*k,.13*k,.025*k],c:'#6d5a45'});
    crowns.push({p:[t.x+tr.x,base+tr.y+.18*k,t.z+tr.z],s:[.09*k,.065*k,.085*k],r:i,c:i%2?'#7f9471':'#8fa37f'});
   });
+  // Street trees on the corner lawns round the forecourt, bigger than the roof's olives.
+  geo.siteTrees.forEach((tr,i)=>{
+   trunks.push({p:[t.x+tr.x,base,t.z+tr.z],s:[.03*k,.2*k,.03*k],c:'#6d5a45'});
+   crowns.push({p:[t.x+tr.x,base+.27*k,t.z+tr.z],s:[.13*k,.1*k,.12*k],r:i+7,c:i%3?'#6f8a5c':'#86a06f'});
+  });
   return {trunks,crowns};
  },[geo,t.x,t.z,base,k]);
  const handlers=useMemo(()=>({
@@ -144,6 +150,7 @@ export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
    {finsOn&&<mesh geometry={geo.ribs} material={mats.fin} raycast={noRaycast}/>}
    <mesh geometry={geo.lawn} material={m.lawn} receiveShadow raycast={noRaycast}/>
    <mesh geometry={geo.pool} material={mats.pool} raycast={noRaycast}/>
+   <mesh geometry={geo.site} material={mats.site} receiveShadow raycast={noRaycast}/>
    <mesh geometry={geo.canopy} material={mats.canopy} castShadow receiveShadow raycast={noRaycast}/>
    <mesh geometry={geo.rail} material={mats.rail} raycast={noRaycast}/>
    {/* The wordmark sits on the canopy's front edge, with the badge and workers sign either side. */}
