@@ -28,6 +28,7 @@ agents:
       then has Claude make the product and six listing images in Canva and emails Khaneil an approval link.
     framework: n8n
     owned_by: commerce-operations-manager            # owning agent, added at Khaneil's request 2026-11-13
+    feeds: [shopify-publisher]   # verified 2026-11-24: its approval email links the approve form that Approve and Publish Product runs on
     model: claude-sonnet-5-5
     runtime: n8n Cloud
     status: active

@@ -1,4 +1,5 @@
 import { isAiAgent } from "../../catalog/roles";
+import { SKILL_OF } from "../../catalog/essentialRoles";
 import { AgentOutput } from "../../components/AgentOutput";
 import {ClaudeReviewHandoff} from "../../components/ClaudeReviewHandoff";
 import { useMemo, useState } from "react";
@@ -55,6 +56,9 @@ export function Inspector({ entry, status }: { entry: RegistryEntry; status?: { 
   const [tab, setTab] = useState<Tab>(reports ? "report" : "overview");
   const agent = catalog.agents.find((a) => a.id === p.id)!;
   const itemLabel = isAiAgent(agent) ? "Agent" : "Automation";
+  // Skills that run inside this agent (Leila's Product Lab steps). Only agents that have some show the block.
+  const skills = catalog.agents.filter((a) => SKILL_OF.get(a.id) === p.id && a.status !== "retired");
+  const skillOf = SKILL_OF.has(p.id) ? catalog.agents.find((a) => a.id === SKILL_OF.get(p.id)) : undefined;
   const snap = repoData(repos[p.repository]);
   const branch = snap?.defaultBranch ?? "HEAD";
   const sourceUrl = (path: string) => `https://github.com/${p.repository}/blob/${branch}/${path}`;
@@ -164,6 +168,25 @@ export function Inspector({ entry, status }: { entry: RegistryEntry; status?: { 
           </p>
         </div>
       </div>
+
+      {skills.length > 0 && (
+        <section className="ess-skills selectable" aria-label="Skills">
+          <div className="section-title">Skills <span className="muted small">· {skills.length}, run inside this agent</span></div>
+          <ul className="reg-list compact">
+            {skills.map((k) => (
+              <li key={k.id}>
+                <button className="linklike" onClick={() => select({ kind: "agent", id: k.id })}><b>{k.name}</b></button>
+                <span className="muted small"> · {k.purpose}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {skillOf && (
+        <p className="ess-skills muted small">
+          A skill of <button className="linklike" onClick={() => select({ kind: "agent", id: skillOf.id })}>{identityFor(skillOf.id, catalog.agents).name}</button>: it runs inside that agent's run, not on its own.
+        </p>
+      )}
 
       <div className="tabs" role="tablist" aria-label={`${itemLabel} details`} onKeyDown={onTabKey}>
         {TABS.map((x) => (

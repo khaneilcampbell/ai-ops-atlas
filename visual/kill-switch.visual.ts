@@ -6,7 +6,7 @@ test.use({deviceScaleFactor:1});
 const out=process.env.SHOTS_DIR??'artifacts/kill-switch';
 for(const width of [1512,390]) test(`Kill switch and caps on the Governance tab ${width}`,async({page})=>{
  await page.setViewportSize({width,height:900});
- await openAtlas(page);
+ await openAtlas(page,{storage:{'registry-prefs-automations':{sub:'directory',board:true}}}); // the list, not the Board (default since 2026-11-24)
  mkdirSync(out,{recursive:true});
  await goTo(page,'Automations');
  const row=page.locator('.reg-row[data-id="benjaire-contact-worker"]');

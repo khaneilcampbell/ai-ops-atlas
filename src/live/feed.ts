@@ -32,6 +32,9 @@ interface FeedPage {
   events: LiveEvent[];
   /** More happened than one page holds; a normal refresh catches up. */
   gap?: boolean;
+  /** Every agent run the site still keeps, sent on a fresh read or after a gap, so a daily
+   *  heartbeat outside the page isn't lost. */
+  agentRuns?: LiveEvent[];
 }
 
 export const POLL_MS = 5_000;
@@ -108,6 +111,10 @@ async function poll(): Promise<number> {
       if (run) fresh.push(run);
       const text = describe(e);
       if (text) last = { at: e.at, text };
+    }
+    for (const e of page.agentRuns ?? []) {
+      const run = toAgentRun(e);
+      if (run) fresh.push(run);
     }
     const agentRuns = mergeAgentRuns(status.agentRuns ?? [], fresh);
     if (agentRuns !== status.agentRuns) save(AGENT_RUNS_KEY, agentRuns);

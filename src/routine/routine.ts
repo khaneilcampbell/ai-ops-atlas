@@ -24,8 +24,8 @@ export const ACTIVITY_LABEL: Record<CityActivity, string> = { walking: "Walking"
 export type WorkPhase = "heading" | "entering" | "to_desk" | "working" | "completed" | "leaving";
 export const PHASE_LABEL: Record<WorkPhase, string> = { heading: "Heading to office", entering: "Entering building", to_desk: "Going to desk", working: "Working", completed: "Task completed", leaving: "Leaving office" };
 
-export type LeisureKind = "office" | "park" | "district" | "train" | "flight" | "yacht" | "wheel" | "arena" | "home";
-export const LEISURE_LABEL: Record<LeisureKind, string> = { office: "Outside its own building", park: "Relaxing in the park", district: "Visiting another district", train: "Riding the train", flight: "Flying on the Atlas Gold Jet", yacht: "On a yacht ride", wheel: "Riding the Ferris wheel", arena: "At the arena", home: "At home" };
+export type LeisureKind = "office" | "park" | "district" | "train" | "flight" | "yacht" | "wheel" | "arena" | "cafe" | "home";
+export const LEISURE_LABEL: Record<LeisureKind, string> = { office: "Outside its own building", park: "Relaxing in the park", district: "Visiting another district", train: "Riding the train", flight: "Flying on the Atlas Gold Jet", yacht: "On a yacht ride", wheel: "Riding the Ferris wheel", arena: "At the arena", cafe: "At the Community Pavilion & Café", home: "At home" };
 
 /** A place the agent can be: a door, a park bench, a platform. The map turns these into coordinates. */
 export type SpotId = string;
@@ -43,6 +43,11 @@ export interface LeisureOption {
   exit: SpotId;
   /** How long it stays, in seconds: a ride's own length is set by the ride. */
   stay: [number, number];
+  /**
+   * Seconds it needs to get back out to the spot when its stay is cut short by work (from a seat inside
+   * the café to its door). Without it the agent leaves from the spot at once.
+   */
+  leave?: number;
 }
 
 export interface RideTimes {
@@ -153,7 +158,7 @@ export const rand = (seed: string) => hashOf(seed) / 4294967296;
 
 /** Each agent's liking for each kind of outing, 0.2 to 1.2, fixed per agent. */
 export function preferences(personaId: string): Record<LeisureKind, number> {
-  const kinds: LeisureKind[] = ["park", "district", "train", "flight", "yacht", "wheel", "arena", "home"];
+  const kinds: LeisureKind[] = ["park", "district", "train", "flight", "yacht", "wheel", "arena", "cafe", "home"];
   // "office" (outside its own building) is weighted in `free()` against the whole pool instead.
   return { office: 0, ...Object.fromEntries(kinds.map((k) => [k, 0.2 + rand(`${personaId}:likes:${k}`)])) } as Record<LeisureKind, number>;
 }
@@ -414,7 +419,7 @@ export function planRoutine(input: RoutineInput): Routine {
     }
     const lo = pick.stay[0], hi = pick.stay[1];
     const stay = Math.min((lo + rand(`${seed}:stay`) * (hi - lo)) * S, Math.max(room, 30 * S));
-    const activity: CityActivity = pick.kind === "home" ? "at_home" : pick.kind === "park" || pick.kind === "office" ? "relaxing" : "visiting";
+    const activity: CityActivity = pick.kind === "home" ? "at_home" : pick.kind === "park" || pick.kind === "office" || pick.kind === "cafe" ? "relaxing" : "visiting";
     push({ kind: "stay", t0: cur.t, t1: cur.t + stay, at: pick.spot, activity, phase: null, note: pick.label, option: pick });
     cur.t += stay;
     cur.at = { spot: pick.exit };
@@ -495,6 +500,15 @@ export function planRoutine(input: RoutineInput): Routine {
       last.note = `${last.option.label}: getting off to head to the office`;
       cur.t = off;
       cur.at = { spot: last.option.exit };
+      return;
+    }
+    // A stay inside a place (the café) ends with time to get back out to its door, then the walk to work.
+    if (last.kind === "stay" && last.option?.leave) {
+      const out = Math.min(last.t1, t + last.option.leave * S);
+      last.t1 = out;
+      last.note = `${last.note}: leaving for the office`;
+      cur.t = out;
+      cur.at = { spot: last.at };
       return;
     }
     cur.at = anchorAt(last, t);

@@ -17,13 +17,16 @@ export interface EssentialRole {
   purpose: string;
   /** Existing agent ids in this role, anchor (the role's stable identity) first. */
   agents: string[];
+  /** Catalog entries that run inside the anchor agent as its skills (the Product Lab research steps).
+   *  They belong to the role but are not agents of their own: never counted or drawn as agents. */
+  skills?: string[];
 }
 
 export const ESSENTIAL_ROLES: EssentialRole[] = [
   { id: "agent-operations-lead", name: "Atlas Operations Lead", purpose: "Agent registry, new-agent proposals and coordination of goals.", agents: ["agent-operations-lead"] },
   { id: "atlas-release-manager", name: "Engineering & Release Lead", purpose: "Engineering reviews, documentation and release preparation.", agents: ["atlas-release-manager", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-engineering-review", "repo-intelligence", "documentation-lead"] },
   { id: "atlas-health-monitor", name: "Health & Security Lead", purpose: "Production health, failures and operational security findings.", agents: ["atlas-health-monitor", "benjaire-ops-monitor"] },
-  { id: "benjaire-product-lab", name: "Product Research Lead", purpose: "Product Lab research, competitors, customer insights, scoring and brief writing.", agents: ["benjaire-product-lab", "benjaire-product-lab-research", "benjaire-product-lab-competitors", "benjaire-product-lab-customers", "benjaire-product-lab-scoring", "benjaire-product-lab-brief"] },
+  { id: "benjaire-product-lab", name: "Product Research Lead", purpose: "Product Lab research, competitors, customer insights, scoring and brief writing.", agents: ["benjaire-product-lab"], skills: ["benjaire-product-lab-research", "benjaire-product-lab-competitors", "benjaire-product-lab-customers", "benjaire-product-lab-scoring", "benjaire-product-lab-brief"] },
   { id: "benjaire-inquiry-manager", name: "Client Operations Lead", purpose: "Inquiries, reply preparation, reminders and digests.", agents: ["benjaire-inquiry-manager"] },
   { id: "commerce-operations-manager", name: "Commerce Operations Lead", purpose: "Product publishing, fulfillment and sales reporting.", agents: ["commerce-operations-manager", "benjaire-shop-manager"] },
   { id: "development-hub-lead", name: "Development & Portfolio Lead", purpose: "Development opportunities and portfolio work.", agents: ["development-hub-lead", "site-builder", "github-profile-manager"] },
@@ -32,13 +35,17 @@ export const ESSENTIAL_ROLES: EssentialRole[] = [
 
 type Item = Pick<Agent, "id" | "status" | "ownedBy" | "trigger" | "registry">;
 
+/** Skill id -> the agent it runs inside. */
+export const SKILL_OF: ReadonlyMap<string, string> = new Map(ESSENTIAL_ROLES.flatMap((r) => (r.skills ?? []).map((id) => [id, r.agents[0]] as const)));
+export const isSkill = (a: Pick<Agent, "id">) => SKILL_OF.has(a.id);
+
 export const isArchived = (a: Pick<Agent, "status">) => a.status === "retired";
 /** Paused, draft or planned: listed apart so a role never looks busier than it is. */
 export const isInactive = (a: Item) => !isArchived(a) && (a.status === "paused" || a.registry?.classification?.type === "F" || /\bdraft\b|until it is published/i.test(a.trigger ?? ""));
 
 /** Role id for each catalog entry; entries with no role (archived ones included) are absent. */
 export function roleOf(items: Item[]): Map<string, string> {
-  const byAgent = new Map(ESSENTIAL_ROLES.flatMap((r) => r.agents.map((id) => [id, r.id] as const)));
+  const byAgent = new Map(ESSENTIAL_ROLES.flatMap((r) => [...r.agents, ...(r.skills ?? [])].map((id) => [id, r.id] as const)));
   const out = new Map<string, string>();
   for (const a of items) {
     const role = isAiAgent(a) ? byAgent.get(a.id) : a.ownedBy ? byAgent.get(a.ownedBy) : undefined;
@@ -54,20 +61,21 @@ export interface RoleDirectory {
   archived: string[];
   /** Current entries no role claims: shown as "No owning role" so the gap is visible. */
   unassigned: string[];
-  counts: { roles: number; automations: number; aiAgents: number; inactive: number; archived: number };
+  /** aiAgents leaves out skills (see EssentialRole.skills); they are counted apart. */
+  counts: { roles: number; automations: number; aiAgents: number; skills: number; inactive: number; archived: number };
 }
 
 /** Splits every entry into exactly one place: a role, Inactive, Archived or Unassigned. */
 export function roleDirectory(items: Item[]): RoleDirectory {
   const roles = roleOf(items);
   const members = new Map(ESSENTIAL_ROLES.map((r) => [r.id, [] as string[]]));
-  const out: RoleDirectory = { members, inactive: [], archived: [], unassigned: [], counts: { roles: ESSENTIAL_ROLES.length, automations: 0, aiAgents: 0, inactive: 0, archived: 0 } };
+  const out: RoleDirectory = { members, inactive: [], archived: [], unassigned: [], counts: { roles: ESSENTIAL_ROLES.length, automations: 0, aiAgents: 0, skills: 0, inactive: 0, archived: 0 } };
   for (const a of items) {
     if (isArchived(a)) out.archived.push(a.id);
     else if (isInactive(a)) out.inactive.push(a.id);
     else if (roles.has(a.id)) members.get(roles.get(a.id)!)!.push(a.id);
     else out.unassigned.push(a.id);
-    if (!isArchived(a)) out.counts[isAiAgent(a) ? "aiAgents" : "automations"]++;
+    if (!isArchived(a)) out.counts[isSkill(a) ? "skills" : isAiAgent(a) ? "aiAgents" : "automations"]++;
   }
   out.counts.inactive = out.inactive.length;
   out.counts.archived = out.archived.length;

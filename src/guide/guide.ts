@@ -88,7 +88,8 @@ export function operation(agents: Agent[]): Operation {
   const leads = ESSENTIAL_ROLES.map((r) => {
     const [anchor, ...rest] = r.agents.filter((id) => ids.has(id));
     const members = rest.map((id) => current.find((a) => a.id === id)!);
-    const skills = members.filter(isSkill).length;
+    // A lead's skills are listed apart from its agents in ESSENTIAL_ROLES (r.skills).
+    const skills = (r.skills ?? []).filter((id) => ids.has(id)).length + members.filter(isSkill).length;
     return {
       roleId: r.id, role: r.name, purpose: r.purpose, agentId: anchor ?? r.id,
       lead: anchor ? identityFor(anchor, agents).name : r.name,
