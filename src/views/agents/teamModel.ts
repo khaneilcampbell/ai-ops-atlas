@@ -40,7 +40,7 @@ export interface Team {
   roles: TeamRole[];
   needs: NeedsYou[];
   lifecycle: { active: string[]; inactive: string[]; archived: number };
-  counts: { aiAgents: number; unassigned: number; automations: number; inactive: number; archived: number };
+  counts: { aiAgents: number; skills: number; unassigned: number; automations: number; inactive: number; archived: number };
 }
 
 export function roleHealth(a: Activity): TeamRole["health"] {
@@ -95,6 +95,6 @@ export function buildTeam(agents: Agent[], projects: Pick<Project, "id" | "name"
       inactive: ai.filter((a) => !isArchived(a) && isInactive(a)).map((a) => a.id),
       archived: dir.counts.archived,
     },
-    counts: { aiAgents: dir.counts.aiAgents, unassigned: dir.unassigned.length, automations: dir.counts.automations, inactive: dir.counts.inactive, archived: dir.counts.archived },
+    counts: { aiAgents: dir.counts.aiAgents, skills: dir.counts.skills, unassigned: dir.unassigned.length, automations: dir.counts.automations, inactive: dir.counts.inactive, archived: dir.counts.archived },
   };
 }

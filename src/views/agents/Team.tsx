@@ -42,13 +42,13 @@ export function Team({ agents, projects, entries, statuses, verified, open, open
     );
   };
   const health = (r: TeamRole) => <span className={`team-health ${r.health.tone}`}><i />{r.health.label}</span>;
-  const count = (r: TeamRole) => `${r.aiAgents} AI agent${r.aiAgents === 1 ? "" : "s"} · ${r.automations} automation${r.automations === 1 ? "" : "s"}`;
+  const count = (r: TeamRole) => [`${r.aiAgents} AI agent${r.aiAgents === 1 ? "" : "s"}`, r.skills.length ? `${r.skills.length} Product Lab skill${r.skills.length === 1 ? "" : "s"}` : "", `${r.automations} automation${r.automations === 1 ? "" : "s"}`].filter(Boolean).join(" · ");
   const waiting = team.needs.length;
 
   return (
     <div className="team">
       <div className="team-kpis">
-        <div className="card team-kpi"><div className="eyebrow">AI agents</div><b>{team.counts.aiAgents}</b><span>{team.roles.length + 1} roles · {team.counts.unassigned} without a role</span></div>
+        <div className="card team-kpi"><div className="eyebrow">AI agents</div><b>{team.counts.aiAgents}</b><span>{team.roles.length + 1} roles · {team.counts.unassigned} without a role{team.counts.skills ? ` · plus ${team.counts.skills} Product Lab skills` : ""}</span></div>
         <div className="card team-kpi"><div className="eyebrow">Verified running</div><b>{verified}</b><span>Seen running in live data</span></div>
         <div className="card team-kpi"><div className="eyebrow">Automations they own</div><b>{team.counts.automations}</b><span>Each one has an owning agent</span></div>
         <div className={`card team-kpi ${waiting ? "gold" : ""}`}><div className="eyebrow">Waiting on you</div><b>{waiting}</b><span>{waiting ? "Failing, drafts and inactive agents" : "Nothing right now"}</span></div>
@@ -75,7 +75,11 @@ export function Team({ agents, projects, entries, statuses, verified, open, open
                 <article key={r.id} className="card team-role" data-role={r.id}>
                   <div className="team-role-head"><span className="eyebrow">{r.name}</span>{health(r)}</div>
                   {lead(r, 48)}
-                  <div className="team-members">{r.members.length ? r.members.map((id) => avatar(id, 28)) : <span className="muted small">{r.skills.length ? `${r.skills.length} skills: ${r.skills.join(", ")}` : "Leads alone"}</span>}</div>
+                  <div className="team-members">
+                    {r.members.map((id) => avatar(id, 28))}
+                    {r.skills.length > 0 && <span className="team-steps" title={r.skills.join(", ")}>{r.skills.length} Product Lab skills</span>}
+                    {!r.members.length && !r.skills.length && <span className="muted small">Leads alone</span>}
+                  </div>
                   <div className="muted small">{count(r)}</div>
                   <p className="muted small team-purpose">{r.purpose}</p>
                 </article>

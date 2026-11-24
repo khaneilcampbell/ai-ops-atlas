@@ -27,6 +27,8 @@ describe("Agents > Team", () => {
     expect(lab.aiAgents).toBe(1);
     expect(lab.members).toEqual([]);
     expect(lab.skills).toHaveLength(5);
+    expect(team.counts.skills).toBe(5);
+    for (const id of ["benjaire-product-lab-research", "benjaire-product-lab-brief"]) expect(team.lifecycle.active).not.toContain(id);
   });
 
   it("never invents health: no runs means no verified run", () => {
