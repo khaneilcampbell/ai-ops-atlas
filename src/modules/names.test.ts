@@ -30,7 +30,7 @@ describe("workspace building names", () => {
       [financialKey("banks"), "Financial Operations Tower", "Benjaire"],
       [financialKey("budget"), "Budget & Forecasting Center", "Benjaire"],
       [financialKey("records"), "Governance & Compliance Center", "Benjaire"],
-      [DEALERSHIP_KEY, "Security & Infrastructure Annex", "Filler building"],
+      [DEALERSHIP_KEY, "Security & Infrastructure Showroom", "Filler building"],
       [financialKey("investments"), "Investment Operations Center", "Benjaire"],
       [MALL_KEY, "Product & Growth Arcade", "Filler building"],
       ["service:atlas-station", "Workflow Automation Hub", "Atlas"],
@@ -43,8 +43,8 @@ describe("workspace building names", () => {
       ["service:stadium-station", "Atlas Commons Station", "Filler building"],
       ["service:airport-building:terminal", "Atlas Airport Terminal", "Filler building"],
       ["service:airport-building:tower", "Atlas Airport Control Tower", "Filler building"],
-      ["service:airport-building:cargo", "AI Engineering Annex", "Filler building"],
-      ["service:airport-building:operations", "Security & Infrastructure Hangar", "Filler building"],
+      ["service:airport-building:cargo", "AI Engineering Hangar", "Filler building"],
+      ["service:airport-building:operations", "Security & Infrastructure Office", "Filler building"],
       // Nov 24: buildings that house no module carry a neutral filler name, labelled "Filler building".
       ["service:financial-station", "Business Operations Station", "Filler building"],
     ];

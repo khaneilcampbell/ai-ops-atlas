@@ -109,11 +109,11 @@ describe("building instances", () => {
     expect(home("data-intelligence-center")).toEqual(["Data Intelligence Center"]);
     expect(home("finance-analytics-tower")).toEqual(["Financial Operations Tower", "Business Finance Center"]);
     expect(home("identity-governance-tower")).toEqual(["Governance & Compliance Center"]);
-    expect(home("infrastructure-control-tower")).toEqual(["Security & Infrastructure Annex"]);
+    expect(home("infrastructure-control-tower")).toEqual(["Security & Infrastructure Showroom"]);
     expect(home("integration-exchange")).toEqual(["Investment Operations Center"]);
-    expect(home("observability-center")).toEqual(["Security & Infrastructure Hangar"]);
+    expect(home("observability-center")).toEqual(["Security & Infrastructure Office"]);
     expect(all.find((i) => i.id === GITHUB_TOWER.projectId)?.moduleType).toBe("development-repository-hub");
-    expect(home("model-intelligence-lab")).toEqual(["AI Engineering Annex"]);
+    expect(home("model-intelligence-lab")).toEqual(["AI Engineering Hangar"]);
     expect(home("knowledge-repository")).toEqual(["Knowledge & Research Center"]);
     expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(LANDMARK_MODULES.map((l) => l.id));
     // Modules are placed in their buildings and switched on once a capability is built.

@@ -41,7 +41,7 @@ buildings:
     organization: Benjaire
     former_names: [Halden Trust]
   "service:bmw-dealership":
-    display_name: Security & Infrastructure Annex
+    display_name: Security & Infrastructure Showroom
     organization: Filler building
     former_names: [Ironwood Hall, Vantor Motors, Infrastructure Operations Hub]
   "service:financial:investments":
@@ -101,11 +101,11 @@ buildings:
     organization: Filler building
     former_names: [Rowan Tower, Air Traffic Control, Atlas · Air Traffic]
   "service:airport-building:cargo":
-    display_name: AI Engineering Annex
+    display_name: AI Engineering Hangar
     organization: Filler building
     former_names: [Quarry House, Atlas · Cargo, Model Intelligence Lab]
   "service:airport-building:operations":
-    display_name: Security & Infrastructure Hangar
+    display_name: Security & Infrastructure Office
     organization: Filler building
     former_names: [Sparrow Hall, Atlas · Operations, Observability Center]
   # Nov 24: buildings that house no module get a neutral filler name, so nobody reads a purpose into them
@@ -116,4 +116,4 @@ buildings:
     organization: Filler building
     former_names: [Birch Lane Station, Financial District Station]
   # Nov 24: filler buildings are named after the core building or place they are grouped with (workspace.yaml merged),
-  # so the map reads by group: "Security & Infrastructure Annex", "Product & Growth Arcade", "Atlas Airport Terminal".
+  # so the map reads by group: "Security & Infrastructure Showroom", "Product & Growth Arcade", "Atlas Airport Terminal".
