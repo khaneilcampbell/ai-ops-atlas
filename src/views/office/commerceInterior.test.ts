@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import {COMMERCE} from '../map3d/commerceTowerPlan';
-import {columns,commerceOutline,cores,goldAt,groundFloor,inside} from './commerceInteriorPlan';
+import {columns,commerceOutline,cores,fixtures,goldAt,groundFloor,inside,type Item} from './commerceInteriorPlan';
 
 // The wave tower inside, from the reference bank-headquarters plan (Khaneil, 2026-11-24).
 describe('Commerce wave tower interior',()=>{
@@ -26,5 +26,20 @@ describe('Commerce wave tower interior',()=>{
  });
  it('turns part of the glass gold on every floor, where the ribbon wraps it',()=>{
   for(let level=0;level<5;level++){const n=COMMERCE.ring,gold=Array.from({length:n},(_,i)=>goldAt(i,level,n)).filter(Boolean).length;expect(gold,`floor ${level}`).toBeGreaterThan(2);expect(gold).toBeLessThan(n/2);}
+ });
+ it('keeps every piece of lobby furniture clear of the others (a desk cross shares its centre on purpose)',()=>{
+  const half=(i:Item)=>i.r?Math.max(i.w,i.d)/2:i.w/2,deep=(i:Item)=>i.r?Math.max(i.w,i.d)/2:i.d/2,onTop=['teller','stool','meetingTable'];
+  for(const [w,d] of [[8.5,7],[12,9],[16,10]]){const items=groundFloor(w,d).filter(i=>!onTop.includes(i.kind)),hits:string[]=[];
+   for(let a=0;a<items.length;a++)for(let b=a+1;b<items.length;b++){const A=items[a],B=items[b];
+    if(A.kind==='desk'&&B.kind==='desk')continue;
+    if(Math.abs(A.x-B.x)<half(A)+half(B)&&Math.abs(A.z-B.z)<deep(A)+deep(B))hits.push(`${A.kind}/${B.kind}`);}
+   expect(hits,`${w}x${d}`).toEqual([]);}
+ });
+ it('hangs the display on the main core and stands the rack and plants inside the glass, off the furniture',()=>{
+  for(const [w,d] of [[8.5,7],[12,9]]){const pts=commerceOutline(w,d),f=fixtures(w,d),[core]=cores(w,d),items=groundFloor(w,d);
+   expect(f.display.z).toBeCloseTo(core.z+core.d/2+.03);
+   for(const p of [f.rack,...f.plants]){expect(inside([p.x,p.z],pts)).toBe(true);
+    for(const c of cores(w,d))expect(Math.abs(p.x-c.x)>c.w/2+.25||Math.abs(p.z-c.z)>c.d/2+.25).toBe(true);
+    for(const i of items)expect(Math.abs(p.x-i.x)>i.w/2+.3||Math.abs(p.z-i.z)>i.d/2+.3,`${i.kind}`).toBe(true);}}
  });
 });

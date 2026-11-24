@@ -104,7 +104,7 @@ export function groundFloor(w:number,d:number):Item[]{
  // Client lounge in the pointed end: two sofas round a low table.
  const lx=X(.27),lz=Z(.22);add({kind:'table',x:lx,z:lz,w:.8,d:.8,h:.4});add({kind:'sofa',x:lx-1,z:lz,w:.75,d:1.6,h:.75,back:-1});add({kind:'sofa',x:lx+1,z:lz,w:.75,d:1.6,h:.75,back:1});
  // A glass meeting room behind it.
- const mx=X(.3),mz=Z(-.3);add({kind:'glassRoom',x:mx,z:mz,w:2.4,d:1.8,h:2.5});add({kind:'meetingTable',x:mx,z:mz,w:1.4,d:.6,h:.74});
+ const mx=X(.27),mz=Z(-.32);add({kind:'glassRoom',x:mx,z:mz,w:2.4,d:1.8,h:2.5});add({kind:'meetingTable',x:mx,z:mz,w:1.4,d:.6,h:.74});
  // Café in the round end: a bar and round tables.
  add({kind:'cafeBar',x:X(.78),z:0,w:.5,d:2.2,h:1.05});
  for(const x of [X(.85),X(.93)])for(const z of [Z(-.26),0,Z(.26)])add({kind:'roundTable',x,z,w:.7,d:.7,h:.74});
@@ -116,6 +116,17 @@ export function groundFloor(w:number,d:number):Item[]{
  const cs=cores(w,d),pad=(it:Item)=>(it.r?Math.max(it.w,it.d):it.w)/2;
  return out.filter(it=>[[-1,-1],[1,-1],[1,1],[-1,1]].every(([sx,sz])=>inside([it.x+sx*pad(it),it.z+sz*(it.r?pad(it):it.d/2)],pts))
   &&cs.every(c=>Math.abs(it.x-c.x)>c.w/2+pad(it)||Math.abs(it.z-c.z)>c.d/2+it.d/2));
+}
+
+/**
+ * Where the shared office fittings go on every floor: the project's wall display on the main
+ * core's front face, the server rack and plants against the cores, so nothing stands loose in
+ * the hall where a flat office's back wall would have been.
+ */
+export function fixtures(w:number,d:number){
+ const [a,b]=cores(w,d),face=a.z+a.d/2;
+ return {display:{x:a.x,z:face+.03},rack:{x:a.x+a.w/2+.5,z:a.z},
+  plants:[{x:a.x-a.w/2-.45,z:a.z},{x:b.x,z:b.z-b.d/2-.45},{x:b.x+b.w/2+.45,z:b.z-b.d/2+.2}]};
 }
 
 /** Columns on the reference's grid, inside the glass, clear of cores, furniture and the doors' path. */
