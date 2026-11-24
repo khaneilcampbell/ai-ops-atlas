@@ -1,0 +1,40 @@
+# Agent self-reports: when each named agent walks to the Data Intelligence Center to report on itself.
+#
+# Khaneil asked (2026-11-22) for every agent to report data about itself to the Data Intelligence
+# Center at the time that suits it best, so its workflow can improve. The n8n workflow
+# "Data Intelligence · Agent Self-Reports" reads this file on every run and writes each report to the
+# Atlas Agent Self-Reports Google Sheet and a PDF, both kept in the Output Library. No AI: every
+# figure is counted from n8n executions, GitHub Actions runs, the catalog and Atlas's own records.
+#
+# Times were picked from each agent's real run history (n8n execution 902, 2026-11-22): a free
+# half hour between 07:00 and 21:30 New York time, clear of its runs and schedules, one agent per
+# slot. docs/agent-self-reports.md explains the method; src/selfReports/selfReports.ts parses this.
+#
+# The map walk follows the workflow's live state in n8n: while it is an unpublished draft, nobody
+# walks there. Once Khaneil publishes it, each agent with free time at its slot walks over and stays
+# a few minutes. Its real work always comes first.
+schema: atlas/self-reports-v1
+building: "service:financial:residence"   # Data Intelligence Center (buildings.yaml)
+n8n_workflow: SBtrX3tY3OKT8qzn
+time_zone: America/New_York
+stay_minutes: 6
+report:
+  # agent id (catalog) : daily time in time_zone. One agent per half hour.
+  slots:
+    github-profile-manager: "08:30"
+    soc-detection-lead: "09:00"
+    atlas-release-coordinator: "09:30"
+    benjaire-shop-manager: "10:00"
+    atlas-engineering-review: "10:30"
+    atlas-health-monitor: "11:00"
+    site-builder: "11:30"
+    atlas-release-manager: "12:00"
+    documentation-lead: "12:30"
+    commerce-operations-manager: "13:00"
+    atlas-production-coordinator: "13:30"
+    agent-operations-lead: "14:00"
+    repo-intelligence: "14:30"
+    benjaire-inquiry-manager: "15:00"
+    benjaire-ops-monitor: "16:00"
+    benjaire-product-lab: "16:30"
+    development-hub-lead: "20:30"

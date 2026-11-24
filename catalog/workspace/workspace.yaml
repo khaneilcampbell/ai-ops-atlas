@@ -55,7 +55,7 @@ landmarks:
     map_name: Aldren Insights
     module: data-intelligence-center
     project: ai-ops-atlas
-    agents: [dataset-census, atlas-data-inventory]
+    agents: [dataset-census, atlas-data-inventory, agent-self-reports]
   "service:financial:business-finance":
     map_name: Corvane Capital
     module: finance-analytics-tower

@@ -1025,6 +1025,100 @@ agents:
           - Save successful runs, or report each run to the Atlas feed, so Atlas can show its last success
         last_review: 2026-11-17
 
+  - id: agent-self-reports
+    name: Agent Self-Reports
+    purpose: >-
+      Every named agent reports data about itself to the Data Intelligence Center once a day, at a
+      time picked from its own run history so it never clashes with its work. Each report counts its
+      runs, failures, run times, busiest hours, schedules, stale states, budget and Atlas memory, and
+      turns them into plain recommendations to improve its workflow. Reports go to the Atlas Agent
+      Self-Reports Google Sheet and a PDF, both kept in the Output Library. No AI step.
+    framework: n8n (plain code, no model)
+    owned_by: atlas-health-monitor
+    model: None (plain code, no AI step)
+    runtime: n8n Cloud
+    status: paused
+    trigger: 'Unpublished n8n draft, run by hand; once published, daily at each agent''s report time (17 times from 8:30am to 8:30pm New York, catalog/workspace/self-reports.yaml)'
+    source: catalog/workspace/self-reports.yaml
+    last_run: 2026-11-23T04:10:40Z
+    history:
+      - at: 2026-11-22
+        event: 'Built at Khaneil''s request as an unpublished n8n draft. Hand runs 902 and 903 reported all 17 agents (818 runs seen, 11 failed, 18 recommendations), filled the Sheet and added the PDF and spreadsheet to the Output Library (run 903 added version 2 of each, no duplicates)'
+    links:
+      - label: 'n8n workflow: Data Intelligence · Agent Self-Reports (draft)'
+        url: https://khancam15.app.n8n.cloud/workflow/SBtrX3tY3OKT8qzn
+      - label: Self-reports sheet
+        url: https://docs.google.com/spreadsheets/d/1IJPNjdqPJ2OLhHZ_HI-pgai2dtPplq9oCx1Qw3DlR4s/edit
+    permissions:
+      - 'n8n API: reads executions of the workflows the agents run (read only)'
+      - 'GitHub: reads Actions runs of the agents'' workflows (read only)'
+      - 'Google Sheets: creates and rewrites the Atlas Agent Self-Reports sheet only'
+      - 'Atlas Output Library hook (Atlas reports key): adds versions of its own two outputs'
+      - 'Atlas data API key "self-reports" (ATLAS_DATA_KEYS, once added): reads run, cost and memory counts per agent, never their content'
+    registry:
+      title: "Data Intelligence · Agent Self-Reports"
+      category: data
+      automation_category: monitoring
+      subcategory: Agent reporting
+      classification:
+        type: D
+        confidence: verified
+        evidence: n8n workflow SBtrX3tY3OKT8qzn (unpublished draft) runs 902 and 903 on 2026-11-22 wrote the Sheet, a 6-page PDF and two Output Library items with plain code and no AI model
+      mission:
+        problem: Agents had no regular look at their own runs, failures and costs, so slow steps, unsaved runs and stale drafts went unnoticed.
+        outcomes:
+          - Each agent has a daily report on itself with clear recommendations
+          - The PDF and spreadsheet are in the Output Library, one item each with versions
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks:
+          - Read the catalog, the report times and each agent's n8n and GitHub runs
+          - Count runs, failures, run times, busiest hours and stale states per agent
+          - Write the Summary, Agents, Report Schedule, Recommendations and Run Log tabs
+          - Build the PDF and add both outputs to the Output Library
+        tools:
+          - Scheduled workflow
+          - Google Sheets
+        inputs:
+          - Atlas catalog and catalog/workspace/self-reports.yaml on main
+          - n8n executions (about 7 days kept) and GitHub Actions runs (30 days)
+          - Atlas data API agent report counts (once the self-reports key is added)
+        outputs:
+          - Atlas Agent Self-Reports Google Sheet
+          - Agent self-reports PDF and spreadsheet in the Output Library
+        dependencies:
+          - atlas-data-inventory
+        limitations:
+          - Unpublished draft; no scheduled report or map walk until Khaneil publishes it
+          - n8n keeps about 7 days of executions, so n8n figures cover only that window
+          - Atlas memory counts read "Not connected yet" until the self-reports data key is added
+      goals:
+        objective: Give every agent one honest daily report on itself.
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed run leaves yesterday's report in the Sheet
+      execution:
+        trigger_type: scheduled
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Reads and reports only.
+        risk: low
+        credential_owner: Khaneil (n8n Google Sheets, GitHub and n8n API credentials; Atlas reports key)
+      cost:
+        budget: No model calls. Once published, 17 n8n runs a day.
+      docs:
+        runbook: docs/agent-self-reports.md
+        known_issues:
+          - The Atlas data API route for agent report counts ships with this change and needs the self-reports key
+        last_review: 2026-11-22
+
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
   - id: atlas-release-manager

@@ -333,3 +333,33 @@ describe("free time sent from Atlas", () => {
     expect([...kept.keys()]).toEqual(["a"]);
   });
 });
+
+describe("daily self-report walk", () => {
+  const REPORT: LeisureOption = { id: "report:residence", kind: "district", label: "Reporting at the Data Intelligence Center", spot: "report:residence", exit: "report:residence", stay: [360, 360] };
+  const now0 = Date.parse("2026-11-18T19:00:00Z"); // 2pm New York; its only schedule is daily 3pm
+  const plan = (now: number, report: { at: number; option: LeisureOption } | null) =>
+    planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(now, [], new Map(), []), env: env(), now, report });
+
+  it("walks to the report building at its time and stays, leaving the day before unchanged", () => {
+    const at = now0;
+    const without = plan(at + 30 * MIN, null);
+    const r = plan(at + 30 * MIN, { at, option: REPORT });
+    expect(r.segments.filter((s) => s.t1 < at)).toEqual(without.segments.filter((s) => s.t1 < at));
+    const walk = r.segments.find((s): s is Extract<Segment, { kind: "walk" }> => s.t0 >= at && s.kind === "walk")!;
+    expect(walk.t0).toBe(at);
+    expect(walk.to).toBe("report:residence");
+    expect(walk.note).toBe("Walking to the Data Intelligence Center for its daily self-report");
+    const stay = r.segments.find((s) => s.kind === "stay" && s.at === "report:residence")!;
+    expect(stay.t1 - stay.t0).toBe(360_000);
+    expect(plan(at + 30 * MIN, { at, option: REPORT }).segments).toEqual(r.segments);
+  });
+
+  it("is skipped while the agent works or at night, and without a report time nothing changes", () => {
+    const run = Date.parse("2026-11-18T20:00:00Z");
+    const busy = planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(run + MIN, []), env: env(), now: run + MIN, report: { at: run - 2 * MIN, option: REPORT } });
+    expect(busy.segments.some((s) => s.kind === "walk" && s.to === "report:residence")).toBe(false);
+    const night = Date.parse("2026-11-19T05:00:00Z");
+    expect(plan(night + MIN, { at: night, option: REPORT }).segments.some((s) => s.kind === "walk" && s.to === "report:residence")).toBe(false);
+    expect(plan(now0, null).segments).toEqual(planRoutine({ personaId: "benjaire-shop-manager", ops: opsWith(now0, [], new Map(), []), env: env(), now: now0 }).segments);
+  });
+});
