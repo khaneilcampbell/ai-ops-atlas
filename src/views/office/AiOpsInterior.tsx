@@ -10,7 +10,7 @@ import {night as cityNight} from '../map3d/materials';
 import type {LightMode} from '../map3d/living';
 import {slab} from '../map3d/ribbonTowerGeometry';
 import {wall} from '../map3d/aiOpsCenterGeometry';
-import {AIOPS,AIOPS_KEY,AIOPS_NAME,PODIUM_H,floorElevation,planAiOps,podiumRing} from '../map3d/aiOpsCenterPlan';
+import {AIOPS,AIOPS_KEY,AIOPS_NAME,PODIUM_H,floorElevation,planAiOps,podiumRing,towerRing} from '../map3d/aiOpsCenterPlan';
 import {buildingDisplayName} from '../../modules/names';
 import {catalog} from '../../catalog';
 import type {Agent} from '../../catalog/types';
@@ -19,7 +19,7 @@ import FloorLabel from './FloorLabel';
 import {WorkplaceInspector} from './WorkplaceInspector';
 import {lookHint,useInteriorTrackpad} from './useInteriorTrackpad';
 import {leaveBuilding} from './store';
-import {AIOPS_LEVELS,INTERIOR_K,STOREY,interiorFloor,type InteriorFloor} from './aiOpsInteriorPlan';
+import {AIOPS_LEVELS,INTERIOR_HEIGHT,INTERIOR_K,STOREY,interiorFloor,type InteriorFloor} from './aiOpsInteriorPlan';
 import '../../styles/skyline.css';
 
 const shown=()=>buildingDisplayName(AIOPS_KEY,AIOPS_NAME);
@@ -63,9 +63,13 @@ function Floor({f,single,night,onPick,onAgent}:{f:InteriorFloor;single:boolean;n
 
 /** On a tower floor seen alone: the podium and its planted terrace below, so the floor stands at its real height. */
 function Podium({below}:{below:number}){
- const geo=useMemo(()=>slab(podiumRing(1).map(([x,z])=>[x*INTERIOR_K,z*INTERIOR_K] as [number,number]),PODIUM_H*INTERIOR_K-below,PODIUM_H*INTERIOR_K),[below]);
- useEffect(()=>()=>geo.dispose(),[geo]);
- return <mesh geometry={geo} receiveShadow castShadow><meshStandardMaterial color={AIOPS.palette.lawn} roughness={.9}/></mesh>;
+ const geo=useMemo(()=>{
+  const K=INTERIOR_K,top=PODIUM_H*K-below,ring=(s:number)=>towerRing(PODIUM_H,INTERIOR_HEIGHT,s).map(([x,z])=>[x*K,z*K] as [number,number]);
+  // The podium roof with the two planted tiers that step up to the tower, as outside.
+  return [slab(podiumRing(1).map(([x,z])=>[x*K,z*K] as [number,number]),top,PODIUM_H*K),slab(ring(AIOPS.tier.scale),top+AIOPS.tier.rise*K,AIOPS.tier.rise*K),slab(ring(AIOPS.step.scale),top+AIOPS.step.rise*K,AIOPS.step.rise*K)];
+ },[below]);
+ useEffect(()=>()=>{for(const g of geo)g.dispose();},[geo]);
+ return <>{geo.map((g,i)=><mesh key={i} geometry={g} receiveShadow castShadow><meshStandardMaterial color={i?'#7aa75c':AIOPS.palette.lawn} roughness={.9}/></mesh>)}</>;
 }
 
 function Camera({all}:{all:boolean}){

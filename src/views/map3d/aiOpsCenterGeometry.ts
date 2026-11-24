@@ -55,7 +55,7 @@ export function aiOpsGeometry(height:number){
  const glass=wall(levels,T.floor,T.floor);
  // Mullion fins every other ring point and a floor ledge every second floor.
  const fin:number[]=[];
- for(let i=0;i<n;i+=2){const nrm=towerNormal(towerPhi(i)),d=.035;for(let l=0;l<levels.length-1;l++){const p=levels[l][i],q=levels[l+1][i];if(q[1]<PODIUM_H)continue;const po:Pt3=[p[0]+nrm[0]*d,p[1],p[2]+nrm[1]*d],qo:Pt3=[q[0]+nrm[0]*d,q[1],q[2]+nrm[1]*d];quad(fin,p,po,qo,q);quad(fin,po,p,q,qo);}}
+ for(let i=0;i<n;i+=2){const d=.035;for(let l=0;l<levels.length-1;l++){const p=levels[l][i],q=levels[l+1][i];if(q[1]<PODIUM_H)continue;const np=towerNormal(towerPhi(i),p[1],height),nq=towerNormal(towerPhi(i),q[1],height),po:Pt3=[p[0]+np[0]*d,p[1],p[2]+np[1]*d],qo:Pt3=[q[0]+nq[0]*d,q[1],q[2]+nq[1]*d];quad(fin,p,po,qo,q);quad(fin,po,p,q,qo);}}
  const ledges:number[]=[];
  for(const y of ys.filter((y,k)=>k%2===0&&y>PODIUM_H+.3))band(towerRing(y,height),towerRing(y,height,1.022),y,.03,ledges);
  // Crown: a white rim standing proud of the glass, a pale roof inside it, and plant room boxes.
@@ -67,6 +67,9 @@ export function aiOpsGeometry(height:number){
   quad(rim,[u[i].x,u[i].y+hi,u[i].z],[o[i].x,o[i].y+hi,o[i].z],[o[j].x,o[j].y+hi,o[j].z],[u[j].x,u[j].y+hi,u[j].z]);
   quad(rim,[u[j].x,u[j].y+.02,u[j].z],[u[j].x,u[j].y+hi,u[j].z],[u[i].x,u[i].y+hi,u[i].z],[u[i].x,u[i].y+.02,u[i].z]);}
  fan(rimIn.map(p=>[p.x,p.y+.02,p.z] as Pt3),roof);
+ // A bronze band under the rim, where the ribbon finishes: it ties the ribbon to the crown.
+ const crownBand:number[]=[],bandOut=crown.map(([,y],i)=>{const [x,z]=towerPoint(towerPhi(i),y,height,1.036);return {x,z,y};});
+ for(let i=0;i<n;i++){const j=(i+1)%n,o=bandOut;quad(crownBand,[o[i].x,o[i].y-.31,o[i].z],[o[j].x,o[j].y-.31,o[j].z],[o[j].x,o[j].y-.23,o[j].z],[o[i].x,o[i].y-.23,o[i].z]);}
  // Bronze ribbon: a continuous backing band with edge fascias, and a louvre every half floor proud of it.
  const back:number[]=[],louvres:number[]=[],S=AIOPS.ribbon.samples,R=AIOPS.ribbon;
  const rows:{y:number;span:NonNullable<ReturnType<typeof ribbonSpan>>}[]=[];
@@ -83,7 +86,8 @@ export function aiOpsGeometry(height:number){
   for(const side of [0,S]){const ia=across(rows[k],1)[side],oa=across(rows[k],1+R.depth/1.6)[side],ib=across(rows[k+1],1)[side],ob=across(rows[k+1],1+R.depth/1.6)[side];if(rows[k+1].y>top(ia.phi))continue;
    const y0=rows[k].y,y1=rows[k+1].y;quad(back,[ia.p[0],y0,ia.p[1]],[oa.p[0],y0,oa.p[1]],[ob.p[0],y1,ob.p[1]],[ib.p[0],y1,ib.p[1]]);quad(back,[oa.p[0],y0,oa.p[1]],[ia.p[0],y0,ia.p[1]],[ib.p[0],y1,ib.p[1]],[ob.p[0],y1,ob.p[1]]);}
  }
- for(const r of rows){const inner=across(r,R.back),outer=across(r,1+R.depth/1.6);if(r.y>top(r.span.mid))continue;
+ // A louvre every floor (every second ribbon row): fine horizontal lines on a smooth bronze band.
+ for(const r of rows.filter((_,k)=>k%R.louvreEvery===0)){const inner=across(r,R.back),outer=across(r,1+R.depth/1.6);if(r.y>top(r.span.mid))continue;
   for(let i=0;i<S;i++){const a=inner[S-i],b=inner[S-i-1],c=outer[S-i-1],d=outer[S-i],y=r.y,t=R.thick;
    quad(louvres,[a.p[0],y+t,a.p[1]],[d.p[0],y+t,d.p[1]],[c.p[0],y+t,c.p[1]],[b.p[0],y+t,b.p[1]]);
    quad(louvres,[a.p[0],y,a.p[1]],[b.p[0],y,b.p[1]],[c.p[0],y,c.p[1]],[d.p[0],y,d.p[1]]);
@@ -96,27 +100,53 @@ export function aiOpsGeometry(height:number){
   const g=wall([at(scaleAbout(ring,.975),y0),at(scaleAbout(ring,.975),y1-AIOPS.podium.slab)],T.floor*.8,(y1-y0)/4);
   (l===0?lobbyGlass:podGlass).push(g);
  }
+ // Podium mullion fins: white posts standing proud of every storey's glass, for facade depth.
+ const podFins:number[]=[];
+ for(let l=0;l<L;l++){const ring=scaleAbout(podiumRing(l,96),.975),y0=l?podiumTop(l-1):0,y1=podiumTop(l)-AIOPS.podium.slab,m=ring.length;
+  for(let i=0;i<m;i+=l?3:2){const a=ring[(i+m-1)%m],b=ring[(i+1)%m],p=ring[i],tx=b[0]-a[0],tz=b[1]-a[1],tl=Math.hypot(tx,tz),nx=tz/tl,nz=-tx/tl,d=l?.045:.06,w=.018;
+   // Skip the fins in front of the entrance vestibule.
+   if(!l&&Math.abs(p[0]-AIOPS.atrium.x)<AIOPS.entry.w/2+.1&&p[1]>0)continue;
+   const s0:Pt3=[p[0]-tx/tl*w,y0,p[1]-tz/tl*w],s1:Pt3=[p[0]+tx/tl*w,y0,p[1]+tz/tl*w],o0:Pt3=[s0[0]+nx*d,y0,s0[2]+nz*d],o1:Pt3=[s1[0]+nx*d,y0,s1[2]+nz*d];
+   const up=(q:Pt3):Pt3=>[q[0],y1,q[2]];
+   quad(podFins,s0,o0,up(o0),up(s0));quad(podFins,o0,o1,up(o1),up(o0));quad(podFins,o1,s1,up(s1),up(o1));}}
  band(scaleAbout(podiumRing(1),.93),scaleAbout(podiumRing(1),.995),podiumTop(1),.06,planters);
  band(scaleAbout(podiumRing(2),.9),scaleAbout(podiumRing(2),.99),PODIUM_H,.05,planters);
  // Terrace lawn on the podium roof, and the planted step that rises round the tower's foot.
  const lawn:number[]=[];fan(at(scaleAbout(podiumRing(2),.92),PODIUM_H+.012),lawn);
+ // Lower planted tier: the terrace steps up twice toward the tower.
+ const tierOuter=towerRing(PODIUM_H,height,AIOPS.tier.scale);
+ slabs.push(slab(tierOuter,PODIUM_H+AIOPS.tier.rise,AIOPS.tier.rise));
+ fan(at(towerRing(PODIUM_H,height,AIOPS.tier.scale*.975),PODIUM_H+AIOPS.tier.rise+.012),lawn);
+ band(towerRing(PODIUM_H,height,AIOPS.tier.scale*.96),towerRing(PODIUM_H,height,AIOPS.tier.scale*.995),PODIUM_H+AIOPS.tier.rise,.05,planters);
  const stepOuter=towerRing(PODIUM_H,height,AIOPS.step.scale);
  slabs.push(slab(stepOuter,PODIUM_H+AIOPS.step.rise,AIOPS.step.rise));
  fan(at(towerRing(PODIUM_H,height,AIOPS.step.scale*.97),PODIUM_H+AIOPS.step.rise+.012),lawn);
- // Atrium drum: a glass cylinder over the entrance, a white crown ring, a lit oculus and a bronze canopy.
- const A=AIOPS.atrium,drumH=PODIUM_H+A.above;
+ // Atrium drum: a glass cylinder over the entrance rising through the podium and above the terrace,
+ // bronze transoms at each storey, a slim white crown ring and a shallow ribbed glass dome with a lit oculus.
+ const A=AIOPS.atrium,drumH=PODIUM_H+A.above,E=AIOPS.entry;
  const drum=new THREE.CylinderGeometry(A.r,A.r,drumH,A.ring,4,true).translate(A.x,drumH/2,A.z);
- const crownRing=new THREE.CylinderGeometry(A.r+.06,A.r+.06,.12,A.ring,1,false).translate(A.x,drumH+.04,A.z);
- const sky=new THREE.CylinderGeometry(A.r*.62,A.r*.62,.03,A.ring).translate(A.x,drumH+.1,A.z);
- const canopy=new THREE.CylinderGeometry(A.r+.55,A.r+.55,.05,A.ring,1,false,0,Math.PI).rotateY(-Math.PI/2).translate(A.x,.62,A.z);
+ const crownRing=new THREE.CylinderGeometry(A.r+.05,A.r+.05,.07,A.ring,1,false).translate(A.x,drumH+.02,A.z);
+ const dome=new THREE.SphereGeometry(A.r,A.ring,6,0,Math.PI*2,0,Math.PI/2).scale(1,.42,1).translate(A.x,drumH+.05,A.z);
+ const sky=new THREE.CylinderGeometry(A.r*.22,A.r*.22,.05,16).translate(A.x,drumH+.05+A.r*.42,A.z);
+ const trim:THREE.BufferGeometry[]=[];
+ for(let i=0;i<8;i++)trim.push(new THREE.TorusGeometry(A.r,.018,4,12,Math.PI).rotateY(i/8*Math.PI).scale(1,.42,1).translate(A.x,drumH+.05,A.z));
+ for(let l=0;l<L;l++)trim.push(new THREE.TorusGeometry(A.r+.015,.022,4,A.ring).rotateX(Math.PI/2).translate(A.x,podiumTop(l)-.02,A.z));
+ // Entrance canopy: a thin bronze arc over the vestibule, and the glazed vestibule itself with a bronze frame and doors.
+ const canopy=new THREE.CylinderGeometry(A.r+.4,A.r+.4,.035,A.ring,1,false,0,Math.PI*.7).rotateY(-Math.PI*.35+Math.PI/2).translate(A.x,E.h+.06,A.z);
+ const vz=A.z+A.r-.05+E.d/2,vestibule=new THREE.BoxGeometry(E.w,E.h,E.d).translate(A.x,E.h/2,vz);
+ const fz=vz+E.d/2;
+ for(const dx of [-E.w/2,-E.w/6,E.w/6,E.w/2])trim.push(new THREE.BoxGeometry(.035,E.h,.035).translate(A.x+dx,E.h/2,fz));
+ slabs.push(new THREE.BoxGeometry(E.w+.06,.05,E.d+.05).translate(A.x,E.h+.02,vz));trim.push(new THREE.BoxGeometry(E.w,.03,.04).translate(A.x,E.h*.78,fz));
+ for(const sx of [-1,1])trim.push(new THREE.BoxGeometry(.035,.035,E.d).translate(A.x+sx*E.w/2,E.h*.78,vz));
+ const doors=new THREE.BoxGeometry(E.w/3-.04,E.h*.76,.012).translate(A.x,E.h*.38,fz+.01);
  const halo=new THREE.TorusGeometry(A.r*.6,.035,6,A.ring).rotateX(Math.PI/2).translate(A.x,podiumTop(0)+.25,A.z);
  // Drum mullions: thin posts round the glass.
- const posts:THREE.BufferGeometry[]=[];for(let i=0;i<16;i++){const t=i/16*Math.PI*2;posts.push(new THREE.BoxGeometry(.03,drumH,.03).translate(A.x+Math.cos(t)*(A.r+.012),drumH/2,A.z+Math.sin(t)*(A.r+.012)));}
+ const posts:THREE.BufferGeometry[]=[];for(let i=0;i<20;i++){const t=i/20*Math.PI*2;posts.push(new THREE.BoxGeometry(.025,drumH,.025).translate(A.x+Math.cos(t)*(A.r+.012),drumH/2,A.z+Math.sin(t)*(A.r+.012)));}
  return {
-  glass,fins:mesh(fin),ledges:mesh(ledges),rim:mesh(rim),roof:mesh(roof),
+  glass,fins:merge([mesh(fin),mesh(podFins)]),ledges:mesh(ledges),rim:mesh(rim),roof:mesh(roof),crownBand:mesh(crownBand),
   ribbonBack:mesh(back),ribbonLouvres:mesh(louvres),
   slabs:merge([...slabs,crownRing]),lobbyGlass:merge(lobbyGlass),podiumGlass:merge(podGlass),planters:mesh(planters),lawn:mesh(lawn),
-  drum,drumPosts:merge(posts),sky,canopy,halo,
+  drum,dome,drumPosts:merge(posts),bronzeTrim:merge(trim),vestibule,doors,sky,canopy,halo,
  };
 }
 export type AiOpsGeometry=ReturnType<typeof aiOpsGeometry>;

@@ -69,7 +69,12 @@ export function interiorFloor(level:number,height=INTERIOR_HEIGHT):InteriorFloor
   // Lobby: a curved reception desk inside the atrium drum, lounge seating and the entrance mat.
   const d=drum!;for(let k=0;k<20;k++){const t=Math.PI*.15+k/20*Math.PI*.7;items.push({p:[d.x+Math.cos(t+Math.PI)*d.r*.45,0,d.z+Math.sin(t+Math.PI)*d.r*.45],s:[.6,1.05,.4],c:k%2?P.bronze:'#e9e2d3',r:-t});}
   for(const dx of [-6,-3.5,6.5,9])items.push({p:[dx,0,4.5],s:[1.6,.45,.8],c:'#58706a'},{p:[dx,0,5.6],s:[.8,.4,.8],c:'#d8cdb6'});
-  items.push({p:[d.x,0,d.z+d.r+.6],s:[3,.03,1.4],c:'#5a4630'});
+  // The glazed entrance vestibule on the drum's street face, as outside: bronze frame, glass, dark doors.
+  const E=AIOPS.entry,vw=E.w*K,vd=E.d*K,vh=E.h*K,vz=(A.z+A.r-.05+E.d/2)*K,fz=vz+vd/2;
+  for(const dx of [-vw/2,-vw/6,vw/6,vw/2])items.push({p:[d.x+dx,0,fz],s:[.11,vh,.11],c:P.bronze});
+  for(const sx of [-1,1])items.push({p:[d.x+sx*vw/2,vh*.78,vz],s:[.11,.11,vd],c:P.bronze});
+  items.push({p:[d.x,vh,vz],s:[vw+.18,.16,vd+.16],c:P.slab},{p:[d.x,0,fz+.03],s:[vw/3-.12,vh*.76,.04],c:'#2c3b38'});
+  items.push({p:[d.x,0,fz+1],s:[3,.03,1.4],c:'#5a4630'});
   desks.push({id:'lobby-reception',label:'Reception',role:meta.role,x:d.x,z:d.z});
  }
  if(drum&&level===1)for(let k=0;k<36;k++){const t=k/36*Math.PI*2;items.push({p:[drum.x+Math.cos(t)*(drum.r+.1),0,drum.z+Math.sin(t)*(drum.r+.1)],s:[.9,1,.06],c:'#cfe3e0',r:-t-Math.PI/2},{p:[drum.x+Math.cos(t)*(drum.r+.1),1,drum.z+Math.sin(t)*(drum.r+.1)],s:[.9,.06,.1],c:P.bronze,r:-t-Math.PI/2});}

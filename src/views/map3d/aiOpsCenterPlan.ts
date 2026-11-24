@@ -33,14 +33,20 @@ export const AIOPS={
  crownSlope:.55,
  /** Planted step round the tower's foot, above the terrace. */
  step:{scale:1.32,rise:.24},
+ /** Lower planted tier between the terrace and the step, so the garden steps back from the tower in two rises. */
+ tier:{scale:1.62,rise:.1},
+ /** Twist of the tower's plan from the ground to the crown, radians: the glass turns gently as it rises. */
+ twist:.32,
  /** Glass atrium drum over the main entrance, rising through the podium above the terrace. */
- atrium:{x:.9,z:2.85,r:1.05,above:.38,ring:32},
+ atrium:{x:.9,z:2.85,r:1.05,above:.55,ring:32},
+ /** Glazed entrance vestibule on the atrium's street face: width, depth out of the drum, height. */
+ entry:{w:1.05,d:.42,h:.62},
  /** Bronze ribbon: louvre every half floor, standing proud of the glass. */
- ribbon:{gap:.15,depth:.11,thick:.032,back:1.028,samples:10},
+ ribbon:{gap:.15,depth:.11,thick:.026,back:1.028,samples:10,louvreEvery:2},
  /** Forecourt in front of the podium, up to the district's north walk. */
  forecourt:1.5,
  /** Glass colours shared by the map model and the interior (Khaneil's rule: inside matches outside). */
- palette:{glassTop:'#a9cbc6',glassBottom:'#5d8a88',spandrel:'#3d5f5c',mullion:'#e7e9e1',slab:'#efece4',bronze:'#d6a565',bronzeDark:'#b07f45',lobby:'#f2e3c2',lawn:'#6f9a52'},
+ palette:{glassTop:'#bcd9d4',glassBottom:'#6d9896',spandrel:'#46696a',mullion:'#e7e9e1',slab:'#efece4',bronze:'#d6a565',bronzeDark:'#b07f45',lobby:'#f2e3c2',lawn:'#6f9a52'},
 } as const;
 
 export const podiumTop=(level:number)=>AIOPS.podium.floors.slice(0,level+1).reduce((a,b)=>a+b,0);
@@ -104,19 +110,21 @@ export function podiumRing(level:number,n=64):Pt[]{
  return pts;
 }
 
-/** Plan scale of the tower at height y: a slight belly low down, tapering toward the crown. */
-export function towerScale(y:number,height:number){const t=Math.max(0,Math.min(1,y/height));return 1+.035*Math.sin(Math.PI*t*1.2)-.06*t;}
+/** Plan scale of the tower at height y: a sculpted belly a third of the way up, tapering hard toward the crown. */
+export function towerScale(y:number,height:number){const t=Math.max(0,Math.min(1,y/height));return 1+.075*Math.sin(Math.PI*t*1.1)-.17*t**1.6;}
+/** How far the tower's plan has turned at height y (radians, counter-clockwise from above). */
+export function towerTwist(y:number,height:number){const t=Math.max(0,Math.min(1,y/height));return AIOPS.twist*t*t*(3-2*t);}
 
 /** Ellipse parameter phi (0 = +x, pi/2 = the front, toward the street) to a point on the tower at scale s. */
 export function towerPoint(phi:number,y:number,height:number,s=1):Pt{
- const {cx,cz,rx,rz}=AIOPS.tower,k=towerScale(y,height)*s;
- return [cx+rx*k*Math.cos(phi),cz+rz*k*Math.sin(phi)];
+ const {cx,cz,rx,rz}=AIOPS.tower,k=towerScale(y,height)*s,x=rx*k*Math.cos(phi),z=rz*k*Math.sin(phi),w=-towerTwist(y,height),c=Math.cos(w),n=Math.sin(w);
+ return [cx+x*c-z*n,cz+x*n+z*c];
 }
 /** Phi of ring point i, counter-clockwise seen from above (so edge x up faces out). */
 export const towerPhi=(i:number,n:number=AIOPS.tower.ring)=>-i/n*Math.PI*2;
 export function towerRing(y:number,height:number,s=1,n:number=AIOPS.tower.ring):Pt[]{return Array.from({length:n},(_,i)=>towerPoint(towerPhi(i,n),y,height,s));}
-/** Outward unit normal of the ellipse at phi. */
-export function towerNormal(phi:number):Pt{const {rx,rz}=AIOPS.tower,x=Math.cos(phi)/rx,z=Math.sin(phi)/rz,l=Math.hypot(x,z);return [x/l,z/l];}
+/** Outward unit normal of the ellipse at phi, turned with the tower's twist at height y. */
+export function towerNormal(phi:number,y=0,height=1):Pt{const {rx,rz}=AIOPS.tower,x=Math.cos(phi)/rx,z=Math.sin(phi)/rz,l=Math.hypot(x,z),w=-towerTwist(y,height),c=Math.cos(w),n=Math.sin(w);return [(x*c-z*n)/l,(x*n+z*c)/l];}
 /** Roof height over ring point phi: the crown is cut on a slope, lowest at the front-right. */
 export function crownAt(phi:number,height:number){return height-AIOPS.crownSlope*Math.cos(phi-Math.PI/4);}
 
@@ -137,8 +145,8 @@ export function terraceTrees(height:number):Pt[]{
  const ring=podiumRing(2,40),out:Pt[]=[];
  for(let i=0;i<ring.length;i+=2){
   const [x,z]=ring[i],p:Pt=[x*.9+(-.22)*.1,z*.9+(-.16)*.1];
-  const {cx,cz,rx,rz}=AIOPS.tower,s=AIOPS.step.scale*towerScale(PODIUM_H,height)+.12;
-  if(((p[0]-cx)/(rx*s))**2+((p[1]-cz)/(rz*s))**2<1)continue;
+  const {cx,cz,rx,rz}=AIOPS.tower,s=AIOPS.tier.scale*towerScale(PODIUM_H,height)+.1,w=towerTwist(PODIUM_H,height),dx=p[0]-cx,dz=p[1]-cz,u=dx*Math.cos(w)-dz*Math.sin(w),v=dx*Math.sin(w)+dz*Math.cos(w);
+  if((u/(rx*s))**2+(v/(rz*s))**2<1)continue;
   if(Math.hypot(p[0]-AIOPS.atrium.x,p[1]-AIOPS.atrium.z)<AIOPS.atrium.r+.3)continue;
   out.push(p);
  }

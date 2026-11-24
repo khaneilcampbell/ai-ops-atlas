@@ -7,7 +7,7 @@ import {glassTexture} from './atlasHqTextures';
 import {packNormals} from './packGeometry';
 import {useQualityLevel} from '../../lib/governor';
 import {TERRACE_H} from './scene';
-import {AIOPS,AIOPS_KEY,PODIUM_H,crownAt,podiumRing,podiumTop,terraceTrees,type AiOpsPlan} from './aiOpsCenterPlan';
+import {AIOPS,AIOPS_KEY,PODIUM_H,crownAt,podiumRing,podiumTop,terraceTrees,towerRing,type AiOpsPlan} from './aiOpsCenterPlan';
 import {aiOpsGeometry} from './aiOpsCenterGeometry';
 
 const noRaycast=()=>null;
@@ -47,7 +47,9 @@ export function AiOpsCenter({plan,g,m,pick,night=false}:{plan?:AiOpsPlan;g:Retur
    slab:std({color:P.slab,roughness:.6}),
    bronze:std({color:P.bronze,roughness:.42,metalness:.3}),
    bronzeDark:std({color:P.bronzeDark,roughness:.5,metalness:.25}),
-   lobby:std({map:tex.map,color:P.lobby,roughness:.15,metalness:.2,emissive:'#ffcf8a',emissiveIntensity:.25}),
+   lobby:std({map:tex.map,color:'#d9e6e0',roughness:.1,metalness:.25,emissive:'#ffd59a',emissiveIntensity:.32}),
+   vestibule:focusable(new THREE.MeshStandardMaterial({color:'#d6eae6',roughness:.04,metalness:.3,transparent:true,opacity:.3,depthWrite:false,emissive:'#ffd9a0',emissiveIntensity:.2})),
+   doors:std({color:'#2c3b38',roughness:.3,metalness:.5}),
    podium:std({map:tex.map,emissiveMap:tex.glow,emissive:'#ffd6a0',emissiveIntensity:0,roughness:.15,metalness:.35}),
    drum:focusable(new THREE.MeshStandardMaterial({color:'#cfe2dc',roughness:.05,metalness:.3,transparent:true,opacity:.5,depthWrite:false,side:THREE.DoubleSide,emissive:'#ffd9a0',emissiveIntensity:.08})),
    sky:std({color:'#9cc3cf',roughness:.05,metalness:.5,emissive:'#d5efff',emissiveIntensity:0}),
@@ -58,7 +60,7 @@ export function AiOpsCenter({plan,g,m,pick,night=false}:{plan?:AiOpsPlan;g:Retur
    paving:std({color:'#e4ddcf',roughness:.85,polygonOffset:true,polygonOffsetFactor:-3}),
   };
  },[]);
- useEffect(()=>{mats.glass.emissiveIntensity=night?.95:0;mats.podium.emissiveIntensity=night?.7:0;mats.lobby.emissiveIntensity=night?.9:.25;mats.drum.emissiveIntensity=night?.5:.08;mats.sky.emissiveIntensity=night?.5:0;mats.halo.emissiveIntensity=night?1.6:.6;mats.sign.emissiveIntensity=night?.45:0;},[mats,night]);
+ useEffect(()=>{mats.glass.emissiveIntensity=night?.95:0;mats.podium.emissiveIntensity=night?.7:0;mats.lobby.emissiveIntensity=night?.9:.32;mats.drum.emissiveIntensity=night?.5:.08;mats.vestibule.emissiveIntensity=night?.9:.2;mats.sky.emissiveIntensity=night?.5:0;mats.halo.emissiveIntensity=night?1.6:.6;mats.sign.emissiveIntensity=night?.45:0;},[mats,night]);
  useEffect(()=>()=>{for(const v of Object.values(mats))if(v instanceof THREE.Material)v.dispose();for(const t of mats.textures)t.dispose();},[mats]);
  const handlers=useMemo(()=>{const p=pick.of([AIOPS_KEY]);return {
   onPointerOver:(e:ThreeEvent<PointerEvent>)=>{e.stopPropagation();p.over(AIOPS_KEY,e);},
@@ -72,6 +74,8 @@ export function AiOpsCenter({plan,g,m,pick,night=false}:{plan?:AiOpsPlan;g:Retur
   // Terrace trees round the podium roof and on the planted step at the tower's foot.
   terraceTrees(height).forEach(([x,z],i)=>{const s=.85+.25*((i*7)%3)/2;trunks.push({p:W(x,PODIUM_H+.16*s,z),s:[.035,.32*s,.035],c:'#6b5a45'});crowns.push({p:W(x,PODIUM_H+.42*s,z),s:[.26*s,.24*s,.26*s],c:i%3?'#5f8f4a':'#4e7c3e'});});
   const step=podiumRing(1,48);for(let i=0;i<step.length;i+=3){const [x,z]=step[i];shrubs.push({p:W(x*.965,podiumTop(1)+.1,z*.965),s:[.09,.07,.09],c:i%2?'#5f8f4a':'#77a35a'});}
+  // Clipped hedges along the lower planted tier's edge.
+  const tier=towerRing(PODIUM_H,height,AIOPS.tier.scale*.975,48);for(let i=0;i<tier.length;i+=2){const [x,z]=tier[i];shrubs.push({p:W(x,PODIUM_H+AIOPS.tier.rise+.07,z),s:[.11,.08,.11],c:i%4?'#5f8f4a':'#6c9a52'});}
   // Plant rooms on the crown, set back from the rim.
   const {cx,cz}=AIOPS.tower;for(const [dx,dz,w,d] of [[-.5,-.2,.7,.5],[.45,.15,.5,.45],[0,.55,.4,.3]] as const){const phi=Math.atan2(dz,dx);boxes.push({p:W(cx+dx,crownAt(phi,height)+.14,cz+dz),s:[w,.26,d],c:'#cfccc3'});}
   // Bollards and planters along the forecourt edge.
@@ -87,6 +91,7 @@ export function AiOpsCenter({plan,g,m,pick,night=false}:{plan?:AiOpsPlan;g:Retur
    <mesh geometry={geo.ledges} material={mats.fin} receiveShadow raycast={noRaycast}/>
    <mesh geometry={geo.rim} material={mats.slab} castShadow receiveShadow {...handlers}/>
    <mesh geometry={geo.roof} material={mats.roof} receiveShadow raycast={noRaycast}/>
+   <mesh geometry={geo.crownBand} material={mats.bronze} castShadow raycast={noRaycast}/>
    <mesh geometry={geo.ribbonBack} material={mats.bronzeDark} castShadow receiveShadow {...handlers}/>
    <mesh geometry={geo.ribbonLouvres} material={mats.bronze} castShadow={quality<2} receiveShadow raycast={noRaycast}/>
    <mesh geometry={geo.slabs} material={mats.slab} castShadow receiveShadow {...handlers}/>
@@ -95,9 +100,13 @@ export function AiOpsCenter({plan,g,m,pick,night=false}:{plan?:AiOpsPlan;g:Retur
    <mesh geometry={geo.planters} material={mats.slab} receiveShadow raycast={noRaycast}/>
    <mesh geometry={geo.lawn} material={m.lawn} receiveShadow raycast={noRaycast}/>
    <mesh geometry={geo.drum} material={mats.drum} {...handlers}/>
+   <mesh geometry={geo.dome} material={mats.drum} {...handlers}/>
    <mesh geometry={geo.drumPosts} material={mats.fin} castShadow raycast={noRaycast}/>
+   <mesh geometry={geo.bronzeTrim} material={mats.bronze} castShadow raycast={noRaycast}/>
+   <mesh geometry={geo.vestibule} material={mats.vestibule} {...handlers}/>
+   <mesh geometry={geo.doors} material={mats.doors} raycast={noRaycast}/>
    <mesh geometry={geo.sky} material={mats.sky} raycast={noRaycast}/>
-   <mesh geometry={geo.canopy} material={mats.bronze} castShadow receiveShadow raycast={noRaycast}/>
+   <mesh geometry={geo.canopy} material={mats.bronzeDark} castShadow receiveShadow raycast={noRaycast}/>
    <mesh geometry={geo.halo} material={mats.halo} raycast={noRaycast}/>
    {/* Sign on the operations storey's fascia, left of the atrium drum. */}
    <mesh geometry={g.plane} material={mats.sign} position={[-1.9,podiumTop(0)+.24,front*.985+.03]} scale={[1.9,.475,1]} raycast={noRaycast}/>
