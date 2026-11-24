@@ -25,7 +25,7 @@ export const PLACE_TEXT: Record<string, PlaceText> = {
   intel: { what: "What Atlas knows: this guide, project data, engineering reviews, repositories, activity and API spend.", how: "Use the tabs above. Everything here is read-only." },
   grid: { what: "All projects as a grid of cards, for a quick health check across everything.", how: "Scan for red or amber, then open the card." },
   settings: { what: "Connections (GitHub, website sync, n8n) and your preferences such as time zone and map navigation.", how: "Connect a service once here; every tab then reads from it." },
-  library: { what: "The Output Library: every report and file your agents produced.", how: "Open it from the Library button on the map toolbar, or inside the Knowledge & Research Center." },
+  library: { what: "The Output Library: every report and file your agents produced.", how: "Open it from the Library button on the map toolbar, or on the Knowledge & Research floor of the Atlas AI Operations Center." },
 };
 
 /** One sentence per tab of a section that has more than one tab. */

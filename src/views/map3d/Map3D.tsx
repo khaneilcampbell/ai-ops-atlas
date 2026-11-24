@@ -32,6 +32,8 @@ import {financialJunctions} from './junctions';
 import {AIRPORT_BUILDINGS,airportBuildingKey} from "./airportBuildings";
 import {Dealership} from "./Dealership";
 import {DEALERSHIP_KEY} from "./dealershipPlan";
+import {AIOPS_KEY,AIOPS_NAME,CLEARED_FOR_AIOPS,aiOpsFootprint,planAiOps,presentAiOps} from "./aiOpsCenterPlan";
+import {AiOpsCenter} from "./AiOpsCenter";
 import {VenueBridge} from "./VenueBridge";
 import {Freight} from "./FreightModel";
 import {Stadium,STADIUM_KEY} from "./Stadium";
@@ -243,6 +245,9 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
   if(scene.galleria){const f=scene.galleria.footprint;m.set(GALLERIA_KEY,{x:f.x+f.w/2,z:f.z+f.d/2,y0:TERRACE_H,y1:TERRACE_H+scene.galleria.column.top+.2,w:f.w,d:f.d});}
   {const b=yachtBounds(yachtBerth(marinaSite(scene,TERRACE_H)));m.set(YACHT_KEY,b);}
   if(scene.stadium)m.set(STADIUM_KEY,{x:scene.stadium.x+scene.stadium.w/2,z:scene.stadium.z+scene.stadium.d/2,y0:TERRACE_H,y1:TERRACE_H+stadiumCrown(),w:scene.stadium.w,d:scene.stadium.d});
+  // Atlas AI Operations Center: drawn on the plot of the four towers it replaced (aiOpsCenterPlan.ts). Their old links,
+  // search hits and the camera land on it; the planned scene (tests, inventory) still has the towers themselves.
+  {const ops=scene.aiOps??planAiOps(scene);if(ops){const f=aiOpsFootprint(ops),a={x:f.x,z:f.z,y0:TERRACE_H,y1:TERRACE_H+f.y1,w:f.w,d:f.d};m.set(AIOPS_KEY,a);if(scene.aiOps)for(const k of CLEARED_FOR_AIOPS)if(!m.has(k))m.set(k,a);}}
   if(scene.dealership){const d=scene.dealership,r=d.showroom;m.set(DEALERSHIP_KEY,{x:d.x+r.cx,z:d.z+r.cz,y0:TERRACE_H,y1:TERRACE_H+r.height+.15,w:r.w+.25,d:r.d+.25});}
   // AI agents work inside their headquarters, so they share its anchor.
   for (const d of layout.districts) {
@@ -260,7 +265,7 @@ const FOLLOW_DIST = 9;
 
 const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const { layout, jobs, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, showLocal } = props;
-  const scene = useMemo(() => buildScene(layout), [layout]);
+  const scene = useMemo(() => presentAiOps(buildScene(layout)), [layout]);
   // The café's panel (outside the canvas) reads its seats and rooms from the plan drawn here.
   useEffect(() => publishCafePlan(scene.cafe ?? null), [scene]);
   const agentCommutes = useMemo(() => (jobs ? planAgentCommutes(scene, jobs) : undefined), [scene, jobs]);
@@ -352,7 +357,9 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     locate: (x, y, z) => api.current?.locate(x, y, z),
   }));
 
-  const select = (key: string) => {
+  const select = (raw: string) => {
+    // The towers the AI Operations Center replaced (an old link, a search hit) land on the center.
+    const key = scene.aiOps && CLEARED_FOR_AIOPS.includes(raw) ? AIOPS_KEY : raw;
     const a = anchors.get(key);
     onSelect(selOf(key), a?.project);
   };
@@ -511,6 +518,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       if(near==="near"||selKey===FINANCIAL_PARK_KEY)plaque({id:FINANCIAL_PARK_KEY,select:FINANCIAL_PARK_KEY,name:"Financial Park",x:f.x+f.park.x+f.park.w/2,roof:TERRACE_H+1.2,z:f.z+f.park.z+f.park.d/2,priority:7,mark:PLANNED,title:"Financial Park · Planned public space"});
     }
     if(scene.communityRail?.loop)for(const stop of scene.communityRail.loop.stops)if(near==="near"||selKey===stop.id||stop.id===ATLAS_STATION_KEY){const [x,z]=stop.point;plaque({id:stop.id,select:stop.id,name:stop.name,x,roof:TERRACE_H+COMMUNITY.platformRise+1.2,z,priority:8,mark:PLANNED,title:`${stop.name} · ${currentBuildingName(stop.district)} · Visual simulation`});}
+    if(scene.aiOps){const f=aiOpsFootprint(scene.aiOps);plaque({id:AIOPS_KEY,select:AIOPS_KEY,name:AIOPS_NAME,x:scene.aiOps.x-1,roof:TERRACE_H+f.y1+.2,z:scene.aiOps.z-.6,priority:1.2,mark:PLANNED,title:`${AIOPS_NAME} · Planned`});}
     if(scene.dealership)plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"Vantor Motors",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:2,mark:PLANNED,title:"Vantor Motors · Planned visual district"});
     if(scene.agency)plaque({id:AGENCY_KEY,select:AGENCY_KEY,name:AGENCY_NAME,x:scene.agency.cx,roof:TERRACE_H+AGENCY.eastHigh+.25,z:scene.agency.cz,priority:1.2,mark:PLANNED,title:`${AGENCY_NAME} · Planned`});
     if(scene.mall)plaque({id:MALL_KEY,select:MALL_KEY,name:"Atlas Marketplace",x:scene.mall.cx,roof:TERRACE_H+MALL.levels*MALL.floor+.4,z:scene.mall.cz,priority:1.2,mark:PLANNED,title:"Atlas Marketplace · Planned"});
@@ -1506,6 +1514,7 @@ function World({
       {detailsReady && <><StationFerrisWheel plaza={scene.stationPlaza} reduced={reduced} /><StationPlaza plan={scene.stationPlaza} g={g} m={m} night={lightMode==="night"}/></>}
       <VenueBridge scene={scene} g={g} m={m} clearRoads={galleriaDrives}/>
       {detailsReady && <DistrictLife scene={scene} g={g} m={m} moving={!reduced&&traffic&&office.phase===null}/>}
+      {detailsReady && <AiOpsCenter plan={scene.aiOps} g={g} m={m} pick={kioskPick} night={lightMode==="night"}/>}
       {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
       {detailsReady && <CommunityRail plan={scene.communityRail} travel={travel} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} land={scene.land} walks={railWalks} bothSides={harbourStop} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
       {detailsReady && namedAgents && <NamedAgents plan={namedAgents} places={city?.places} routes={city?.routes} open={insideOpen} moving={!reduced} drawing={drawing} roofMarked={roofMarked} />}

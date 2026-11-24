@@ -65,6 +65,12 @@ landmarks:
   "service:financial:financial-planning":
     map_name: Ravelle Advisors
     module: knowledge-repository
+  # Nov 24: Atlas AI Operations Center on the Financial District's west waterfront plot (aiOpsCenterPlan.ts),
+  # where the Business Finance, Risk & Insurance, Knowledge & Research and Client Success towers stood. It
+  # houses the Knowledge Repository (with the Output Library) that came with the Knowledge & Research floor.
+  "service:ai-operations-center":
+    map_name: Atlas AI Operations Center
+    module: knowledge-repository
   "service:airport-building:operations":
     map_name: Atlas · Operations
     module: observability-center
@@ -78,8 +84,7 @@ landmarks:
 # stays on the map but houses no module; its module shows in the core building's panel, so a core
 # building can hold several. Agents and records are unchanged. Remove a line to give the module back.
 merged:
-  # AI Engineering & Research Center (Development Hub): knowledge and model intelligence
-  "service:financial:financial-planning": "project:github-profile"
+  # AI Engineering & Research Center (Development Hub): model intelligence
   "service:airport-building:cargo": "project:github-profile"
   # Business Operations HQ (the former Vendor & Supplier Hub, Khaneil 2026-11-24): the Financial District
   # towers and the former Benjaire HQ tower
@@ -88,11 +93,14 @@ merged:
   "service:financial:records": "service:atlas-galleria"
   "service:financial:investments": "service:atlas-galleria"
   "service:financial:residence": "service:atlas-galleria"
-  "service:financial:business-finance": "service:atlas-galleria"
   "service:financial:budget": "service:atlas-galleria"
-  "service:financial:insurance": "service:atlas-galleria"
-  "service:financial:harbor-residence": "service:atlas-galleria"
   "project:benjaire-site": "service:atlas-galleria"
+  # Atlas AI Operations Center (Khaneil, 2026-11-24): the four waterfront towers it replaced are its floors.
+  # Their map models are gone; their records, modules, agents and ids are unchanged.
+  "service:financial:business-finance": "service:ai-operations-center"
+  "service:financial:insurance": "service:ai-operations-center"
+  "service:financial:financial-planning": "service:ai-operations-center"
+  "service:financial:harbor-residence": "service:ai-operations-center"
   # Product & Growth Studio (Growth & Marketing Studio): marketplace and commerce
   "service:atlas-marketplace": "service:benjaire-marketing"
   "project:commerce-pipeline": "service:benjaire-marketing"

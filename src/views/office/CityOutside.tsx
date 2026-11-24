@@ -13,6 +13,8 @@ import {load} from "../../lib/storage";
 import {layoutMap,keepRemovedLots,type GroupBy} from "../mapLayout";
 import {catalog as fullCatalog} from "../../catalog";
 import {buildScene} from "../map3d/scene";
+import {AIOPS_NAME,presentAiOps} from "../map3d/aiOpsCenterPlan";
+import {AiOpsCenter} from "../map3d/AiOpsCenter";
 import {Traffic,Vehicles} from "../map3d/living";
 import {Terrain,Landscape,Towers,Bridges,Kiosks,useGeometries,useMaterials,type PickHandlerSet} from "../map3d/models";
 export default function CityOutside({building="",projectId,span=16,clearSpan=span,elevation=0,allFloors=false,anchorAt,scaleOverride,extras}:{building?:string;projectId?:string;span?:number;
@@ -28,7 +30,7 @@ export default function CityOutside({building="",projectId,span=16,clearSpan=spa
   const traffic=load<boolean>("mapTraffic",true);
   const {catalog,uncataloged}=useAtlas();
   const grouping=load<GroupBy>("mapProjectGrouping","district");
-  const source=useMemo(()=>buildScene(layoutMap(keepRemovedLots(catalog,fullCatalog),uncataloged,grouping)),[catalog,uncataloged,grouping]);
+  const source=useMemo(()=>presentAiOps(buildScene(layoutMap(keepRemovedLots(catalog,fullCatalog),uncataloged,grouping))),[catalog,uncataloged,grouping]);
   const g=useGeometries(),m=useMaterials();
   const park=openLot(source.parks);
   const pick=useMemo<PickHandlerSet>(()=>({of:keys=>({keys,over:()=>{},out:()=>{},click:()=>{}})}),[]);
@@ -52,6 +54,6 @@ export default function CityOutside({building="",projectId,span=16,clearSpan=spa
   // The city drops by the ground height plus the lobby slab's depth, which puts every lobby on the ground.
   return <group scale={scale} position={[-cx*scale,-interiorGroundY()*scale-0.35-elevation,-cz*scale]}>
     <Traffic scene={scene} g={g} m={m} moving={!reduced}/>{traffic&&<Vehicles scene={scene} g={g} m={m} moving={!reduced}/>}
-    <Terrain scene={scene} g={g} m={m} onTerrace={pick.of([])}/><Bridges scene={scene} g={g} m={m}/><Landscape scene={scene} g={g} m={m}/><Towers towers={scene.towers.filter(t=>t.projectId!==projectId&&visible(t))} strays={scene.strays.filter(visible)} health={new Map()} g={g} m={m} pick={pick}/><Kiosks kiosks={scene.kiosks.filter(k=>k.name!==building&&visible(k))} g={g} m={m} pick={pick}/>{extras?.({scene,g,m})}
+    {building!==AIOPS_NAME&&scene.aiOps&&visible(scene.aiOps)&&<AiOpsCenter plan={scene.aiOps} g={g} m={m} pick={pick}/>}<Terrain scene={scene} g={g} m={m} onTerrace={pick.of([])}/><Bridges scene={scene} g={g} m={m}/><Landscape scene={scene} g={g} m={m}/><Towers towers={scene.towers.filter(t=>t.projectId!==projectId&&visible(t))} strays={scene.strays.filter(visible)} health={new Map()} g={g} m={m} pick={pick}/><Kiosks kiosks={scene.kiosks.filter(k=>k.name!==building&&visible(k))} g={g} m={m} pick={pick}/>{extras?.({scene,g,m})}
   </group>;
 }
