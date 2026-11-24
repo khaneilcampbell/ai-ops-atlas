@@ -21,10 +21,12 @@ import {intelligenceHubHeight} from './intelligenceHubPlan';
 export const PORTFOLIO_SITE={
  projectId:'portfolio-site',
  /**
-  * Ground floor plus twelve floors: the reference is G+8, but Khaneil asked for it taller (2026-11-08),
-  * so the same floor repeats four more times and the roof stands near the old tower's height.
+  * Ground floor plus eight floors, as in the G+8 reference. It was twelve (Khaneil, 2026-11-08: taller);
+  * Khaneil asked for it about a third shorter again on 2026-11-24, like the Development Hub.
   */
- floors:12,
+ floors:8,
+ /** Floors it had when its roof was matched to the Operations Center; each floor keeps that height. */
+ matchedFloors:12,
  ground:.66,
  storey:.5,
  /** Roof terrace: the canopy's underside above the roof, its thickness, the parapet height. */
@@ -48,9 +50,13 @@ export const isPortfolioSite=(projectId:string)=>projectId===PORTFOLIO_SITE.proj
 export const portfolioSiteRoof=()=>PORTFOLIO_SITE.ground+PORTFOLIO_SITE.floors*PORTFOLIO_SITE.storey;
 export const portfolioSiteTop=(roof=portfolioSiteRoof())=>roof+PORTFOLIO_SITE.canopy.lift+PORTFOLIO_SITE.canopy.h;
 
-/** Match the Operations Center roof with Portfolio's canopy, preserving its twelve floors. */
+/**
+ * Floor height from the old match with the Operations Center roof (twelve floors), now stacked only
+ * eight floors high, so it stands about a third under the Operations Center (Khaneil, 2026-11-24).
+ */
 export function sizePortfolioSite(towers:Tower[]){
- const roof=intelligenceHubHeight(headquartersEnvelope(towers))-PORTFOLIO_SITE.canopy.lift-PORTFOLIO_SITE.canopy.h;
+ const P=PORTFOLIO_SITE,matched=intelligenceHubHeight(headquartersEnvelope(towers))-P.canopy.lift-P.canopy.h;
+ const roof=P.ground+(matched-P.ground)*P.floors/P.matchedFloors;
  for(const t of towers)if(isPortfolioSite(t.projectId))t.customHeight=roof;
 }
 

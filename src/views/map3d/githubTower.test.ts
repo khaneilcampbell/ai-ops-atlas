@@ -13,12 +13,12 @@ const tower=scene.towers.find(t=>t.projectId===GITHUB_TOWER.projectId)!;
 const plan=planGithubTower(tower.size,tower.customHeight!);
 
 describe('GitHub tower',()=>{
- it('stands with the Financial District: taller than before, under its tallest towers',()=>{
+ it('stands below the Financial District and under its tallest towers',()=>{
   const reference=scene.financial!.referenceHeight;
   expect(tower.customHeight).toBeCloseTo(githubTowerHeight(reference));
-  // Taller than the plain tower it replaces, and at Financial scale, whatever the city scale (#160).
-  expect(tower.customHeight!).toBeGreaterThan(tower.height);
-  expect(githubTowerTop(tower.customHeight!)).toBeGreaterThan(reference*.9);
+  // Development Hub was made shorter (Khaneil, 2026-11-24): its crown at about two thirds of the reference.
+  expect(githubTowerTop(tower.customHeight!)).toBeGreaterThan(reference*.6);
+  expect(githubTowerTop(tower.customHeight!)).toBeLessThan(reference*.7);
   const tallest=Math.max(...scene.financial!.buildings.filter(b=>b.id!=='circa').map(b=>b.height));
   expect(githubTowerTop(tower.customHeight!)).toBeLessThan(tallest);
   // Atlas HQ's roof stands at the reference itself (#159), so the GitHub crown stays under it.
