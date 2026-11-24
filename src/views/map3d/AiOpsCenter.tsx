@@ -43,7 +43,7 @@ export function AiOpsCenter({plan,g,m,pick,night=false}:{plan?:AiOpsPlan;g:Retur
   return {
    textures:[tex.map,tex.glow,sign,shadow],
    glass:std({map:tex.map,emissiveMap:tex.glow,emissive:'#ffd6a0',emissiveIntensity:0,roughness:.12,metalness:.4}),
-   fin:std({color:P.mullion,roughness:.5,metalness:.2}),
+   fin:std({color:P.mullion,roughness:.5,metalness:.2,side:THREE.DoubleSide}),
    slab:std({color:P.slab,roughness:.6}),
    bronze:std({color:P.bronze,roughness:.42,metalness:.3}),
    bronzeDark:std({color:P.bronzeDark,roughness:.5,metalness:.25}),

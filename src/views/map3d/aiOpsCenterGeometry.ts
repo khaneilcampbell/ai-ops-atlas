@@ -9,13 +9,14 @@ import {AIOPS,PODIUM_H,crownAt,podiumRing,podiumTop,ribbonSpan,towerNormal,tower
 /** Atlas AI Operations Center geometry: a handful of merged meshes, built once. See aiOpsCenterPlan. */
 
 const quad=(o:number[],a:Pt3,b:Pt3,c:Pt3,d:Pt3)=>o.push(...a,...b,...c,...a,...c,...d);
+/** Flat-shaded triangles, then welded and indexed; untextured parts carry no UVs (map geometry budget). */
 function mesh(pos:number[],uv?:number[]){
  const g=new THREE.BufferGeometry();
  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
- g.setAttribute('uv',new THREE.Float32BufferAttribute(uv??new Array(pos.length/3*2).fill(0),2));
- g.computeVertexNormals();return g;
+ if(uv)g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+ g.computeVertexNormals();return compactGeometry(g);
 }
-const merge=(gs:THREE.BufferGeometry[])=>{const m=gs.length?mergeGeometries(gs.map(g=>g.index?g.toNonIndexed():g)):mesh([]);if(!m)throw new Error('AI Operations Center: parts could not be merged');return compactGeometry(m);};
+const merge=(gs:THREE.BufferGeometry[])=>{const m=gs.length?mergeGeometries(gs.map(g=>g.index?g.toNonIndexed():g)):mesh([],[]);if(!m)throw new Error('AI Operations Center: parts could not be merged');return compactGeometry(m);};
 
 /**
  * A wall through closed outlines (same point count, counter-clockwise from above). UVs run one
@@ -48,14 +49,14 @@ function fan(pts:Pt3[],pos:number[]){const n=pts.length,c:Pt3=[0,0,0];for(const 
 
 export function aiOpsGeometry(height:number){
  const T=AIOPS.tower,n=T.ring,P=AIOPS.palette;void P;
- // Tower levels: one per floor from the ground (hidden by the podium) to just under the crown, then the crown itself.
- const ys:number[]=[];for(let y=0;y<height-AIOPS.crownSlope-.15;y+=T.floor)ys.push(y);
+ // Tower levels: one per floor from just under the podium roof to just under the crown, then the crown itself.
+ const ys:number[]=[];for(let y=Math.floor((PODIUM_H-.1)/T.floor)*T.floor;y<height-AIOPS.crownSlope-.15;y+=T.floor)ys.push(y);
  const crown=Array.from({length:n},(_,i)=>{const phi=towerPhi(i);const y=crownAt(phi,height);const [x,z]=towerPoint(phi,y,height);return [x,y,z] as Pt3;});
  const levels=[...ys.map(y=>at(towerRing(y,height),y)),crown];
  const glass=wall(levels,T.floor,T.floor);
- // Mullion fins every other ring point and a floor ledge every second floor.
+ // Mullion fins every other ring point (one face, drawn double-sided) and a floor ledge every second floor.
  const fin:number[]=[];
- for(let i=0;i<n;i+=2){const d=.035;for(let l=0;l<levels.length-1;l++){const p=levels[l][i],q=levels[l+1][i];if(q[1]<PODIUM_H)continue;const np=towerNormal(towerPhi(i),p[1],height),nq=towerNormal(towerPhi(i),q[1],height),po:Pt3=[p[0]+np[0]*d,p[1],p[2]+np[1]*d],qo:Pt3=[q[0]+nq[0]*d,q[1],q[2]+nq[1]*d];quad(fin,p,po,qo,q);quad(fin,po,p,q,qo);}}
+ for(let i=0;i<n;i+=2){const d=.035;for(let l=0;l<levels.length-1;l++){const p=levels[l][i],q=levels[l+1][i];if(q[1]<PODIUM_H)continue;const np=towerNormal(towerPhi(i),p[1],height),nq=towerNormal(towerPhi(i),q[1],height),po:Pt3=[p[0]+np[0]*d,p[1],p[2]+np[1]*d],qo:Pt3=[q[0]+nq[0]*d,q[1],q[2]+nq[1]*d];quad(fin,p,po,qo,q);}}
  const ledges:number[]=[];
  for(const y of ys.filter((y,k)=>k%2===0&&y>PODIUM_H+.3))band(towerRing(y,height),towerRing(y,height,1.022),y,.03,ledges);
  // Crown: a white rim standing proud of the glass, a pale roof inside it, and plant room boxes.
@@ -100,15 +101,13 @@ export function aiOpsGeometry(height:number){
   const g=wall([at(scaleAbout(ring,.975),y0),at(scaleAbout(ring,.975),y1-AIOPS.podium.slab)],T.floor*.8,(y1-y0)/4);
   (l===0?lobbyGlass:podGlass).push(g);
  }
- // Podium mullion fins: white posts standing proud of every storey's glass, for facade depth.
+ // Podium mullion fins: one face each (the fin material is double-sided) standing proud of every storey's glass, for facade depth.
  const podFins:number[]=[];
  for(let l=0;l<L;l++){const ring=scaleAbout(podiumRing(l,96),.975),y0=l?podiumTop(l-1):0,y1=podiumTop(l)-AIOPS.podium.slab,m=ring.length;
-  for(let i=0;i<m;i+=l?3:2){const a=ring[(i+m-1)%m],b=ring[(i+1)%m],p=ring[i],tx=b[0]-a[0],tz=b[1]-a[1],tl=Math.hypot(tx,tz),nx=tz/tl,nz=-tx/tl,d=l?.045:.06,w=.018;
+  for(let i=0;i<m;i+=l?3:2){const a=ring[(i+m-1)%m],b=ring[(i+1)%m],p=ring[i],tx=b[0]-a[0],tz=b[1]-a[1],tl=Math.hypot(tx,tz),nx=tz/tl,nz=-tx/tl,d=l?.045:.06;
    // Skip the fins in front of the entrance vestibule.
    if(!l&&Math.abs(p[0]-AIOPS.atrium.x)<AIOPS.entry.w/2+.1&&p[1]>0)continue;
-   const s0:Pt3=[p[0]-tx/tl*w,y0,p[1]-tz/tl*w],s1:Pt3=[p[0]+tx/tl*w,y0,p[1]+tz/tl*w],o0:Pt3=[s0[0]+nx*d,y0,s0[2]+nz*d],o1:Pt3=[s1[0]+nx*d,y0,s1[2]+nz*d];
-   const up=(q:Pt3):Pt3=>[q[0],y1,q[2]];
-   quad(podFins,s0,o0,up(o0),up(s0));quad(podFins,o0,o1,up(o1),up(o0));quad(podFins,o1,s1,up(s1),up(o1));}}
+  quad(podFins,[p[0],y0,p[1]],[p[0]+nx*d,y0,p[1]+nz*d],[p[0]+nx*d,y1,p[1]+nz*d],[p[0],y1,p[1]]);}}
  band(scaleAbout(podiumRing(1),.93),scaleAbout(podiumRing(1),.995),podiumTop(1),.06,planters);
  band(scaleAbout(podiumRing(2),.9),scaleAbout(podiumRing(2),.99),PODIUM_H,.05,planters);
  // Terrace lawn on the podium roof, and the planted step that rises round the tower's foot.
