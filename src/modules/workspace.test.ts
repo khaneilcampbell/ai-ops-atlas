@@ -4,6 +4,7 @@ import { AGENCY_KEY } from "../views/map3d/marketingAgencyPlan";
 import { MALL_KEY } from "../views/map3d/mallPlan";
 import { GALLERIA_KEY } from "../views/map3d/galleriaPlan";
 import { DEALERSHIP_KEY } from "../views/map3d/dealershipPlan";
+import { BOH_KEY, SUPPLIER_HUB_KEY } from "../views/map3d/businessHqPlan";
 import { FINANCIAL_BUILDINGS, financialKey } from "../views/map3d/financialPlan";
 import { LOOP_STATIONS } from "../views/map3d/perimeterRailPlan";
 import { AIRPORT_BUILDINGS, airportBuildingKey } from "../views/map3d/airportBuildings";
@@ -11,7 +12,7 @@ import { catalog } from "../catalog";
 import { LANDMARK_MODULES, WORKSPACE, WORKSPACE_SCHEMA, parseWorkspace, workspaceIssues } from "./workspace";
 
 /** Every landmark id the map draws itself and that workspace.yaml may give a module. */
-const MAP_KEYS = new Set([AGENCY_KEY, MALL_KEY, GALLERIA_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id), ...AIRPORT_BUILDINGS.map((b) => airportBuildingKey(b.id))]);
+const MAP_KEYS = new Set([AGENCY_KEY, MALL_KEY, GALLERIA_KEY, BOH_KEY, SUPPLIER_HUB_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id), ...AIRPORT_BUILDINGS.map((b) => airportBuildingKey(b.id))]);
 
 const parse = (text: string) => {
   const issues: ManifestIssue[] = [];

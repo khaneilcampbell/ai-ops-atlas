@@ -50,8 +50,10 @@ landmarks:
     module: integration-exchange
     project: ai-ops-atlas
     agents: [investment-operations, trading-risk-limits, trade-journal, trading-reporting]
-  "service:atlas-galleria":
-    map_name: Atlas Galleria
+  # Nov 24: Business Operations HQ moved from the Galleria into its own building in the Financial
+  # District's east corner (businessHqPlan.ts), with the Vendor & Supplier Hub as its annex.
+  "service:business-operations-hq":
+    map_name: Business Operations HQ
     module: business-operations-hq
     project: benjaire-site
   "service:financial:residence":
@@ -81,18 +83,23 @@ merged:
   # AI Engineering & Research Center (Development Hub): knowledge and model intelligence
   "service:financial:financial-planning": "project:github-profile"
   "service:airport-building:cargo": "project:github-profile"
-  # Business Operations HQ (the former Vendor & Supplier Hub, Khaneil 2026-11-24): the Financial District
+  # Business Operations HQ (its own building in the Financial District corner since Nov 24): the Financial District
   # towers and the former Benjaire HQ tower
-  "service:financial-district": "service:atlas-galleria"
-  "service:financial:banks": "service:atlas-galleria"
-  "service:financial:records": "service:atlas-galleria"
-  "service:financial:investments": "service:atlas-galleria"
-  "service:financial:residence": "service:atlas-galleria"
-  "service:financial:business-finance": "service:atlas-galleria"
-  "service:financial:budget": "service:atlas-galleria"
-  "service:financial:insurance": "service:atlas-galleria"
-  "service:financial:harbor-residence": "service:atlas-galleria"
-  "project:benjaire-site": "service:atlas-galleria"
+  "service:financial-district": "service:business-operations-hq"
+  "service:financial:banks": "service:business-operations-hq"
+  "service:financial:records": "service:business-operations-hq"
+  "service:financial:investments": "service:business-operations-hq"
+  "service:financial:residence": "service:business-operations-hq"
+  "service:financial:business-finance": "service:business-operations-hq"
+  "service:financial:budget": "service:business-operations-hq"
+  "service:financial:insurance": "service:business-operations-hq"
+  "service:financial:harbor-residence": "service:business-operations-hq"
+  "project:benjaire-site": "service:business-operations-hq"
+  # Nov 24: the Galleria, which held Business Operations HQ until the HQ got its own building, and the
+  # HQ's Vendor & Supplier Hub annex. Budget & Forecasting and Governance & Compliance (above) are now
+  # floors of the HQ; their towers are no longer drawn on the map (CLEARED_FOR_BOH), records unchanged.
+  "service:atlas-galleria": "service:business-operations-hq"
+  "service:supplier-hub": "service:business-operations-hq"
   # Product & Growth Studio (Growth & Marketing Studio): marketplace and commerce
   "service:atlas-marketplace": "service:benjaire-marketing"
   "project:commerce-pipeline": "service:benjaire-marketing"

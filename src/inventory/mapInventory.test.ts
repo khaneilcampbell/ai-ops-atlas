@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { presentBusinessHq } from "../views/map3d/businessHqPlan";
 import { catalog } from "../catalog";
 import { OFF_MAP_PROJECTS } from "../catalog/projects";
 import { anchorsOf } from "../views/map3d/Map3D";
@@ -12,7 +13,7 @@ const inv = mapInventory(catalog);
 describe("Atlas map inventory", () => {
   it("lists every clickable building on the map, once", () => {
     const layout = layoutMap(catalog, [], "district");
-    const onMap = [...anchorsOf(buildScene(layout), layout).keys()].filter((k) => !k.startsWith("agent:"));
+    const onMap = [...anchorsOf(presentBusinessHq(buildScene(layout)), layout).keys()].filter((k) => !k.startsWith("agent:"));
     const ids = inv.buildings.map((b) => b.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const k of onMap) expect(ids, `missing ${k}`).toContain(k);

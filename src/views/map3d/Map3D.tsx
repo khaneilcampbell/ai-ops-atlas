@@ -29,6 +29,9 @@ import {financialJunctions} from './junctions';
 import {AIRPORT_BUILDINGS,airportBuildingKey} from "./airportBuildings";
 import {Dealership} from "./Dealership";
 import {DEALERSHIP_KEY} from "./dealershipPlan";
+import {BOH_KEY,BOH_NAME,CLEARED_FOR_BOH,SUPPLIER_HUB_KEY,SUPPLIER_HUB_NAME,businessHqFootprints,presentBusinessHq} from "./businessHqPlan";
+import {BusinessHq} from "./BusinessHq";
+import {hostOf} from "../../modules/workspace";
 import {VenueBridge} from "./VenueBridge";
 import {Freight} from "./FreightModel";
 import {Stadium,STADIUM_KEY} from "./Stadium";
@@ -239,6 +242,7 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
   if(scene.galleria){const f=scene.galleria.footprint;m.set(GALLERIA_KEY,{x:f.x+f.w/2,z:f.z+f.d/2,y0:TERRACE_H,y1:TERRACE_H+scene.galleria.column.top+.2,w:f.w,d:f.d});}
   {const b=yachtBounds(yachtBerth(marinaSite(scene,TERRACE_H)));m.set(YACHT_KEY,b);}
   if(scene.stadium)m.set(STADIUM_KEY,{x:scene.stadium.x+scene.stadium.w/2,z:scene.stadium.z+scene.stadium.d/2,y0:TERRACE_H,y1:TERRACE_H+stadiumCrown(),w:scene.stadium.w,d:scene.stadium.d});
+  if(scene.businessHq){const f=businessHqFootprints(scene.businessHq);m.set(BOH_KEY,{x:f.hq.x,z:f.hq.z,y0:TERRACE_H,y1:TERRACE_H+f.hq.y1,w:f.hq.w,d:f.hq.d});m.set(SUPPLIER_HUB_KEY,{x:f.annex.x,z:f.annex.z,y0:TERRACE_H,y1:TERRACE_H+f.annex.y1,w:f.annex.w,d:f.annex.d});}
   if(scene.dealership){const d=scene.dealership,r=d.showroom;m.set(DEALERSHIP_KEY,{x:d.x+r.cx,z:d.z+r.cz,y0:TERRACE_H,y1:TERRACE_H+r.height+.15,w:r.w+.25,d:r.d+.25});}
   // AI agents work inside their headquarters, so they share its anchor.
   for (const d of layout.districts) {
@@ -248,6 +252,9 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
   for (const h of scene.houses) m.set(h.key, { x: h.x, z: h.z, y0: TERRACE_H, y1: TERRACE_H + h.h + h.roofH + 0.03, w: h.w + 0.14, d: h.d + 0.16, project: h.projectId });
   for (const k of scene.kiosks) m.set(k.key, { x: k.x, z: k.z, y0: TERRACE_H, y1: TERRACE_H + (k.height ?? TOOL_OFFICE_TOP - 0.4) + 0.4, w: k.size, d: k.size * 0.8, project: k.projectId });
   for (const s of scene.strays) m.set(s.key, { x: s.x, z: s.z, y0: 0, y1: Math.max(2, Math.round(s.height / 0.3)) * 0.3 + 0.06, w: s.size, d: s.size });
+  // The corner objects Business Operations HQ replaced have no model of their own: links, search and the
+  // camera use the building that houses them (workspace.yaml `merged`).
+  if(scene.businessHq)for(const k of CLEARED_FOR_BOH)if(!m.has(k)){const h=m.get(hostOf(k)??BOH_KEY)??m.get(BOH_KEY);if(h)m.set(k,h);}
   return m;
 }
 
@@ -256,7 +263,7 @@ const FOLLOW_DIST = 9;
 
 const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const { layout, jobs, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, showLocal } = props;
-  const scene = useMemo(() => buildScene(layout), [layout]);
+  const scene = useMemo(() => presentBusinessHq(buildScene(layout)), [layout]);
   const agentCommutes = useMemo(() => (jobs ? planAgentCommutes(scene, jobs) : undefined), [scene, jobs]);
   // The named team, one character per identity at its real workplace (namedAgentPlan.ts).
   const namedAgents = useMemo(() => (jobs ? planNamedAgents(scene, fullCatalog.agents, jobs, agentCommutes) : undefined), [scene, jobs, agentCommutes]);
@@ -346,7 +353,9 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     locate: (x, y, z) => api.current?.locate(x, y, z),
   }));
 
-  const select = (key: string) => {
+  const select = (raw: string) => {
+    // The corner objects the HQ replaced (an old link, a search hit) land on the building that now houses them.
+    const key = CLEARED_FOR_BOH.includes(raw) ? (hostOf(raw) ?? BOH_KEY) : raw;
     const a = anchors.get(key);
     onSelect(selOf(key), a?.project);
   };
@@ -505,6 +514,8 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       if(near==="near"||selKey===FINANCIAL_PARK_KEY)plaque({id:FINANCIAL_PARK_KEY,select:FINANCIAL_PARK_KEY,name:"Financial Park",x:f.x+f.park.x+f.park.w/2,roof:TERRACE_H+1.2,z:f.z+f.park.z+f.park.d/2,priority:7,mark:PLANNED,title:"Financial Park · Planned public space"});
     }
     if(scene.communityRail?.loop)for(const stop of scene.communityRail.loop.stops)if(near==="near"||selKey===stop.id||stop.id===ATLAS_STATION_KEY){const [x,z]=stop.point;plaque({id:stop.id,select:stop.id,name:stop.name,x,roof:TERRACE_H+COMMUNITY.platformRise+1.2,z,priority:8,mark:PLANNED,title:`${stop.name} · ${currentBuildingName(stop.district)} · Visual simulation`});}
+    if(scene.businessHq){const f=businessHqFootprints(scene.businessHq);plaque({id:BOH_KEY,select:BOH_KEY,name:BOH_NAME,x:scene.businessHq.x,roof:TERRACE_H+f.hq.y1+.1,z:scene.businessHq.z,priority:1.2,mark:PLANNED,title:`${BOH_NAME} · Planned`});
+      if(mapLabelVisible("building",near,selKey===SUPPLIER_HUB_KEY,hover===SUPPLIER_HUB_KEY))plaque({id:SUPPLIER_HUB_KEY,select:SUPPLIER_HUB_KEY,name:SUPPLIER_HUB_NAME,x:f.annex.x,roof:TERRACE_H+f.annex.y1+.1,z:f.annex.z,priority:3,mark:PLANNED,title:`${SUPPLIER_HUB_NAME} · Part of ${BOH_NAME}`});}
     if(scene.dealership)plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"Vantor Motors",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:2,mark:PLANNED,title:"Vantor Motors · Planned visual district"});
     if(scene.agency)plaque({id:AGENCY_KEY,select:AGENCY_KEY,name:AGENCY_NAME,x:scene.agency.cx,roof:TERRACE_H+AGENCY.eastHigh+.25,z:scene.agency.cz,priority:1.2,mark:PLANNED,title:`${AGENCY_NAME} · Planned`});
     if(scene.mall)plaque({id:MALL_KEY,select:MALL_KEY,name:"Atlas Marketplace",x:scene.mall.cx,roof:TERRACE_H+MALL.levels*MALL.floor+.4,z:scene.mall.cz,priority:1.2,mark:PLANNED,title:"Atlas Marketplace · Planned"});
@@ -1502,6 +1513,7 @@ function World({
       {detailsReady && <FinancialDistrict plan={scene.financial} junctions={financialJunctionSpans} g={g} m={m} night={lightMode==="night"} pick={kioskPick} moving={!reduced}/>}
       {detailsReady && <CommunityRail plan={scene.communityRail} travel={travel} community={scene.community} financial={scene.financial} roads={railRoads} clearRoads={galleriaDrives} keepClear={railKeepClear} land={scene.land} walks={railWalks} bothSides={harbourStop} g={g} m={m} pick={kioskPick} moving={drawing&&!reduced&&traffic} night={lightMode==="night"}/>}
       {detailsReady && namedAgents && <NamedAgents plan={namedAgents} places={city?.places} routes={city?.routes} open={insideOpen} moving={!reduced} drawing={drawing} roofMarked={roofMarked} />}
+      {detailsReady && <BusinessHq plan={scene.businessHq} night={lightMode==="night"} pick={kioskPick}/>}
       {detailsReady && <Dealership night={lightMode==="night"} traffic={traffic} reduced={reduced} plan={scene.dealership} g={g} m={m} pick={kioskPick.of([DEALERSHIP_KEY])}/>}
       {detailsReady && <Freight plan={scene.freight} g={g} m={m} moving={!reduced&&traffic} visible={traffic}/>}
       {detailsReady && <StreetLights scene={scene} g={g} m={m} night={lightMode==="night"}/>}

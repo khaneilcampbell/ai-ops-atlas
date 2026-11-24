@@ -7,32 +7,33 @@ import { financialKey } from "../views/map3d/financialPlan";
 
 // Khaneil, 2026-11-24: eight core buildings hold the modules. The other buildings stay on the map
 // but house no module for now (workspace.yaml `merged`); nothing is deleted.
-const CORE = ["project:ai-ops-atlas", "project:intelligence-hub", "service:atlas-station", "project:github-profile", "project:portfolio-site", "service:atlas-galleria", "service:benjaire-marketing", "project:soc-lab"];
+const CORE = ["project:ai-ops-atlas", "project:intelligence-hub", "service:atlas-station", "project:github-profile", "project:portfolio-site", "service:business-operations-hq", "service:benjaire-marketing", "project:soc-lab"];
 
 describe("eight core buildings", () => {
   it("groups every other building with a core building or Atlas Commons, and never a core building itself", () => {
     for (const h of new Set(Object.values(WORKSPACE.merged ?? {}))) expect([...CORE, "service:atlas-commons"]).toContain(h);
     for (const k of [...CORE, "service:atlas-commons", "service:logistics-airport", financialKey("circa")]) expect(hostOf(k), k).toBeUndefined();
-    expect(housedIn("service:atlas-galleria")).toEqual(expect.arrayContaining(["project:benjaire-site", financialKey("banks"), financialKey("insurance"), financialKey("budget")]));
+    expect(housedIn("service:business-operations-hq")).toEqual(expect.arrayContaining(["project:benjaire-site", financialKey("banks"), financialKey("insurance"), financialKey("budget"), financialKey("records"), "service:atlas-galleria", "service:supplier-hub"]));
     expect(housedIn("project:github-profile")).toEqual([financialKey("financial-planning"), "service:airport-building:cargo"]);
     expect(housedIn("service:benjaire-marketing")).toEqual(["service:atlas-marketplace", "project:commerce-pipeline"]);
     expect(housedIn("project:soc-lab")).toEqual(["service:bmw-dealership", "service:airport-building:operations"]);
-    expect(onMapKey("project:benjaire-site")).toBe("service:atlas-galleria");
+    expect(onMapKey("project:benjaire-site")).toBe("service:business-operations-hq");
   });
 
   it("gives a grouped building no module of its own, while core buildings keep theirs", () => {
     expect(buildingForSelection({ kind: "project", id: "commerce-pipeline" }, catalog)).toBeUndefined();
     expect(buildingForSelection({ kind: "project", id: "benjaire-site" }, catalog)).toBeUndefined();
     expect(landmarkModuleStatus("financial:banks")).toBeUndefined();
-    // Khaneil, 2026-11-24: the former Vendor & Supplier Hub is the Business Operations HQ building.
-    expect(buildingForSelection({ kind: "service", id: "atlas-galleria" }, catalog)?.moduleType).toBe("business-operations-hq");
+    // Khaneil, 2026-11-24: Business Operations HQ has its own building; the Galleria that held it houses no module now.
+    expect(buildingForSelection({ kind: "service", id: "business-operations-hq" }, catalog)?.moduleType).toBe("business-operations-hq");
+    expect(buildingForSelection({ kind: "service", id: "atlas-galleria" }, catalog)).toBeUndefined();
     expect(buildingForSelection({ kind: "service", id: "benjaire-marketing" }, catalog)?.moduleType).toBe("growth-marketing-studio");
   });
 
   it("keeps every grouped building's data: catalog project, agents and module assignment", () => {
     expect(catalog.projects.some((p) => p.id === "commerce-pipeline")).toBe(true);
     expect(catalog.agents.some((a) => a.projectId === "commerce-pipeline")).toBe(true);
-    for (const id of ["atlas-marketplace", "atlas-galleria", "bmw-dealership", "financial:banks", "financial:residence"]) expect(WORKSPACE.landmarks.some((l) => l.id === id), id).toBe(true);
+    for (const id of ["atlas-marketplace", "business-operations-hq", "bmw-dealership", "financial:records", "financial:banks", "financial:residence"]) expect(WORKSPACE.landmarks.some((l) => l.id === id), id).toBe(true);
   });
 
   it("rejects a bad merged entry without dropping the rest", () => {

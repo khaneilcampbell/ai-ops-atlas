@@ -6,7 +6,7 @@ import type { Agent, Catalog } from "../catalog/types";
 import { MODULE_TYPES } from "../modules/catalog";
 import { buildingDisplayName, buildingOrganization } from "../modules/names";
 import type { ModuleTypeId } from "../modules/types";
-import { LANDMARK_MODULES } from "../modules/workspace";
+import { LANDMARK_MODULES, hostOf } from "../modules/workspace";
 import { CLEARED_LOTS, RETIRED_LOT_NAMES, VACANT_LOTS, layoutMap, type Layout } from "../views/mapLayout";
 import { AIRPORT_KEY, AIRPORT_PARKED_STANDS } from "../views/map3d/airport";
 import { LOOP } from "../views/map3d/airportArrivals";
@@ -15,9 +15,10 @@ import { planAirportCrew, planCrewTrains } from "../views/map3d/airportCrew";
 import { COMMONS_KEY, COMMONS_NAME } from "../views/map3d/commonsPlan";
 import { PLAZA_KEY, PLAZA_NAME } from "../views/map3d/plazaPlan";
 import { DEALERSHIP_KEY } from "../views/map3d/dealershipPlan";
+import { BOH_KEY, BOH_NAME, CLEARED_FOR_BOH, SUPPLIER_HUB_KEY, SUPPLIER_HUB_NAME, presentBusinessHq } from "../views/map3d/businessHqPlan";
 import { planDistrictLife } from "../views/map3d/districtLifePlan";
 import { planDistrictWalkers } from "../views/map3d/districtWalkers";
-import { FINANCIAL_PARK_KEY, financialKey } from "../views/map3d/financialPlan";
+import { FINANCIAL_BUILDINGS, FINANCIAL_PARK_KEY, financialKey } from "../views/map3d/financialPlan";
 import { GALLERIA_KEY, GALLERIA_NAME } from "../views/map3d/galleriaPlan";
 import { planGalleriaLife } from "../views/map3d/galleriaLifePlan";
 import { HILLS_KEY } from "../views/map3d/hillsPlan";
@@ -171,6 +172,10 @@ function buildingsOf(catalog: Catalog, layout: Layout, scene: Scene3D): Inventor
   }
   const stops = scene.communityRail?.loop?.stops ?? [];
   for (const s of stops) add({ id: s.id, name: s.name, kind: "Train station", area: "Perimeter rail loop", status: PLANNED, project: "", source: "src/views/map3d/perimeterRailPlan.ts" });
+  if (scene.businessHq) {
+    add({ id: BOH_KEY, name: BOH_NAME, kind: "Landmark", area: "Financial District", status: PLANNED, project: "benjaire-site", source: "src/views/map3d/businessHqPlan.ts" });
+    add({ id: SUPPLIER_HUB_KEY, name: SUPPLIER_HUB_NAME, kind: "Landmark", area: "Financial District", status: PLANNED, project: "", source: "src/views/map3d/businessHqPlan.ts" });
+  }
   if (scene.dealership) add({ id: DEALERSHIP_KEY, name: "Vantor Motors", kind: "Landmark", area: "Financial District", status: PLANNED, project: "", source: "src/views/map3d/dealershipPlan.ts" });
   if (scene.agency) add({ id: AGENCY_KEY, name: AGENCY_NAME, kind: "Landmark", area: "Bay", status: PLANNED, project: "", source: "src/views/map3d/marketingAgencyPlan.ts" });
   if (scene.mall) add({ id: MALL_KEY, name: "Atlas Marketplace", kind: "Landmark", area: "Marketplace", status: PLANNED, project: "", source: "src/views/map3d/mallPlan.ts" });
@@ -188,6 +193,13 @@ function buildingsOf(catalog: Catalog, layout: Layout, scene: Scene3D): Inventor
   if (scene.airport) {
     add({ id: AIRPORT_KEY, name: "Atlas Airport", kind: "Landmark", area: "Airport", status: PLANNED, project: "", source: "src/views/map3d/airport.ts" });
     for (const b of AIRPORT_BUILDINGS) add({ id: airportBuildingKey(b.id), name: b.name, kind: "Airport building", area: "Airport", status: PLANNED, project: "", source: "src/views/map3d/airportBuildings.ts" });
+  }
+  // Nov 24: the corner objects Business Operations HQ replaced. Only their map models are gone; their
+  // records, modules and agents stay, and the building that houses them is named here.
+  if (scene.businessHq) for (const id of CLEARED_FOR_BOH) {
+    if (out.some((b) => b.id === id)) continue;
+    const fin = FINANCIAL_BUILDINGS.find((b) => financialKey(b.id) === id), host = hostOf(id);
+    add({ id, name: fin?.name ?? "Vantor Motors", kind: fin ? "Financial District building" : "Landmark", area: `Inside ${plain(buildingDisplayName(host ?? BOH_KEY, BOH_NAME))}`, status: "Off the map", project: "", source: "src/views/map3d/businessHqPlan.ts CLEARED_FOR_BOH" });
   }
   // Removed buildings: their lots stay so nothing else moves (src/views/mapLayout.ts).
   for (const id of OFF_MAP_PROJECTS) {
@@ -297,7 +309,8 @@ function objectsOf(scene: Scene3D): { objects: InventoryObject[]; notes: string[
 /** The whole map inventory, from a catalog: the same layout and scene the map draws by default. */
 export function mapInventory(catalog: Catalog): MapInventory {
   const layout = layoutMap(catalog, [], "district");
-  const scene = buildScene(layout);
+  // What the map draws: the corner objects Business Operations HQ replaced are left out.
+  const scene = presentBusinessHq(buildScene(layout));
   const buildings = buildingsOf(catalog, layout, scene);
   const agents = agentsOf(catalog, buildings);
   const byId = new Map(buildings.map((b) => [b.id, b]));
