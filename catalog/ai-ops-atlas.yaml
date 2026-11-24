@@ -946,7 +946,7 @@ agents:
   - id: trade-desk
     name: Trade Desk
     purpose: >-
-      The one seat on the trading team that may place orders: a Claude Code session that Khaneil runs and directs on the Mac, trading only in the Agentic account (the one account Robinhood lets an agent trade in), within Khaneil's limits of $80 of agent trades a week, stocks and ETFs only. Before each order it runs the Risk & Limits check and writes the outcome to the trade journal. It gives no investment advice and never moves money. Off while the Robinhood order tools stay denied in Claude Code on the Mac.
+      The only trading seat: a Claude Code session Khaneil runs on the Mac. Places orders Khaneil directs in the Agentic account, within $80 a week. No advice.
     framework: Claude Code on Khaneil's Mac
     owned_by: atlas-health-monitor
     model: Claude, in Khaneil's Claude Code session
@@ -1017,7 +1017,7 @@ agents:
   - id: trading-risk-limits
     name: Risk & Limits
     purpose: >-
-      Checks every proposed agent trade against Khaneil's limits before it can be sent: Agentic account only, stocks and ETFs only, no more than $80 of sent agent orders in any 7 days, no buy above the account's cash and no sell above what is held. It can block an order, never place one, and never judges whether a trade is a good idea. The Trading desk tab shows the limit used and alerts for blocked or rejected orders.
+      Checks each proposed agent trade against Khaneil's limits before it is sent. Can block an order, never place one.
     framework: Atlas web app (fixed rules, no model)
     owned_by: atlas-health-monitor
     model: None
@@ -1084,7 +1084,7 @@ agents:
   - id: trade-journal
     name: Trade Journal
     purpose: >-
-      Keeps the record of every agent order: when, which seat, buy or sell, symbol, amount, the Risk & Limits result, what Robinhood said and a short note on why. The Mac app reads the journal file the Trade Desk writes, checks it against a fixed allowlist that refuses account numbers, credentials and money movement, and shows it in the Trading desk tab. Disconnect deletes it.
+      Records every agent order (seat, side, symbol, amount, check, result, note) and shows it in the Trading desk. Mac only.
     framework: Atlas web app (fixed rules, no model)
     owned_by: atlas-health-monitor
     model: None
@@ -1149,7 +1149,7 @@ agents:
   - id: trading-reporting
     name: Trading Reporting
     purpose: >-
-      Totals agent trades for the last 7 days from the trade journal (orders sent, dollars bought, dollars sold) and shows them in the Trading desk tab. A PDF and sheet in the Output Library are planned, not built.
+      Totals the last 7 days of agent trades from the journal in the Trading desk. PDF and sheet not built.
     framework: Atlas web app (fixed rules, no model)
     owned_by: atlas-health-monitor
     model: None
@@ -1214,7 +1214,7 @@ agents:
   - id: market-research
     name: Market Research
     purpose: >-
-      Planned: a short daily brief for the Trade Desk with watchlist quotes, earnings dates and news, read from Robinhood's read tools in Claude Code on the Mac. Facts only, no picks or recommendations. Not built.
+      Planned daily facts brief for the Trade Desk: quotes, earnings dates, news. No picks. Not built.
     framework: Not built
     owned_by: atlas-health-monitor
     model: Planned to use Claude in Claude Code on the Mac
