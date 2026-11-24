@@ -15,6 +15,7 @@ import { Manage } from "./agents/Manage";
 import { CLASS_COLOR, ClassBadge, OperationalPill, RiskPill } from "./agents/parts";
 import { Portfolio } from "./agents/Portfolio";
 import { Team } from "./agents/Team";
+import { Roster, type RosterPrefs } from "./agents/Roster";
 import { RegistryRefresh } from "./agents/RegistryRefresh";
 import { Roles, type RoleView } from "./agents/Roles";
 import { roleDirectory } from "../catalog/essentialRoles";
@@ -24,9 +25,10 @@ import { identityFor } from "../registry/identity";
 import { catalog as bundledCatalog } from "../catalog";
 import { agentStatuses, type IdentityStatus } from "../registry/agentStatus";
 
-type Sub = "team" | "directory" | "portfolio" | "goals" | "manage";
+type Sub = "team" | "roster" | "directory" | "portfolio" | "goals" | "manage";
 const SUBS: { id: Sub; label: string }[] = [
   { id: "team", label: "Team" },
+  { id: "roster", label: "Roster" },
   { id: "directory", label: "Directory" },
   { id: "portfolio", label: "Portfolio" },
   { id: "goals", label: "Goals & performance" },
@@ -43,8 +45,10 @@ interface Prefs {
   runtime: string;
   /** Agents tab only: essential roles (default), Inactive, Archived, or the flat list of all agents. */
   view: RoleView | "all";
+  /** Agents > Roster filter and sort. */
+  roster: RosterPrefs;
 }
-const DEFAULT_PREFS: Prefs = { view: "roles", sub: "directory", group: "none", sort: "title", category: "", classification: "", operational: "", runtime: "" };
+const DEFAULT_PREFS: Prefs = { view: "roles", sub: "directory", group: "none", sort: "title", category: "", classification: "", operational: "", runtime: "", roster: { filter: "all", sort: "name", desc: false } };
 
 /** Agent Registry: every registered agent, automation and pipeline, classified and documented. Read-only. */
 export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations" }) {
@@ -57,8 +61,8 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
     // A saved filter from the former mixed directory must not hide the newly separated list.
     const types = kind === "agents" ? ["A", "F"] : ["B", "C", "D", "E"];
     // Manage moved from Agents to Automations (2026-11-18): the managed GitHub workflows are automations.
-    // Team (2026-11-24) is an Agents view only.
-    const sub = (saved.sub === "manage" && kind === "agents") || (saved.sub === "team" && kind === "automations") ? "directory" : saved.sub;
+    // Team and Roster (2026-11-24) are Agents views only.
+    const sub = (saved.sub === "manage" && kind === "agents") || ((saved.sub === "team" || saved.sub === "roster") && kind === "automations") ? "directory" : saved.sub;
     return { ...saved, sub, classification: types.includes(saved.classification) ? saved.classification : "" };
   });
   const set = (p: Partial<Prefs>) => setPrefs((x) => ({ ...x, ...p }));
@@ -88,6 +92,8 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
   const roleView = kind === "agents" && prefs.view !== "all";
   const counts = useMemo(() => roleDirectory(allCatalog.agents).counts, [allCatalog]);
   const current = roleView ? (selection?.kind === "agent" ? byId.get(selection.id) : undefined) : (selection?.kind === "agent" && entries.find((e) => e.profile.id === selection.id)) || flat[0];
+
+  const rosterCurrent = selection?.kind === "agent" ? byId.get(selection.id) : undefined;
 
   const open = (id: string) => {
     select({ kind: "agent", id });
@@ -124,7 +130,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
           {kind === "agents" && <RegistryRefresh />}
         </div>
         <div className="seg" role="tablist" aria-label="Registry views">
-          {SUBS.filter((s) => (s.id !== "manage" || kind === "automations") && (s.id !== "team" || kind === "agents")).map((s) => (
+          {SUBS.filter((s) => (s.id !== "manage" || kind === "automations") && ((s.id !== "team" && s.id !== "roster") || kind === "agents")).map((s) => (
             <button key={s.id} role="tab" aria-selected={prefs.sub === s.id} className={prefs.sub === s.id ? "on" : ""} onClick={() => set({ sub: s.id })}>
               {s.label}
             </button>
@@ -134,6 +140,20 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
 
       {prefs.sub === "team" && kind === "agents" && (
         <Team agents={allCatalog.agents} projects={allCatalog.projects} entries={allEntries} statuses={statuses} verified={summary.operational.verified} open={open} openRoles={() => set({ sub: "directory", view: "roles" })} />
+      )}
+      {prefs.sub === "roster" && kind === "agents" && (
+        <Roster
+          agents={allCatalog.agents}
+          entries={allEntries}
+          statuses={statuses}
+          query={filters.query}
+          setQuery={(query) => setFilters({ query })}
+          prefs={prefs.roster}
+          setPrefs={(p) => set({ roster: { ...prefs.roster, ...p } })}
+          current={selection?.kind === "agent" ? selection.id : undefined}
+          pick={(id) => select({ kind: "agent", id })}
+          detail={rosterCurrent ? <Inspector key={rosterCurrent.profile.id} entry={rosterCurrent} status={statuses.get(rosterCurrent.profile.id)} /> : <div className="card empty">Pick an agent to see its details.</div>}
+        />
       )}
       {prefs.sub === "portfolio" && <Portfolio entries={entries} summary={summary} open={open} />}
       {prefs.sub === "goals" && <Goals entries={rows} open={open} />}

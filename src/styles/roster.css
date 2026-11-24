@@ -1,0 +1,44 @@
+/* Agents > Roster (src/views/agents/Roster.tsx): every current AI agent in one table. */
+.agents-split.roster-split, .agents-split.roster-split:has(.reg-inspector) { grid-template-columns: minmax(0, 1fr) minmax(420px, 0.62fr); }
+/* Autonomy as steps only; the level and its meaning are in the tooltip and the details. */
+.roster .autonomy { font-size: 0; }
+.roster-filters { flex-wrap: wrap; }
+.roster-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.roster-chip { padding: 5px 12px; border-radius: 999px; border: 1px solid var(--sage-200); background: var(--sage-50); font-size: 12px; color: var(--ink-2); cursor: pointer; }
+.roster-chip.on { background: var(--forest-800); border-color: var(--forest-800); color: var(--on-dark); }
+.roster-pane { overflow-x: auto; }
+table.roster { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.roster th { text-align: left; font-size: 9.5px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); padding: 10px 8px; border-bottom: 1px solid var(--sage-200); white-space: nowrap; }
+.roster th button { all: unset; cursor: pointer; }
+.roster th button:hover, .roster th button:focus-visible { color: var(--ink); }
+.roster td { padding: 7px 8px; border-bottom: 1px solid var(--sage-100); vertical-align: middle; }
+.roster td:nth-child(n + 4) { white-space: nowrap; }
+.roster tbody tr { cursor: pointer; }
+.roster tbody tr:hover td { background: var(--sage-100); }
+.roster tr.on td { background: #fbf6ea; }
+.roster tr.on td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
+.roster tr.roster-step td:first-child { padding-left: 30px; }
+.roster tr.dim { opacity: 0.6; }
+.roster-who { all: unset; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.roster-who b { display: block; font-weight: 600; font-size: 13px; }
+.roster-who .muted { display: block; }
+.roster-who:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
+.roster-health { display: inline-flex; align-items: center; gap: 6px; }
+.roster-autos { display: inline-flex; align-items: center; gap: 6px; }
+.roster-seg { display: flex; gap: 2px; width: 64px; height: 6px; border-radius: 999px; overflow: hidden; background: var(--sage-100); }
+.roster-seg i { display: block; height: 100%; }
+.roster-seg .live { background: var(--good); }
+.roster-seg .paused { background: var(--warn); }
+.roster-seg .manual { background: var(--sage-300); }
+@media (max-width: 1100px) { .agents-split.roster-split, .agents-split.roster-split:has(.reg-inspector) { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  /* Phones: each row becomes a card; details open in the sheet. */
+  table.roster thead { display: none; }
+  .roster-split > .empty { display: none; }
+  table.roster, .roster tbody, .roster tr, .roster td { display: block; }
+  .roster tr { padding: 10px 12px; border-bottom: 1px solid var(--sage-200); }
+  .roster td { border: 0; padding: 3px 0; white-space: normal; }
+  .roster td:not(:first-child) { display: inline-flex; margin-right: 12px; }
+  .roster tr.roster-step { padding-left: 26px; }
+  .roster tr.roster-step td:first-child { padding-left: 0; }
+}
