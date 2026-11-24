@@ -15,6 +15,8 @@ import CutawayWall from "./CutawayWall";
 import CityOutside from "./CityOutside";
 import AtlasHqShell from "./AtlasHqShell";
 import { hqClearSpan, isAtlasHq, shellAxes } from "./atlasHqInteriorPlan";
+import CommerceShell from "./CommerceShell";
+import { commerceOutline, frontZ, isCommerceInterior } from "./commerceInteriorPlan";
 import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
 import type { CityFigure } from "../../registry/cityFigures";
@@ -79,9 +81,10 @@ export default function OfficeScene(props: Props) {
         <FloorLabel level={level} width={props.plan.w} depth={props.plan.d+2}/>
         {props.floor!==undefined&&<Box p={[0,-0.06,props.plan.d/2+1]} s={[props.plan.w+0.4,0.12,2.2]} m={MAT.floor}/>}
         {isAtlasHq(props.plan.projectId)&&<AtlasHqShell w={props.plan.w} d={props.plan.d} level={level} night={props.light==="night"}/>}
-        <OfficeEnvironment shell={isAtlasHq(props.plan.projectId)} plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} residents={residentsLabel(desks.length,props.automations??0)} lighting={props.floor!==-1||level===4}/>
-        {(level===0||props.floor===undefined)&&<LobbyEntrance z={isAtlasHq(props.plan.projectId)?shellAxes(props.plan.w,props.plan.d).b:props.plan.d/2+0.08} width={1.4} height={2.2}/>}
-        {level<4&&!desks.some(d=>(d.floor??4)===level)&&<SharedFloor plan={props.plan} floor={level}/>}
+        {isCommerceInterior(props.plan.projectId)&&<CommerceShell w={props.plan.w} d={props.plan.d} level={level} night={props.light==="night"}/>}
+        <OfficeEnvironment shell={isAtlasHq(props.plan.projectId)||isCommerceInterior(props.plan.projectId)} plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} residents={residentsLabel(desks.length,props.automations??0)} lighting={props.floor!==-1||level===4}/>
+        {(level===0||props.floor===undefined)&&<LobbyEntrance z={isAtlasHq(props.plan.projectId)?shellAxes(props.plan.w,props.plan.d).b:isCommerceInterior(props.plan.projectId)?frontZ(commerceOutline(props.plan.w,props.plan.d),0):props.plan.d/2+0.08} width={1.4} height={2.2}/>}
+        {level<4&&!desks.some(d=>(d.floor??4)===level)&&!(level===0&&isCommerceInterior(props.plan.projectId))&&<SharedFloor plan={props.plan} floor={level}/>}
         {props.floor!==undefined&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,1,1]}><ElevatorLanding door={isAtlasHq(props.plan.projectId)?0:undefined} lobbyWalk={false} level={level} reduced={reduced} labels={props.floor!==-1}/></group>}
         {desks.some(d=>(d.floor??4)===level)&&<WorkflowFloor desks={desks.filter(d=>(d.floor??4)===level)}/>}
         {desks.some(d=>(d.floor??4)===level)&&<LevelBands desks={desks} level={level}/>}
