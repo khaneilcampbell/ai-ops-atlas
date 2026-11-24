@@ -464,7 +464,7 @@ agents:
       responsibilities:
         tasks: [Check goals and plans, Assign registered agents, Dispatch approved work to n8n, Verify results, Report blocked work and costs]
         tools: [Atlas database, Agent Registry]
-        dependencies: [benjaire-product-lab-research]
+        dependencies: [benjaire-product-lab-research, atlas-engineer, atlas-qa]
         outputs: [Goal timeline, Verified opportunity report, Approval requests]
         inputs:
           - Goals Khaneil writes in Mission Control
@@ -501,6 +501,164 @@ agents:
         technical: docs/executive-agent.md
         runbook: docs/runbooks/ai-ops-atlas.md#atlas-executive
         last_review: 2026-11-22
+  - id: atlas-engineer
+    name: Atlas Engineering
+    purpose: >-
+      Autonomous Software Engineer in the Engineering Division, reporting to Atlas Executive. When CI fails on main in an allowlisted repository (today only this one) with a lint, type or unit test failure, it repairs it: Claude Code edits a fresh checkout of the failing commit in a throwaway GitHub Actions job with no shell, a separate job with no secrets runs the checks, and the change goes to Atlas QA before any pull request. Bounded: one job per repository, 3 automatic repairs a day, 10 files and 400 lines per change, $1 of model spend per attempt, at most 2 repairs after QA rejects it. Never merges, deploys, changes credentials or edits release, signing, updater or policy files.
+    model: Claude Code with sonnet for routine fixes and opus for test failures and repairs (aliases, set by ATLAS_ENGINEERING_MODELS)
+    framework: Atlas Executive engine + GitHub Actions runner (Claude Code headless) + n8n dispatch
+    owned_by: agent-operations-lead            # same owner as Atlas Executive, its supervisor
+    runtime: GitHub Actions (.github/workflows/atlas-engineer.yml), started by n8n for Atlas
+    status: paused
+    trigger: 'CI failure on main picked up by Atlas, once switched on; Atlas · Engineering Dispatch is a draft, ATLAS_ENGINEERING_ENABLED is off and migration 0004 is not applied'
+    source: server/engineering/handlers.ts
+    observe:
+      github_workflow: atlas-engineer.yml
+    links:
+      - label: 'n8n workflow: Atlas · Engineering Dispatch (draft, starts the runner)'
+        url: https://khancam15.app.n8n.cloud/workflow/IAtPkKS8fhFFsRWP
+      - label: 'n8n workflow: Atlas · GitHub PR Delivery (draft, opens the pull request after QA)'
+        url: https://khancam15.app.n8n.cloud/workflow/1k0B7tA9PACRgOMI
+    last_run: null
+    permissions:
+      - Read the failing commit and its CI log (redacted) in the runner
+      - Edit files in a throwaway checkout; no shell, no network tools
+      - Push only atlas-eng/<task>-a<attempt> branches, never main
+      - Open a pull request through n8n after Atlas QA passes it; cannot merge or approve
+    history:
+      - at: 2026-11-23
+        event: Built (Phase 2). Needs migrations 0002 and 0004, the two n8n drafts published, the runner's repository secret and variables, and ATLAS_ENGINEERING_ENABLED before its first real run
+    registry:
+      title: Autonomous Software Engineer
+      version: 1.0.0
+      tier: specialized
+      category: engineering
+      subcategory: CI repair
+      automation_category: intelligence
+      classification:
+        type: B
+        confidence: verified
+        evidence: AI-assisted under Atlas's taxonomy, like Atlas Executive. Intake, routing, limits, QA and delivery are deterministic; the one model step is Claude Code writing the edit inside the runner, bounded to one task, 30 turns and no shell, behind an independent QA gate. A persona and portrait (type A) wait for Khaneil. Code in server/engineering/, src/engineering/, ops/atlas-engineer/ and .github/workflows/atlas-engineer.yml; tests in src/engineering/engineering.test.ts, ops/atlas-engineer/runner.test.mjs and server/engineering/engineering.test.ts
+      mission:
+        problem: A red check on main blocked every release until Khaneil found and fixed it by hand.
+        outcomes:
+          - Simple lint, type and unit test failures come back as a reviewed pull request
+          - Anything risky or unclear goes to Khaneil instead of being guessed
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks: [Repair failing lint checks, Repair failing type checks, Repair failing unit tests, Push a task branch, Report what changed and why]
+        tools: [GitHub Actions, Claude Code]
+        dependencies: [atlas-executive, atlas-qa]
+        outputs: [atlas-eng branch, Engineering change report, Pull request for Khaneil]
+        inputs:
+          - Failed CI runs on main (webhook and a check every 30 minutes)
+          - The failing commit and its redacted log
+          - Atlas QA's feedback on a rejected attempt
+        limitations:
+          - One repository, lint, type and unit test failures only; build, visual, Rust, security and release failures go to Khaneil
+          - Never merges, deploys, changes credentials or approves its own work
+          - Cannot run commands while editing; the checks run in a separate job
+      goals:
+        objective: Turn a simple red check on main into a pull request Khaneil can merge, without a risky change.
+        review_frequency: Monthly
+        kpis:
+          - name: Repairs that pass QA first time
+            kind: quality
+            target: Most repairs pass QA without a repair round
+            basis: QA outcomes recorded per execution
+          - name: Model spend per repair
+            kind: cost
+            target: Under $1 per attempt
+            basis: Claude Code's reported cost, capped per goal
+      execution:
+        trigger_type: event
+        environment: GitHub Actions runner started by n8n
+        stages: [Task assigned, Context collected, Policy checked, Workspace prepared, Code modified, Validation, QA review requested, Pull request ready]
+      governance:
+        autonomy: 3
+        autonomy_note: Level 3 Conditional Autonomy, policy-bound. Within limits a repair starts on its own; past the daily limit, on a dependency or security change, or when QA can't decide, it waits for Khaneil. Merge and deploy stay with Khaneil.
+        risk: medium
+        credential_owner: Khaneil (ANTHROPIC_API_KEY and ATLAS_ENGINEERING_CALLBACK_TOKEN repository secrets, GitHub credential in n8n)
+      cost:
+        budget: $1 of model spend per attempt, $3.50 per repair goal, 3 automatic repairs a day.
+      docs:
+        technical: docs/engineering-division.md
+        runbook: docs/runbooks/ai-ops-atlas.md#atlas-engineering-division
+        last_review: 2026-11-23
+  - id: atlas-qa
+    name: Atlas Quality Assurance
+    purpose: >-
+      Independent Quality Verification in the Engineering Division, reporting to Atlas Executive. Checks every change Atlas Engineering makes before a pull request exists, from GitHub's own records rather than Engineering's report: the runner run is genuine, each approved check passed in the clean job, the branch holds exactly the reported commit on the failing base, the change is small, no protected file, deleted test or silenced check. Passes, fails with feedback for a repair (at most 2), blocks when the evidence can't be read, or sends dependency and security-relevant changes to Khaneil. It uses no model.
+    model: None; deterministic checks in src/engineering/qa.ts
+    framework: Atlas Executive engine (runs inside the Atlas site)
+    owned_by: agent-operations-lead            # same owner as Atlas Executive, its supervisor
+    runtime: Atlas web site functions, reading GitHub with the site's read-only token
+    status: paused
+    trigger: 'After each Atlas Engineering change, once the division is switched on; migration 0004 is not applied'
+    source: server/engineering/qaRunner.ts
+    links:
+      - label: 'n8n workflow: Atlas · Engineering Dispatch (draft, the runs QA checks)'
+        url: https://khancam15.app.n8n.cloud/workflow/IAtPkKS8fhFFsRWP
+    last_run: null
+    permissions:
+      - Read the runner run, its jobs and the branch diff from GitHub (read only)
+      - Record a QA decision and file an approval request; cannot edit code or approve its own request
+    history:
+      - at: 2026-11-23
+        event: Built (Phase 2). Runs with Atlas Engineering once the division is switched on
+    registry:
+      title: Independent Quality Verification
+      version: 1.0.0
+      tier: specialized
+      category: engineering
+      subcategory: Quality assurance
+      automation_category: monitoring
+      classification:
+        type: C
+        confidence: verified
+        evidence: Rule-based checks on GitHub's own run, job and compare data; the same evidence always gives the same outcome. src/engineering/qa.ts, server/engineering/qaRunner.ts, tests in src/engineering/engineering.test.ts and server/engineering/engineering.test.ts
+      mission:
+        problem: An agent that checks its own work can't be trusted to say a fix works.
+        outcomes:
+          - No pull request without GitHub's own proof that the checks passed
+          - Risky changes reach Khaneil before a pull request exists
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks: [Confirm the runner run is genuine, Read each check's real result, Compare the branch with the failing commit, Reject silenced or deleted tests, Send risky changes to Khaneil]
+        tools: [GitHub API (read only)]
+        dependencies: [atlas-engineer]
+        outputs: [QA report, Repair feedback, Approval request]
+        inputs:
+          - Atlas Engineering's change report (which run and branch to read)
+          - GitHub's run, job and compare records
+        limitations:
+          - Checks only what the approved commands cover (lint, types, unit tests)
+          - Cannot edit code, merge or approve
+      goals:
+        objective: Let only checked, small, honest changes become pull requests.
+        review_frequency: Monthly
+        kpis:
+          - name: Pull requests opened without GitHub proof
+            kind: quality
+            target: Zero
+            basis: Delivery waits for a QA PASS or Khaneil's approval
+      execution:
+        trigger_type: event
+        environment: Atlas web site functions
+        stages: [Read evidence, Check run, Check results, Check diff, Decide]
+      governance:
+        autonomy: 2
+        autonomy_note: Level 2. Its decision gates the pull request; NEEDS_REVIEW changes wait for Khaneil.
+        risk: low
+        credential_owner: Khaneil (site GITHUB_TOKEN, read only)
+      cost:
+        budget: No model cost.
+      docs:
+        technical: docs/engineering-division.md
+        runbook: docs/runbooks/ai-ops-atlas.md#atlas-engineering-division
+        last_review: 2026-11-23
   - id: atlas-production-coordinator
     name: Atlas Production Coordinator
     purpose: >-
@@ -866,6 +1024,103 @@ agents:
         improvements:
           - Save successful runs, or report each run to the Atlas feed, so Atlas can show its last success
         last_review: 2026-11-17
+
+  - id: agent-self-reports
+    name: Agent Self-Reports
+    purpose: >-
+      Every named agent reports data about itself to the Data Intelligence Center once a day, at a
+      time picked from its own run history so it never clashes with its work. Each report counts its
+      runs, failures, run times, busiest hours, schedules, stale states, budget and Atlas memory, and
+      turns them into plain recommendations to improve its workflow. Reports go to the Atlas Agent
+      Self-Reports Google Sheet and a PDF, both kept in the Output Library. No AI step.
+    framework: n8n (plain code, no model)
+    owned_by: atlas-health-monitor
+    model: None (plain code, no AI step)
+    runtime: n8n Cloud
+    status: active
+    trigger: 'Published n8n workflow: daily at each agent''s report time (17 times from 8:30am to 8:30pm New York, catalog/workspace/self-reports.yaml), or run by hand'
+    source: catalog/workspace/self-reports.yaml
+    last_run: 2026-11-23T04:10:40Z
+    history:
+      - at: 2026-11-22
+        event: 'Built at Khaneil''s request as an unpublished n8n draft. Hand runs 902 and 903 reported all 17 agents (818 runs seen, 11 failed, 18 recommendations), filled the Sheet and added the PDF and spreadsheet to the Output Library (run 903 added version 2 of each, no duplicates)'
+      - at: 2026-11-24
+        event: 'Khaneil published the n8n workflow, with the per-agent PDF and Excel work reports filed in the Knowledge & Research Center library'
+    links:
+      - label: 'n8n workflow: Data Intelligence · Agent Self-Reports'
+        url: https://khancam15.app.n8n.cloud/workflow/SBtrX3tY3OKT8qzn
+      - label: Self-reports sheet
+        url: https://docs.google.com/spreadsheets/d/1IJPNjdqPJ2OLhHZ_HI-pgai2dtPplq9oCx1Qw3DlR4s/edit
+    permissions:
+      - 'n8n API: reads executions of the workflows the agents run (read only)'
+      - 'GitHub: reads Actions runs of the agents'' workflows (read only)'
+      - 'Google Sheets: creates and rewrites the Atlas Agent Self-Reports sheet only'
+      - 'Atlas Output Library hook (Atlas reports key): adds versions of its own two outputs'
+      - 'Atlas data API key "self-reports" (ATLAS_DATA_KEYS, once added): reads run, cost and memory counts per agent, never their content'
+    registry:
+      title: "Data Intelligence · Agent Self-Reports"
+      category: data
+      automation_category: monitoring
+      subcategory: Agent reporting
+      classification:
+        type: D
+        confidence: verified
+        evidence: n8n workflow SBtrX3tY3OKT8qzn (unpublished draft) runs 902 and 903 on 2026-11-22 wrote the Sheet, a 6-page PDF and two Output Library items with plain code and no AI model
+      mission:
+        problem: Agents had no regular look at their own runs, failures and costs, so slow steps, unsaved runs and stale drafts went unnoticed.
+        outcomes:
+          - Each agent has a daily report on itself with clear recommendations
+          - The PDF and spreadsheet are in the Output Library, one item each with versions
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks:
+          - Read the catalog, the report times and each agent's n8n and GitHub runs
+          - Count runs, failures, run times, busiest hours and stale states per agent
+          - Write the Summary, Agents, Report Schedule, Recommendations and Run Log tabs
+          - Build the PDF and add both outputs to the Output Library
+        tools:
+          - Scheduled workflow
+          - Google Sheets
+        inputs:
+          - Atlas catalog and catalog/workspace/self-reports.yaml on main
+          - n8n executions (about 7 days kept) and GitHub Actions runs (30 days)
+          - Atlas data API agent report counts (once the self-reports key is added)
+        outputs:
+          - Atlas Agent Self-Reports Google Sheet
+          - Agent self-reports PDF and spreadsheet in the Output Library
+          - One work report per agent in the Output Library at the Knowledge & Research Center (a PDF and an Excel workbook each)
+        dependencies:
+          - atlas-data-inventory
+        limitations:
+          - Unpublished draft; no scheduled report or map walk until Khaneil publishes it
+          - n8n keeps about 7 days of executions, so n8n figures cover only that window
+          - Atlas memory counts read "Not connected yet" until the self-reports data key is added
+      goals:
+        objective: Give every agent one honest daily report on itself.
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed run leaves yesterday's report in the Sheet
+      execution:
+        trigger_type: scheduled
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Reads and reports only.
+        risk: low
+        credential_owner: Khaneil (n8n Google Sheets, GitHub and n8n API credentials; Atlas reports key)
+      cost:
+        budget: No model calls. Once published, 17 n8n runs a day.
+      docs:
+        runbook: docs/agent-self-reports.md
+        known_issues:
+          - The Atlas data API route for agent report counts ships with this change and needs the self-reports key
+        last_review: 2026-11-22
 
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.

@@ -116,8 +116,8 @@ describe("automation categories", () => {
         "trade-desk",
           "visual-director",
       ],
-      monitoring: ["atlas-health-monitor", "benjaire-ops-monitor", "health-report", "investment-operations", "trade-journal", "trading-reporting", "trading-risk-limits"],
-      intelligence: ["agent-operations-lead", "atlas-agent-factory", "atlas-engineering-review", "atlas-executive", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-step-runner", "atlas-task-writer", "development-hub-lead", "github-profile-manager", "repo-intelligence"],
+      monitoring: ["agent-self-reports", "atlas-health-monitor", "atlas-qa", "benjaire-ops-monitor", "health-report", "investment-operations", "trade-journal", "trading-reporting", "trading-risk-limits"],
+      intelligence: ["agent-operations-lead", "atlas-agent-factory", "atlas-engineer", "atlas-engineering-review", "atlas-executive", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-step-runner", "atlas-task-writer", "development-hub-lead", "github-profile-manager", "repo-intelligence"],
       maintenance: ["agent-registry-sync", "db-backup", "docs-builder", "documentation-lead", "github-design-consistency", "site-audit", "site-builder"],
     });
   });

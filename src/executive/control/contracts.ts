@@ -20,6 +20,10 @@ export interface WorkflowRoute {
   timeoutSeconds: number;
   maxAttempts: number;
   maxSearches: number;
+  /** The result schema the route's output must match (Atlas verifies it before anything counts). */
+  resultSchema: string;
+  /** Runs inside the Atlas site (no n8n, no model), through the same claim, attempt and result path. */
+  local?: boolean;
 }
 
 /** Capability -> n8n workflow. Only these run outside Atlas; everything else is in-process or refused. */
@@ -33,6 +37,43 @@ export const WORKFLOW_ROUTES: Readonly<Record<string, WorkflowRoute>> = {
     timeoutSeconds: 300,
     maxAttempts: 3,
     maxSearches: 5,
+    resultSchema: "opportunity-report/1",
+  },
+  // Engineering Division (Phase 2). n8n starts the repository's runner workflow; the runner's report
+  // job posts the result to /api/hooks/engineering-result. n8n drafts created 2026-11-23
+  // (docs/engineering-division.md); unpublished until Khaneil says so.
+  "engineering.implement_fix": {
+    route: "engineering-repair",
+    workflow: "Atlas · Engineering Dispatch",
+    workflowId: "IAtPkKS8fhFFsRWP",
+    webhookPath: "atlas-engineering-dispatch",
+    timeoutSeconds: 55 * 60,
+    maxAttempts: 2,
+    maxSearches: 0,
+    resultSchema: "engineering-change/1",
+  },
+  "qa.verify_change": {
+    route: "qa-validation",
+    workflow: "Atlas QA (inside Atlas)",
+    workflowId: null,
+    webhookPath: "",
+    timeoutSeconds: 120,
+    // QA looks again about every 5 minutes while the checks run on the branch: about 20 minutes in all.
+    // (5 is the database's limit on attempts.)
+    maxAttempts: 5,
+    maxSearches: 0,
+    resultSchema: "qa-report/1",
+    local: true,
+  },
+  "engineering.deliver_pr": {
+    route: "pr-delivery",
+    workflow: "Atlas · GitHub PR Delivery",
+    workflowId: "1k0B7tA9PACRgOMI",
+    webhookPath: "atlas-github-pr-delivery",
+    timeoutSeconds: 300,
+    maxAttempts: 2,
+    maxSearches: 0,
+    resultSchema: "pr-delivery/1",
   },
 };
 
@@ -63,10 +104,12 @@ export interface ResultBody {
   executionId: string;
   kind: "succeeded" | "failed";
   report?: unknown;
+  /** Route-specific output (engineering-change/1, qa-report/1, pr-delivery/1). */
+  artifact?: unknown;
   searched?: string[];
   error?: string;
   transient?: boolean;
-  usage?: { model: string; inputTokens: number; outputTokens: number; webSearches: number };
+  usage?: { model: string; inputTokens: number; outputTokens: number; webSearches: number; costUsd?: number };
   at: string;
 }
 
@@ -94,7 +137,8 @@ export function parseResult(raw: unknown): { ok: true; value: ResultBody } | { o
   if (raw.usage !== undefined) {
     const u = raw.usage;
     if (!isObj(u) || !str(u.model, 80) || !count(u.inputTokens, 5_000_000) || !count(u.outputTokens, 1_000_000) || !count(u.webSearches, 50)) return { ok: false, error: "Bad usage." };
-    usage = { model: u.model, inputTokens: u.inputTokens as number, outputTokens: u.outputTokens as number, webSearches: u.webSearches as number };
+    const reported = typeof u.costUsd === "number" && Number.isFinite(u.costUsd) && u.costUsd >= 0 && u.costUsd < 100 ? { costUsd: u.costUsd } : {};
+    usage = { model: u.model, inputTokens: u.inputTokens as number, outputTokens: u.outputTokens as number, webSearches: u.webSearches as number, ...reported };
   }
   const searched = Array.isArray(raw.searched) ? raw.searched.filter((x): x is string => typeof x === "string" && x.length <= 2000).slice(0, 100) : [];
   return {
@@ -111,6 +155,7 @@ export function parseResult(raw: unknown): { ok: true; value: ResultBody } | { o
       executionId: String(raw.executionId),
       kind: raw.kind,
       ...(raw.report !== undefined ? { report: raw.report } : {}),
+      ...(raw.artifact !== undefined ? { artifact: raw.artifact } : {}),
       searched,
       ...(typeof raw.error === "string" ? { error: raw.error } : {}),
       ...(raw.transient === true ? { transient: true } : {}),
@@ -130,7 +175,8 @@ export const WEB_SEARCH_USD = 0.01;
 
 /** Estimated cost of a reported run. Unknown models count at the highest listed price (never zero). */
 export function estimateCost(u: NonNullable<ResultBody["usage"]>): number {
-  const p = PRICES[u.model] ?? PRICES["claude-opus-5-5"];
-  const usd = (u.inputTokens * p.inputPerM + u.outputTokens * p.outputPerM) / 1_000_000 + u.webSearches * WEB_SEARCH_USD;
+  // Claude Code reports its own cost for the run; a reported figure is used when it is higher than the estimate.
+  const p = PRICES[u.model] ?? PRICES[`claude-${u.model}-5-5`] ?? PRICES["claude-opus-5-5"];
+  const usd = Math.max((u.inputTokens * p.inputPerM + u.outputTokens * p.outputPerM) / 1_000_000 + u.webSearches * WEB_SEARCH_USD, u.costUsd ?? 0);
   return Math.round(usd * 10_000) / 10_000;
 }

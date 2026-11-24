@@ -11,6 +11,8 @@ import { useAtlas } from "../../state";
 import { focusTasks } from "../../tasks/focus";
 import { useTasks } from "../../tasks/store";
 import type { StoredTask } from "../../tasks/types";
+import { useN8nRuns } from "../../n8n/runs";
+import { SELF_REPORTS, reportTimeOn, reportsLive } from "../../selfReports/selfReports";
 import { useFreeTimeRequests } from "../../routine/freeTime";
 import { activityText, planRoutine, segmentAt, type Routine, type RoutineEnv, type Segment } from "../../routine/routine";
 import type { OpRun } from "../../routine/operations";
@@ -207,14 +209,20 @@ export function NamedAgents({ plan, places, routes, open: insideOpen = NO_OPEN, 
 
   // Each agent's day, recomputed when its runs change or the clock ticks (useRoutineOps, every 20 s while visible).
   const envs = useMemo(() => new Map<string, RoutineEnv | null>(ids.map((id) => [id, routes ? routineEnv(routes, id) : null])), [ids, routes]);
+  // Daily self-reports at the Data Intelligence Center: walked only while the report workflow is published in n8n.
+  const n8n = useN8nRuns();
+  const reportPlace = routes?.places.report;
+  const reporting = !!reportPlace && reportsLive(SELF_REPORTS, n8n.value?.state === "ok" ? n8n.value.workflows : null);
   const routines = useMemo(() => {
     const out = new Map<string, Routine>();
     for (const id of ids) {
       const env = envs.get(id), o = ops.ops.get(id);
-      if (env && o) out.set(id, planRoutine({ personaId: id, ops: o, env, now: ops.now, held: held.has(id), outing: freeTime.get(id) ?? null }));
+      const at = reporting && reportPlace ? reportTimeOn(SELF_REPORTS, id, ops.now) : null;
+      const report = at !== null && reportPlace ? { at, option: reportPlace } : null;
+      if (env && o) out.set(id, planRoutine({ personaId: id, ops: o, env, now: ops.now, held: held.has(id), outing: freeTime.get(id) ?? null, report }));
     }
     return out;
-  }, [ids, envs, ops.ops, ops.now, held, freeTime]);
+  }, [ids, envs, ops.ops, ops.now, held, freeTime, reporting, reportPlace]);
   const routinesRef = useRef(routines);
   routinesRef.current = routines;
   useEffect(() => publishRoutines(routines), [routines]);

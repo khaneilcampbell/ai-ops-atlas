@@ -58,6 +58,15 @@ How to check, run, fix and stop each agent in this repository. Facts here come f
 - **When it fails:** a goal says why in its state reason and history. `BLOCKED` with "No eligible agent" means the agent it needs is paused or missing in the catalog; `FAILED` after 3 attempts means n8n or the checks kept failing; a `503` from the panel means migration 0002 isn't applied.
 - **Stop it:** the emergency stop holds every dispatch; pausing or cancelling a goal stops new work for it; unpublishing the dispatch workflow stops all outside work.
 
+## Atlas Engineering Division
+
+**Atlas Engineering** (`atlas-engineer`) and **Atlas Quality Assurance** (`atlas-qa`), both reporting to Atlas Executive. A failed CI run on `main` becomes an engineering goal; n8n **Atlas · Engineering Dispatch** starts `.github/workflows/atlas-engineer.yml`, Claude Code edits with no shell, a job with no secrets runs the checks, Atlas QA reads the real results from GitHub, and n8n **Atlas · GitHub PR Delivery** opens the pull request. Nothing merges. Details in [docs/engineering-division.md](../engineering-division.md).
+
+- **Healthy:** Mission Control → Engineering Operations lists incidents and executions with their phase, QA outcome and pull request; the runner's last run on the [Atlas Engineer workflow page](https://github.com/khaneilcampbell/ai-ops-atlas/actions/workflows/atlas-engineer.yml) ended in `report` posting a 202.
+- **Turn it on:** follow the setup list in [docs/engineering-division.md](../engineering-division.md#switching-it-on), last step `ATLAS_ENGINEERING_ENABLED=true`.
+- **When it fails:** each failure becomes a Task Center task for Khaneil with the reason. `QA FAIL` twice means the fix didn't hold; `BLOCKED` means GitHub couldn't be read and QA retries; a runner run with no report means `ATLAS_ENGINEERING_RESULT_URL` or the callback key is missing, and Atlas times the attempt out.
+- **Stop it:** the emergency stop holds every dispatch; set `ATLAS_ENGINEERING_ENABLED` to anything but `true` to stop new repairs; disable the Atlas Engineer workflow on GitHub to stop the runner itself. Delete stale `atlas-eng/` branches by hand.
+
 ## Production Coordinator
 
 An owning agent with no model of its own. Its main step is Merge Flow (`ops/merge-flow/README.md`); on request Khaneil asks the Release Coordinator in n8n chat or Claude Code for a review. It never merges, deploys or bypasses a check.
