@@ -215,6 +215,92 @@ agents:
           - Add security-guardrails.yml to the catalog
         last_review: 2026-10-28
 
+  - id: connor-security-sheet
+    name: Atlas Security Sheet
+    purpose: >-
+      n8n workflow that reads, read-only, the open Dependabot, code scanning and secret scanning alerts,
+      default-branch protection and rulesets, and the last CI run of every repository in the Atlas
+      catalog, writes them to the "Atlas Security Data" Google Sheet, and adds a version of that data to
+      the Atlas Output Library. No AI step.
+    framework: n8n
+    owned_by: soc-detection-lead
+    model: None (plain code, no AI step)
+    runtime: n8n Cloud
+    status: paused
+    trigger: Daily 7:00am ET once published; unpublished draft, run by hand
+    last_run: 2026-11-22T21:26:03Z
+    history:
+      - at: 2026-11-22
+        event: Built as an unpublished n8n draft at Khaneil's request, owned by Connor Walsh
+      - at: 2026-11-22
+        event: Two test runs by hand (897, 898) passed; the second reused the same sheet with no duplicate rows and saved Library version 2
+    links:
+      - label: n8n workflow (Security sheet)
+        url: https://khancam15.app.n8n.cloud/workflow/ArdLbnah1KgzAh7B
+    permissions:
+      - 'GitHub (n8n "GitHub account" credential): GET requests only, for repository details, alerts, branch protection, rulesets and Actions runs'
+      - 'Google Sheets: creates the Atlas Security Data sheet once, then rewrites its tabs and appends its Run Log'
+      - 'Atlas Output Library hook with the add-only AGENT_FEED_TOKEN: adds versions, can''t list or read anything'
+    registry:
+      title: "SOC · Security Data Sheet"
+      category: security
+      subcategory: Vulnerability management
+      classification:
+        type: B
+        confidence: verified
+        evidence: n8n workflow ArdLbnah1KgzAh7B (unpublished draft) calls only GitHub GET endpoints, Google Sheets and the Output Library hook; no AI model. Hand run 897 on 2026-11-22 read 6 repositories, wrote the sheet and stored Library version 1 (202, verified)
+      mission:
+        problem: Security alerts, branch protection and CI status for Atlas's repositories are spread across GitHub pages, with no single record over time.
+        outcomes:
+          - One sheet lists every open and past alert per repository, with severity, age and link
+          - Default branches without protection and repositories with failing CI are counted
+          - The Output Library keeps a dated version of the summary each run
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks: [Read open security alerts for each Atlas repository, Read default-branch protection and the last CI run, Keep the Atlas Security Data sheet current, Add each run's summary to the Output Library]
+        tools: [Google Sheets, GitHub REST API (read only), Atlas Output Library]
+        inputs: [The Atlas catalog repositories, GitHub alerts, branch protection and Actions runs]
+        outputs: [Atlas Security Data Google Sheet (Summary, Alerts, Branch Protection, CI, Run Log), Atlas Security Data in the Output Library]
+        dependencies:
+          - GitHub REST API
+          - Google Sheets
+          - Atlas Output Library
+        limitations:
+          - Reads only; it never dismisses an alert or changes a repository setting
+          - Reads at most 100 open alerts per repository and source per run
+          - Never writes a leaked secret's value; secret scanning rows carry its type and link only
+          - Runs only when started by hand until Khaneil publishes it
+      goals:
+        objective: Keep one current, dated record of Atlas's security posture.
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: Every run rewrites the sheet and adds a Library version
+            target_value: 100
+            direction: min
+            basis: A failed run leaves the sheet a day old
+      execution:
+        trigger_type: manual
+        environment: n8n
+      governance:
+        autonomy: 0
+        autonomy_note: Observes and records only; it opens no issues and changes nothing on GitHub.
+        data_sensitivity: internal
+        credential_owner: Khaneil (n8n credentials and Cloudflare Pages secrets)
+        risk: low
+        audit_log: n8n executions and the sheet's Run Log tab
+      cost:
+        budget: No model calls
+      docs:
+        technical: docs/output-library.md
+        runbook: https://github.com/khaneilcampbell/ai-ops-atlas/blob/main/docs/runbooks/splunk-bruteforce-detection-lab.md#atlas-security-sheet
+        known_issues:
+          - The GitHub credential is Khaneil's OAuth sign-in, which can also write; the workflow only sends GET requests. A read-only fine-grained token would be narrower
+          - The Google Sheets credential can reach every sheet the account can; the workflow only touches the Atlas Security Data sheet
+        last_review: 2026-11-22
+
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
   - id: soc-detection-lead
@@ -230,6 +316,8 @@ agents:
     history:
       - at: 2026-11-13
         event: Added as the owning agent of Threat Detection Analyst, Security Case Documentation Specialist, Detection Quality Engineer, at Khaneil's request
+      - at: 2026-11-22
+        event: Owns the Atlas Security Sheet n8n workflow (unpublished draft), which records Atlas's GitHub security alerts, branch protection and CI in a Google Sheet and the Output Library
     permissions:
       - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
@@ -263,7 +351,7 @@ agents:
         beneficiaries:
           - Khaneil
       responsibilities:
-        tasks: [Flag repeated failed logons from one source, Write case notes from the results, Test the detection and case notes on every change]
+        tasks: [Flag repeated failed logons from one source, Write case notes from the results, Test the detection and case notes on every change, Keep the Atlas Security Data sheet of GitHub alerts current]
         tools: [Its automations]
         outputs: [The results of its automations]
         inputs:
@@ -272,6 +360,7 @@ agents:
           - bruteforce-detection
           - soc-case-notes
           - soc-lab-ci
+          - connor-security-sheet
         limitations:
           - Acts only through the automations it owns; it has no model, schedule or credentials of its own
           - Detection and case notes are still run by hand
