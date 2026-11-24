@@ -22,10 +22,12 @@
     "atlas-qa",
     "atlas-production-coordinator",
     "atlas-release-coordinator",
+    "trade-desk",
+    "market-research",
     "atlas-release-manager",
     "atlas-health-monitor"
    ],
-   "ai_agents": 6,
+   "ai_agents": 8,
    "automations": 6
   },
   {
@@ -345,13 +347,18 @@
    "kind": "Financial District building",
    "area": "Financial District",
    "status": "Planned",
-   "project": "",
+   "project": "ai-ops-atlas",
    "source": "src/views/map3d/financialPlan.ts",
    "organization": "Benjaire",
    "module": "Integration Exchange",
-   "agent_ids": [],
+   "agent_ids": [
+    "investment-operations",
+    "trading-risk-limits",
+    "trade-journal",
+    "trading-reporting"
+   ],
    "ai_agents": 0,
-   "automations": 0
+   "automations": 4
   },
   {
    "id": "service:financial:records",
@@ -942,6 +949,90 @@
    "runtime": "n8n Cloud",
    "trigger": "Published n8n workflow: daily at each agent's report time (17 times from 8:30am to 8:30pm New York, catalog/workspace/self-reports.yaml), or run by hand",
    "source": "catalog/workspace/self-reports.yaml"
+  },
+  {
+   "id": "investment-operations",
+   "name": "Portfolio Sync",
+   "kind": "Automation",
+   "status": "paused",
+   "building_id": "service:financial:investments",
+   "building_name": "Investment Operations Center",
+   "placement": "Operates this building",
+   "owned_by": "atlas-health-monitor",
+   "project": "ai-ops-atlas",
+   "runtime": "In the Atlas Mac app, when the building is opened or Refresh is pressed",
+   "trigger": "Manual: Khaneil asks Claude on the Mac to sync; Mac app only, synthetic preview on the website",
+   "source": "src/finance/investments.ts"
+  },
+  {
+   "id": "trade-desk",
+   "name": "Trade Desk",
+   "kind": "AI agent",
+   "status": "paused",
+   "building_id": "project:ai-ops-atlas",
+   "building_name": "Atlas Command Center",
+   "placement": "Desk in its project building",
+   "owned_by": "",
+   "project": "ai-ops-atlas",
+   "runtime": "On Khaneil's Mac, only while Khaneil runs it",
+   "trigger": "Manual: Khaneil runs Claude Code on the Mac; off while the Robinhood order tools are denied in ~/.claude/settings.json",
+   "source": "src/finance/tradingDesk.ts"
+  },
+  {
+   "id": "trading-risk-limits",
+   "name": "Risk and Limits",
+   "kind": "Automation",
+   "status": "paused",
+   "building_id": "service:financial:investments",
+   "building_name": "Investment Operations Center",
+   "placement": "Operates this building",
+   "owned_by": "atlas-health-monitor",
+   "project": "ai-ops-atlas",
+   "runtime": "In the Atlas Mac app and in the Trade Desk's check before each order",
+   "trigger": "Manual: before each Trade Desk order; off while trading is off",
+   "source": "src/finance/tradingDesk.ts"
+  },
+  {
+   "id": "trade-journal",
+   "name": "Trade Journal",
+   "kind": "Automation",
+   "status": "paused",
+   "building_id": "service:financial:investments",
+   "building_name": "Investment Operations Center",
+   "placement": "Operates this building",
+   "owned_by": "atlas-health-monitor",
+   "project": "ai-ops-atlas",
+   "runtime": "In the Atlas Mac app, when the building is opened or Refresh is pressed",
+   "trigger": "Manual: reads the journal when the Trading desk opens; empty while trading is off",
+   "source": "src/finance/tradingDesk.ts"
+  },
+  {
+   "id": "trading-reporting",
+   "name": "Trading Reporting",
+   "kind": "Automation",
+   "status": "paused",
+   "building_id": "service:financial:investments",
+   "building_name": "Investment Operations Center",
+   "placement": "Operates this building",
+   "owned_by": "atlas-health-monitor",
+   "project": "ai-ops-atlas",
+   "runtime": "In the Atlas Mac app, when the Trading desk opens",
+   "trigger": "Manual: when the Trading desk opens; nothing to report while trading is off",
+   "source": "src/finance/tradingDesk.ts"
+  },
+  {
+   "id": "market-research",
+   "name": "Market Research",
+   "kind": "AI agent",
+   "status": "paused",
+   "building_id": "project:ai-ops-atlas",
+   "building_name": "Atlas Command Center",
+   "placement": "Desk in its project building",
+   "owned_by": "",
+   "project": "ai-ops-atlas",
+   "runtime": "Not built",
+   "trigger": "Planned: not built yet",
+   "source": ""
   },
   {
    "id": "atlas-release-manager",
@@ -2193,6 +2284,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-24T07:35:57.002Z",
- "commit": "c4f1da1dddd419dff0bef26082b18ca3d72e93ba"
+ "generated_at": "2026-11-24T07:54:05.437Z",
+ "commit": "a506e9584a3620ec663f2787b1ff702690b6ea49"
 }
