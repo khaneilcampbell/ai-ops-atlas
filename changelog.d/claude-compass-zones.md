@@ -11,3 +11,4 @@
 - 2026-11-24 · The Security Operations Center stands on the lake beside the Benjaire tower again, with the land round it filled and planted (#528)
 - 2026-11-24 · Atlas Stadium (Atlas Commons Arena) stands on the Security Operations Center's old parcel, with a few palms; its airport and Financial District roads now reach the new gate. Work in progress: 10 street and travel checks still expect the old site (#528)
 - 2026-11-24 · Projects & Portfolio Studio now stands where the pond was, north of Atlas Stadium, on a concrete plaza with a driveway to the street; its district and the AI Engineering building stay where they were (#528)
+- 2026-11-24 · Projects & Portfolio Studio on the pond gets a full forecourt: a larger concrete plaza with a plaza lane round it that its driveway joins, the pond filled right up to the stadium parcel with no ditch left, and paved paths where boardwalks crossed it (#528)

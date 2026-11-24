@@ -12,8 +12,8 @@ import { towerRing, type Pt } from "./roads";
  */
 export const PORTFOLIO_POND = {
   projectId: "portfolio-site",
-  /** Plaza side as a share of the building's footprint. */
-  plaza: 1.7,
+  /** Plaza side as a share of the building's footprint: wide enough for the lobby steps and a forecourt, like a headquarters plaza. */
+  plaza: 2.3,
   /** Grounds kept clear of trees round the plaza. */
   clear: 0.35,
 } as const;
@@ -31,10 +31,15 @@ export function movePortfolioOntoPond(scene: Scene3D): void {
   const tower = scene.towers.find(t => t.projectId === PORTFOLIO_POND.projectId), pond = portfolioPondArea(scene);
   if (!tower || !pond || pond.w < tower.size * PORTFOLIO_POND.plaza || pond.d < tower.size * PORTFOLIO_POND.plaza) return;
   const top = TERRACE_H, cx = pond.x + pond.w / 2, cz = pond.z + pond.d / 2;
-  // Fill the pond level with the city: no moat, pit or bare basin wall is left round the studio.
-  scene.land.push(...uncoveredLand(pond, scene.land));
-  // Boardwalks that crossed the pond become paths on the new ground.
-  for (const w of scene.walks) if (w.bridge && inside(pond, (w.x0 + w.x1) / 2, (w.z0 + w.z1) / 2)) w.bridge = false;
+  // Fill the pond level with the city, right up to the stadium's parcel: no moat, ditch or bare basin wall is left.
+  const fill: Rect = { ...pond, d: (scene.stadium?.z ?? pond.z + pond.d) - pond.z };
+  scene.land.push(...uncoveredLand(fill, scene.land));
+  // Boardwalks that crossed the pond become paved paths on the new ground.
+  for (const w of scene.walks) if (w.bridge && inside(fill, (w.x0 + w.x1) / 2, (w.z0 + w.z1) / 2)) {
+    w.bridge = false;
+    const x0 = Math.min(w.x0, w.x1), z0 = Math.min(w.z0, w.z1), along = Math.abs(w.x1 - w.x0) > Math.abs(w.z1 - w.z0);
+    scene.paving.push(along ? { x: x0, z: z0 - 0.16, w: Math.abs(w.x1 - w.x0), d: 0.32, y: top, h: 0.03 } : { x: x0 - 0.16, z: z0, w: 0.32, d: Math.abs(w.z1 - w.z0), y: top, h: 0.03 });
+  }
   tower.x = cx; tower.z = cz;
   const p = tower.size * PORTFOLIO_POND.plaza, plaza: Rect = { x: cx - p / 2, z: cz - p / 2, w: p, d: p };
   scene.paving.push({ ...plaza, y: top, h: 0.03 });
@@ -42,8 +47,11 @@ export function movePortfolioOntoPond(scene: Scene3D): void {
   // street, so the plaza lane, sidewalks, cars and walking agents all use it like any other link road.
   const ring = towerRing(tower, p), line = ring && driveLine({ x: ring.x0, z: ring.z0, w: ring.x1 - ring.x0, d: ring.z1 - ring.z0 }, scene.transportConnections.map(c => c.road));
   if (line) scene.transportConnections.push({ id: "portfolio-pond-drive", road: line, walk: [] });
+  // The plaza lane round the forecourt, as every headquarters has: the driveway meets it, so cars can go round and pull up.
+  if (ring && line) scene.transportConnections.push({ id: "portfolio-pond-lane", road: [[ring.x0, ring.z0], [ring.x1, ring.z0], [ring.x1, ring.z1], [ring.x0, ring.z1], [ring.x0, ring.z0]], walk: [] });
   const drive = line && { x: Math.min(line[0][0], line[1][0]) - 0.4, z: Math.min(line[0][1], line[1][1]) - 0.4, w: Math.abs(line[1][0] - line[0][0]) + 0.8, d: Math.abs(line[1][1] - line[0][1]) + 0.8 };
-  const keep = (x: number, z: number) => !inside(plaza, x, z, PORTFOLIO_POND.clear) && !(drive && inside(drive, x, z, PORTFOLIO_POND.clear));
+  const lane = ring && { x: ring.x0, z: ring.z0, w: ring.x1 - ring.x0, d: ring.z1 - ring.z0 };
+  const keep = (x: number, z: number) => !inside(lane ?? plaza, x, z, PORTFOLIO_POND.clear + 0.3) && !(drive && inside(drive, x, z, PORTFOLIO_POND.clear));
   scene.trees = scene.trees.filter(t => keep(t.x, t.z));
   scene.bushes = scene.bushes.filter(b => keep(b.x, b.z));
 }
