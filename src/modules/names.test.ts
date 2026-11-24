@@ -55,9 +55,9 @@ describe("workspace building names", () => {
   it("renames catalog buildings in their manifests, keeping ids, modules and the old name as an alias", () => {
     const want: [string, string, string | undefined, ...string[]][] = [
       ["ai-ops-atlas", "Atlas Command Center", "Atlas", "Atlas HQ"],
-      ["benjaire-site", "Business Operations HQ", "Benjaire", "Benjaire HQ"],
+      ["benjaire-site", "Commerce Operations Center", "Benjaire", "Business Operations HQ", "Benjaire HQ"],
       ["intelligence-hub", "Agent Operations Center", undefined, "Intelligence Hub"],
-      ["commerce-pipeline", "Commerce Operations Center", undefined, "Commerce Pipeline"],
+      ["commerce-pipeline", "Business Operations HQ", undefined, "Commerce Operations Center", "Commerce Pipeline"],
       ["soc-lab", "Security & Infrastructure Center", undefined, "SOC Lab", "Security Operations Center"],
       ["portfolio-site", "Projects & Portfolio Studio", undefined, "Portfolio Site", "Portfolio Web Studio"],
     ];

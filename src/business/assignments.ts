@@ -2,7 +2,7 @@ import { isAiAgent } from "../catalog/roles";
 import type { Agent, Catalog } from "../catalog/types";
 import type { RepoState } from "../github/types";
 import { observedRun, repoData } from "../lib/derive";
-import { instancesOf, workspaceBuildings } from "../modules/instances";
+import { workspaceBuildings } from "../modules/instances";
 import { buildingAssets } from "../modules/operations";
 import { n8nHealth, n8nWorkflowId } from "../n8n/runs";
 import type { N8nSnapshot } from "../n8n/types";
@@ -59,12 +59,13 @@ function assignment(a: Agent, n8n: N8nSnapshot | null, repos: Record<string, Rep
 const ORDER: Record<AssignmentState, number> = { failing: 0, running: 1, ok: 2, "not-seen": 3, off: 4, "not-observed": 5 };
 
 /**
- * One group per business the Business Operations HQ module houses (in catalog order), listing the
- * agents and automations assigned to it. Failing first, then by most recent run, then by name.
+ * One group per business in the Business Operations district (a building that belongs to an
+ * organization, in catalog order), listing the agents and automations assigned to it. Business
+ * Operations HQ moved to the Commerce teardrop tower on 2026-11-24; the businesses it runs did not. Failing first, then by most recent run, then by name.
  */
 export function automationAssignments(catalog: Catalog, n8n: N8nSnapshot | null, repos: Record<string, RepoState>): BusinessAssignments[] {
-  return instancesOf(workspaceBuildings(catalog), "business-operations-hq").flatMap((b) => {
-    if (!b.projectId) return [];
+  return workspaceBuildings(catalog).flatMap((b) => {
+    if (!b.projectId || b.districtId !== "business-operations" || !b.organization) return [];
     const assets = buildingAssets(b, catalog);
     const items = [...assets.agents, ...assets.automations]
       .filter((a) => a.status !== "retired")

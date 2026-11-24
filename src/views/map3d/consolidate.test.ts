@@ -3,7 +3,7 @@ import { catalog } from "../../catalog";
 import { WORKSPACE, hostOf, housedIn, onMapKey, parseWorkspace } from "../../modules/workspace";
 import type { ManifestIssue } from "../../catalog/types";
 import { layoutMap } from "../mapLayout";
-import { presentScene } from "./consolidate";
+import { BUSINESS_HQ_GAP, BUSINESS_HQ_PROJECT, presentScene } from "./consolidate";
 import { financialKey } from "./financialPlan";
 import { buildScene } from "./scene";
 
@@ -32,6 +32,18 @@ describe("eight core buildings", () => {
     expect(drawn.financial?.buildings.map((b) => b.id)).toEqual(["circa"]);
     expect([drawn.dealership, drawn.stadium, drawn.stadiumSite]).toEqual([undefined, undefined, undefined]);
     expect(drawn.agency && drawn.commons && drawn.airport && drawn.mall && drawn.galleria && drawn.plaza).toBeTruthy();
+  });
+
+  it("draws Business Operations HQ, the Commerce teardrop tower, east of Financial Park with its teardrop offices (when shown) beside it", () => {
+    const f = drawn.financial!, t = drawn.towers.find((t) => t.projectId === BUSINESS_HQ_PROJECT)!;
+    const planT = planned.towers.find((t) => t.projectId === BUSINESS_HQ_PROJECT)!;
+    expect(t.x).toBeCloseTo(f.x + f.park.x + f.park.w + BUSINESS_HQ_GAP, 6);
+    expect(t.z).toBeCloseTo(f.z + f.park.z + f.park.d / 2, 6);
+    const offices = (s: typeof drawn) => s.kiosks.filter((k) => k.projectId === BUSINESS_HQ_PROJECT);
+    offices(drawn).forEach((k, i) => {
+      const o = offices(planned)[i];
+      expect([k.x - t.x, k.z - t.z]).toEqual([expect.closeTo(o.x - planT.x, 6), expect.closeTo(o.z - planT.z, 6)]);
+    });
   });
 
   it("keeps the planned city exactly as it was, so streets, rail and traffic don't move", () => {

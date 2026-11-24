@@ -68,8 +68,8 @@ describe("building instances", () => {
   });
 
   it("separates the workspace's building name from its platform module", () => {
-    const hq = instances.find((i) => i.id === "benjaire-site")!;
-    expect(hq).toMatchObject({ name: "Business Operations HQ", organization: "Benjaire", moduleType: "business-operations-hq", moduleProvenance: "declared", enabled: true });
+    const hq = instances.find((i) => i.id === "commerce-pipeline")!;
+    expect(hq).toMatchObject({ name: "Business Operations HQ", moduleType: "business-operations-hq", moduleProvenance: "declared", enabled: true });
     expect(MODULE_TYPES[hq.moduleType!].name).toBe("Business Operations HQ");
   });
 

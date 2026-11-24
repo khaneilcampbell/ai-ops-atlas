@@ -17,9 +17,13 @@ export function presentScene(scene: Scene3D, workspace: Pick<AtlasWorkspace, "me
   if (!workspace.merged) return scene;
   const gone = (key: string) => isMerged(key, workspace);
   const financial = scene.financial && { ...scene.financial, buildings: scene.financial.buildings.filter((b) => !gone(financialKey(b.id))) };
+  const move = businessHqMove(scene);
+  const shift = <T extends { projectId: string; x: number; z: number }>(b: T): T =>
+    move && b.projectId === BUSINESS_HQ_PROJECT ? { ...b, x: b.x + move.dx, z: b.z + move.dz } : b;
   return {
     ...scene,
-    towers: scene.towers.filter((t) => !gone(t.key)),
+    towers: scene.towers.filter((t) => !gone(t.key)).map(shift),
+    kiosks: scene.kiosks.map(shift),
     ...(financial ? { financial } : {}),
     dealership: gone(DEALERSHIP_KEY) ? undefined : scene.dealership,
     galleria: gone(GALLERIA_KEY) ? undefined : scene.galleria,
@@ -29,3 +33,15 @@ export function presentScene(scene: Scene3D, workspace: Pick<AtlasWorkspace, "me
     stadiumSite: gone(STADIUM_KEY) ? undefined : scene.stadiumSite,
   };
 }
+
+/** Khaneil, 2026-11-24: the Commerce teardrop tower is now Business Operations HQ and stands east of Financial Park. */
+export const BUSINESS_HQ_PROJECT = "commerce-pipeline";
+/** How far the drawn tower and its teardrop offices move: the tower lands just east of Financial Park, level with its middle. */
+export function businessHqMove(scene: Pick<Scene3D, "towers" | "financial">): { dx: number; dz: number } | undefined {
+  const tower = scene.towers.find((t) => t.projectId === BUSINESS_HQ_PROJECT), f = scene.financial;
+  if (!tower || !f) return;
+  const x = f.x + f.park.x + f.park.w + BUSINESS_HQ_GAP, z = f.z + f.park.z + f.park.d / 2;
+  return { dx: x - tower.x, dz: z - tower.z };
+}
+/** Map units from Financial Park's east edge to the tower's centre. */
+export const BUSINESS_HQ_GAP = 5;

@@ -3,7 +3,7 @@ import { catalog } from "../catalog";
 import { buildingForSelection } from "./lookup";
 
 it("finds the module building behind a map selection by stable id", () => {
-  expect(buildingForSelection({ kind: "project", id: "benjaire-site" }, catalog)?.moduleType).toBe("business-operations-hq");
+  expect(buildingForSelection({ kind: "project", id: "commerce-pipeline" }, catalog)?.moduleType).toBe("business-operations-hq");
   expect(buildingForSelection({ kind: "project", id: "intelligence-hub" }, catalog)?.moduleType).toBe("agent-operations-center");
   expect(buildingForSelection({ kind: "service", id: "benjaire-marketing" }, catalog)?.moduleType).toBe("growth-marketing-studio");
   expect(buildingForSelection({ kind: "service", id: "financial:investments" }, catalog)?.moduleType).toBe("integration-exchange");

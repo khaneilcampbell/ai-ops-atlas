@@ -79,7 +79,7 @@ landmarks:
 merged:
   # AI Engineering & Research Center (Development Hub)
   "service:financial:financial-planning": "project:github-profile"
-  # Business Operations HQ: the Financial District towers, Vendor & Supplier and Commerce
+  # Commerce Operations Center (the old Business Operations HQ tower): the Financial District towers
   "service:financial-district": "project:benjaire-site"
   "service:financial:banks": "project:benjaire-site"
   "service:financial:records": "project:benjaire-site"

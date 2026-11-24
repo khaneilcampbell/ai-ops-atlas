@@ -83,7 +83,7 @@ import { isPortfolioSite } from "./portfolioSitePlan";
 import { SocLab } from "./SocLab";
 import { isSocLab } from "./socLabPlan";
 import { FLOOR_BASE, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
-import { presentScene } from "./consolidate";
+import { BUSINESS_HQ_PROJECT, presentScene } from "./consolidate";
 import { isMerged, onMapKey } from "../../modules/workspace";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D, type Tower } from "./scene";
 import type { AgentJob } from "../../catalog/agentJobs";
@@ -404,7 +404,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       const mark = <b className={`hm hm-${health.kind}${health.stale ? " stale" : ""}`} title={health.label} aria-label={health.label} />;
       // A compact nameplate by default; the full name and details on hover or selection.
       if (state !== "selected") {
-        out.push(buildingPlaque({ id: `hq:${t.projectId}`, key: t.key, select: t.key, name: t.name, x: t.x, roof: roofOf(t), z: t.z, priority: t.projectId === "ai-ops-atlas" ? 1 : t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents), mark: { kind: health.kind, label: health.label, stale: health.stale }, title: `${t.name} · ${health.label}`, selKey, hover, state, dim: !!net.focusSet && !net.focusSet.has(t.projectId), onSelect: select }));
+        out.push(buildingPlaque({ id: `hq:${t.projectId}`, key: t.key, select: t.key, name: t.name, x: t.x, roof: roofOf(t), z: t.z, priority: t.projectId === "ai-ops-atlas" ? 1 : t.projectId === BUSINESS_HQ_PROJECT ? 1.5 : t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents), mark: { kind: health.kind, label: health.label, stale: health.stale }, title: `${t.name} · ${health.label}`, selKey, hover, state, dim: !!net.focusSet && !net.focusSet.has(t.projectId), onSelect: select }));
         continue;
       }
       const lines = wrap(t.name, 13, SANS, 230, 600);
