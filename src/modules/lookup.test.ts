@@ -6,11 +6,9 @@ it("finds the module building behind a map selection by stable id", () => {
   expect(buildingForSelection({ kind: "service", id: "atlas-galleria" }, catalog)?.moduleType).toBe("business-operations-hq");
   expect(buildingForSelection({ kind: "project", id: "intelligence-hub" }, catalog)?.moduleType).toBe("agent-operations-center");
   expect(buildingForSelection({ kind: "service", id: "benjaire-marketing" }, catalog)?.moduleType).toBe("growth-marketing-studio");
-  // A module building in Business Operations HQ's group keeps its own module.
-  expect(buildingForSelection({ kind: "service", id: "financial:investments" }, catalog)?.moduleType).toBe("integration-exchange");
-  // A filler building has none of its own; its core building still finds it.
-  expect(buildingForSelection({ kind: "service", id: "financial:business-finance" }, catalog)).toBeUndefined();
-  expect(buildingForSelection({ kind: "service", id: "financial:business-finance" }, catalog, { grouped: true })?.moduleType).toBe("finance-analytics-tower");
+  // Grouped with Business Operations HQ: no module of its own, but the HQ still finds it.
+  expect(buildingForSelection({ kind: "service", id: "financial:investments" }, catalog)).toBeUndefined();
+  expect(buildingForSelection({ kind: "service", id: "financial:investments" }, catalog, { grouped: true })?.moduleType).toBe("integration-exchange");
   expect(buildingForSelection({ kind: "service", id: "atlas-station" }, catalog)?.moduleType).toBe("workflow-automation-plant");
   expect(buildingForSelection({ kind: "project", id: "portfolio-site" }, catalog)?.moduleType).toBe("development-repository-hub");
 });
@@ -31,8 +29,9 @@ describe("landmarkModuleStatus", () => {
     const plant = landmarkModuleStatus("atlas-station");
     expect(plant?.name).toBe("Workflow Automation Hub");
     expect(plant?.connectors.length).toBeGreaterThan(0);
-    expect(landmarkModuleStatus("airport-building:operations")?.name).toBe("Observability Center");
-    expect(landmarkModuleStatus("financial:budget")).toBeUndefined();
+    // Grouped with a core building (Khaneil, 2026-11-24): the airport buildings house no module of their own.
+    expect(landmarkModuleStatus("airport-building:operations")).toBeUndefined();
+    expect(landmarkModuleStatus("airport-building:cargo")).toBeUndefined();
     expect(landmarkModuleStatus("airport-building:nope")).toBeUndefined();
   });
 });

@@ -21,37 +21,37 @@ buildings:
   # finance and operations buildings; the fictional brands they used to carry stay in former_names
   # so search still finds them. What Benjaire data each building holds: catalog/workspace/finance.yaml.
   "service:financial:residence":
-    display_name: Data Intelligence Center
-    organization: Benjaire
-    former_names: [Aldren Insights, Briarcliff Tower]
+    display_name: Briarcliff Tower
+    organization: Filler building
+    former_names: [Aldren Insights, Data Intelligence Center]
   "service:financial:banks":
-    display_name: Financial Operations Tower
-    organization: Benjaire
-    former_names: [Bayvale Bank, Larkspur Tower]
+    display_name: Larkspur Tower
+    organization: Filler building
+    former_names: [Bayvale Bank, Financial Operations Tower]
   "service:financial:financial-planning":
-    display_name: Knowledge & Research Center
-    organization: Benjaire
-    former_names: [Ravelle Advisors, Willow Court]
+    display_name: Willow Court
+    organization: Filler building
+    former_names: [Ravelle Advisors, Knowledge & Research Center]
   "service:financial:budget":
     display_name: Elmhurst Tower
     organization: Filler building
     former_names: [Ellery Budget Center, Budget & Forecasting Center]
   "service:financial:records":
-    display_name: Governance & Compliance Center
-    organization: Benjaire
-    former_names: [Halden Trust, Maplewood Tower]
+    display_name: Maplewood Tower
+    organization: Filler building
+    former_names: [Halden Trust, Governance & Compliance Center]
   "service:bmw-dealership":
-    display_name: Infrastructure Operations Hub
-    organization: Atlas
-    former_names: [Vantor Motors, Ironwood Hall]
+    display_name: Ironwood Hall
+    organization: Filler building
+    former_names: [Vantor Motors, Infrastructure Operations Hub]
   "service:financial:investments":
-    display_name: Investment Operations Center
-    organization: Benjaire
-    former_names: [Robin Exchange, Integration Exchange, Ashford Tower]
+    display_name: Ashford Tower
+    organization: Filler building
+    former_names: [Robin Exchange, Integration Exchange, Investment Operations Center]
   "service:atlas-marketplace":
-    display_name: Product Marketplace
-    organization: Atlas
-    former_names: [Atlas Marketplace, Seaview Arcade]
+    display_name: Seaview Arcade
+    organization: Filler building
+    former_names: [Atlas Marketplace, Product Marketplace]
   "service:atlas-station":
     display_name: Workflow Automation Hub
     organization: Atlas
@@ -101,13 +101,13 @@ buildings:
     organization: Filler building
     former_names: [Air Traffic Control, Atlas · Air Traffic]
   "service:airport-building:cargo":
-    display_name: Model Intelligence Lab
-    organization: Atlas Airport
-    former_names: [Atlas · Cargo, Quarry House]
+    display_name: Quarry House
+    organization: Filler building
+    former_names: [Atlas · Cargo, Model Intelligence Lab]
   "service:airport-building:operations":
-    display_name: Observability Center
-    organization: Atlas Airport
-    former_names: [Atlas · Operations, Sparrow Hall]
+    display_name: Sparrow Hall
+    organization: Filler building
+    former_names: [Atlas · Operations, Observability Center]
   # Nov 24: buildings that house no module get a neutral filler name, so nobody reads a purpose into them
   # (Khaneil: "make the other buildings not in a module a random building name ... label it as a filler
   # building"). Their earlier names stay in former_names for search.

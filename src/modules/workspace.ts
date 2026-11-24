@@ -44,8 +44,6 @@ export interface AtlasWorkspace {
    * no module for now; its module is listed in the core building, so one building can hold several.
    */
   merged?: Readonly<Record<string, string>>;
-  /** Module buildings that keep their own module but belong to a core building's group (workspace.yaml `groups`). */
-  groups?: Readonly<Record<string, string>>;
 }
 
 export const WORKSPACE_SCHEMA = "atlas/workspace-v1";
@@ -124,19 +122,7 @@ export function parseWorkspace(file: string, text: string, issues: ManifestIssue
     // A host is a building that stays on the map, never one that is folded itself.
     for (const [key, host] of Object.entries(merged)) if (merged[host]) { fail(`merged.${key}: "${host}" is folded into another building itself`); delete merged[key]; }
   }
-  const groups: Record<string, string> = {};
-  const rawGroups = root.groups;
-  if (rawGroups !== undefined && (!rawGroups || typeof rawGroups !== "object" || Array.isArray(rawGroups))) {
-    fail("groups: expected a mapping of module building id to its core building");
-  } else if (rawGroups) {
-    for (const [key, v] of Object.entries(rawGroups as Record<string, unknown>)) {
-      const core = str(v);
-      if (!BUILDING_RE.test(key) || !core || !BUILDING_RE.test(core) || core === key) { fail(`groups.${key}: use building ids such as "service:financial:banks": "service:atlas-galleria"`); continue; }
-      if (merged[key]) { fail(`groups.${key}: already grouped as a filler building under merged`); continue; }
-      groups[key] = core;
-    }
-  }
-  return { id: id ?? EMPTY.id, name: name ?? EMPTY.name, landmarks, entitlements, ...(Object.keys(merged).length ? { merged } : {}), ...(Object.keys(groups).length ? { groups } : {}) };
+  return { id: id ?? EMPTY.id, name: name ?? EMPTY.name, landmarks, entitlements, ...(Object.keys(merged).length ? { merged } : {}) };
 }
 
 const files = import.meta.glob("../../catalog/workspace/workspace.yaml", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
@@ -148,16 +134,6 @@ export const workspaceIssues: readonly ManifestIssue[] = issues;
 
 /** The landmark module assignments of this workspace (kept as a name for the existing callers and tests). */
 export const LANDMARK_MODULES: readonly LandmarkAssignment[] = WORKSPACE.landmarks;
-
-/** The module buildings in a core building's group: they keep their own module (workspace.yaml `groups`). */
-export function groupMembers(core: string, workspace: Pick<AtlasWorkspace, "groups"> = WORKSPACE): string[] {
-  return Object.entries(workspace.groups ?? {}).filter(([, c]) => c === core).map(([k]) => k);
-}
-
-/** The core building whose group a module building belongs to. */
-export function groupOf(key: string | null | undefined, workspace: Pick<AtlasWorkspace, "groups"> = WORKSPACE): string | undefined {
-  return key ? workspace.groups?.[key] : undefined;
-}
 
 /** The building that houses a folded building, or undefined when it stands on its own. */
 export function hostOf(key: string | null | undefined, workspace: Pick<AtlasWorkspace, "merged"> = WORKSPACE): string | undefined {

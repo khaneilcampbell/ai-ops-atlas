@@ -102,19 +102,19 @@ describe("building instances", () => {
     expect(home("atlas-command-center")).toEqual(["Atlas Command Center"]);
     expect(home("business-operations-hq")).toEqual(["Business Operations HQ"]);
     expect(home("agent-operations-center")).toEqual(["Agent Operations Center"]);
-    expect(home("commerce-product-marketplace")).toEqual(["Juniper House", "Product Marketplace"]);
+    expect(home("commerce-product-marketplace")).toEqual(["Juniper House", "Seaview Arcade"]);
     expect(home("security-operations-center")).toEqual(["Security & Infrastructure Center"]);
     expect(home("growth-marketing-studio")).toEqual(["Product & Growth Studio"]);
     expect(home("workflow-automation-plant")).toEqual(["Workflow Automation Hub"]);
-    expect(home("data-intelligence-center")).toEqual(["Data Intelligence Center"]);
-    expect(home("finance-analytics-tower")).toEqual(["Financial Operations Tower", "Cedar Row Tower"]);
-    expect(home("identity-governance-tower")).toEqual(["Governance & Compliance Center"]);
-    expect(home("infrastructure-control-tower")).toEqual(["Infrastructure Operations Hub"]);
-    expect(home("integration-exchange")).toEqual(["Investment Operations Center"]);
-    expect(home("observability-center")).toEqual(["Observability Center"]);
+    expect(home("data-intelligence-center")).toEqual(["Briarcliff Tower"]);
+    expect(home("finance-analytics-tower")).toEqual(["Larkspur Tower", "Cedar Row Tower"]);
+    expect(home("identity-governance-tower")).toEqual(["Maplewood Tower"]);
+    expect(home("infrastructure-control-tower")).toEqual(["Ironwood Hall"]);
+    expect(home("integration-exchange")).toEqual(["Ashford Tower"]);
+    expect(home("observability-center")).toEqual(["Sparrow Hall"]);
     expect(all.find((i) => i.id === GITHUB_TOWER.projectId)?.moduleType).toBe("development-repository-hub");
-    expect(home("model-intelligence-lab")).toEqual(["Model Intelligence Lab"]);
-    expect(home("knowledge-repository")).toEqual(["Knowledge & Research Center"]);
+    expect(home("model-intelligence-lab")).toEqual(["Quarry House"]);
+    expect(home("knowledge-repository")).toEqual(["Willow Court"]);
     expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(LANDMARK_MODULES.map((l) => l.id));
     // Modules are placed in their buildings and switched on once a capability is built.
     expect(all.find((i) => i.id === "atlas-marketplace")).toMatchObject({ moduleType: "commerce-product-marketplace", enabled: true });
