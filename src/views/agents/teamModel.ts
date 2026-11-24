@@ -3,7 +3,7 @@ import { isAiAgent } from "../../catalog/roles";
 import type { Agent, Project } from "../../catalog/types";
 import type { Operational } from "../../registry/types";
 
-// The Agents > Team view (2026-11-24): the 8 essential roles drawn as an org chart. Presentation
+// The Agents > Team view (2026-11-24): the essential roles drawn as an org chart. Presentation
 // only: every number comes from the catalog and observed runs, never a made-up metric.
 
 type Entry = { operational: Operational; lastVerifiedAt: string | null };

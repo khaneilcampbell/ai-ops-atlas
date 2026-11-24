@@ -11,8 +11,9 @@ minutes, and it redeploys the web page.
 
 - One problem, one small pull request (aim for under about 200 changed lines), on a new branch from
   the latest `main`. Open it as a **draft**. Never merge, approve or enable auto-merge; Khaneil merges.
-- Fill in `.github/pull_request_template.md` and add one line at the top of `CHANGELOG.md`:
-  `- YYYY-MM-DD · What changed, in plain words (#PR)`.
+- Fill in `.github/pull_request_template.md` and add one changelog line in a new file
+  `changelog.d/<your-branch-name>.md`: `- YYYY-MM-DD · What changed, in plain words (#PR)`. Don't
+  edit the top of `CHANGELOG.md`.
 - Before pushing, run `npm run lint`, `npm run typecheck`, `npm test`, and
   `cargo test --manifest-path src-tauri/Cargo.toml` when Rust changed. Anything on screen: `npm run visual`
   with before and after screenshots at desktop and iPhone width (`docs/visual-testing.md`).
@@ -29,7 +30,8 @@ minutes, and it redeploys the web page.
 
 Every change that adds or changes something in Atlas (buildings, agents, automations, n8n workflows,
 map objects, names, statuses) also updates the data behind the tabs in the same pull request. Where
-that data lives and what is checked: `CLAUDE.md`, "Keep the dashboard tabs current".
+that data lives and what is checked: `CLAUDE.md`, "Keep the dashboard tabs current". Adding an agent,
+automation or building: follow `docs/adding-to-atlas.md`.
 
 ## Fix requests from Atlas
 

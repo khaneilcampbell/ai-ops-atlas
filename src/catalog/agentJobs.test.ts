@@ -3,6 +3,7 @@ import { catalog } from "./index";
 import { AGENT_RESIDENCE, OVERFLOW_RESIDENCE, agentJobs, apartments, clock, ownerOf, SHIFT_BY_TRIGGER } from "./agentJobs";
 import { isAiAgent } from "./roles";
 import type { Agent } from "./types";
+import { WORKSPACE } from "../modules/workspace";
 
 describe("agent jobs", () => {
   const jobs = agentJobs(catalog);
@@ -11,14 +12,18 @@ describe("agent jobs", () => {
     expect(jobs.length).toBeGreaterThan(10);
   });
   it("gives each working agent its own Circa apartment, stable across catalog order", () => {
-    const working = jobs.filter((j) => !j.offDuty);
+    // Residents of a landmark (workspace.yaml `residents`) live in that building instead.
+    const resident = new Set(WORKSPACE.landmarks.flatMap((l) => l.residents ?? []));
+    for (const j of jobs.filter((j) => resident.has(j.agentId))) expect(j.home).toMatchObject({ building: "investments", label: "Investment Operations Center" });
+    const rest = jobs.filter((j) => !resident.has(j.agentId));
+    const working = rest.filter((j) => !j.offDuty);
     expect(new Set(working.map((j) => j.home.label)).size).toBe(working.length);
     // Off duty agents hold no apartment, so they never take one a working agent needs.
-    for (const j of jobs.filter((j) => j.offDuty)) expect(j.home).toMatchObject({ unit: "", label: expect.stringContaining(`no apartment while ${j.offDuty}`) });
-    expect(jobs.every((j) => j.home.building === AGENT_RESIDENCE.id)).toBe(true);
+    for (const j of rest.filter((j) => j.offDuty)) expect(j.home).toMatchObject({ unit: "", label: expect.stringContaining(`no apartment while ${j.offDuty}`) });
+    expect(rest.every((j) => j.home.building === AGENT_RESIDENCE.id)).toBe(true);
     const named = new Set(catalog.agents.filter((a) => a.registry?.identity).map((a) => a.id));
-    const reversed = apartments(jobs.map((j) => j.agentId).reverse(), new Map(jobs.flatMap((j) => (j.offDuty ? [[j.agentId, j.offDuty] as const] : []))), named);
-    for (const j of jobs) expect(reversed.get(j.agentId)).toEqual(j.home);
+    const reversed = apartments(rest.map((j) => j.agentId).reverse(), new Map(rest.flatMap((j) => (j.offDuty ? [[j.agentId, j.offDuty] as const] : []))), named);
+    for (const j of rest) expect(reversed.get(j.agentId)).toEqual(j.home);
   });
   it("moves the city's named agents into Team Residence Towers first, then Client Success Center once it's full", () => {
     // Every named agent has its own apartment in the residence today.

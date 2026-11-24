@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { openAtlas, goTo, settle } from "./atlas";
-// The Agents tab opens on eight essential roles, each with its agents and automations nested
+// The Agents tab opens on the essential roles, each with its agents and automations nested
 // underneath (2026-11-17). Inactive, Archived and All entries stay one tab away.
 test.use({ deviceScaleFactor: 1 });
 const out = process.env.ROLE_SHOTS ?? "docs/essential-roles";
@@ -11,7 +11,7 @@ for (const width of [1512, 390])
     await openAtlas(page);
     mkdirSync(out, { recursive: true });
     await goTo(page, "Agents");
-    await expect(page.locator(".role-card")).toHaveCount(8);
+    await expect(page.locator(".role-card")).toHaveCount(9);
     await settle(page, 1);
     await page.screenshot({ path: `${out}/overview-${width}.png` });
     await page.locator('.role-card[data-role="benjaire-product-lab"] > summary').click();

@@ -145,7 +145,7 @@ export function occupancyText(building: string, agents: readonly { name: string;
  * building the map doesn't draw) has no roof to mark, so it returns null.
  */
 export function officeBuildingOf(
-  work: { kind: "headquarters" | "workplace"; projectId: string; building: string },
+  work: { kind: "headquarters" | "workplace" | "landmark"; projectId: string; building: string },
   towers: readonly { key: string; projectId: string }[],
   agency: { key: string; name: string } | null,
 ): string | null {

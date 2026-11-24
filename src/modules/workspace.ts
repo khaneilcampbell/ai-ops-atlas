@@ -24,6 +24,8 @@ export interface LandmarkAssignment {
   project?: string;
   /** That project's agents that operate this building without a desk in it (catalog agent ids). */
   agents?: string[];
+  /** AI agents among `agents` who also live here (their home on the map and on their cards). */
+  residents?: string[];
 }
 
 /**
@@ -98,7 +100,9 @@ export function parseWorkspace(file: string, text: string, issues: ManifestIssue
       if (o.project !== undefined && (!project || !ID_RE.test(project))) { fail(`landmarks.${key}.project: use a catalog project id such as "benjaire-site"`); continue; }
       const agents = o.agents === undefined ? undefined : Array.isArray(o.agents) ? o.agents.map(str) : null;
       if (agents !== undefined && (!project || !agents || !agents.length || !agents.every((a) => a && ID_RE.test(a)))) { fail(`landmarks.${key}.agents: list the catalog agent ids of its project that operate it, and set project`); continue; }
-      landmarks.push({ id: key.slice("service:".length), name: mapName, moduleType: o.module, ...(project ? { project } : {}), ...(agents?.length ? { agents: agents as string[] } : {}) });
+      const residents = o.residents === undefined ? undefined : Array.isArray(o.residents) ? o.residents.map(str) : null;
+      if (residents !== undefined && (!residents || !residents.length || !residents.every((a) => a && agents?.includes(a)))) { fail(`landmarks.${key}.residents: list agents from its own agents list`); continue; }
+      landmarks.push({ id: key.slice("service:".length), name: mapName, moduleType: o.module, ...(project ? { project } : {}), ...(agents?.length ? { agents: agents as string[] } : {}), ...(residents?.length ? { residents: residents as string[] } : {}) });
     }
   }
   return { id: id ?? EMPTY.id, name: name ?? EMPTY.name, landmarks, entitlements };

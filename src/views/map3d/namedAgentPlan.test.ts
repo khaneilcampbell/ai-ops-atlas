@@ -4,7 +4,7 @@ import { agentJobs } from "../../catalog/agentJobs";
 import { identities } from "../../registry/identity";
 import { CITY_FIGURES } from "../../registry/cityFigures";
 import { layoutMap } from "../mapLayout";
-import { planAgentCommutes } from "./agentCommutes";
+import { landmarkDoor, planAgentCommutes } from "./agentCommutes";
 import { figureParts, partMatrix, poseBones, BONES } from "./agentFigures";
 import { namedAgentAt, planNamedAgents, SPOT } from "./namedAgentPlan";
 import { buildScene } from "./scene";
@@ -37,6 +37,9 @@ describe("named agents in the city", () => {
       if (job.work.kind === "headquarters") {
         const t = scene.towers.find((x) => x.projectId === job.work.projectId)!;
         expect(Math.hypot(a.spot.x - t.x, a.spot.z - t.z), a.personaId).toBeLessThan(t.size / 2 + 2.5);
+      } else if (job.work.kind === "landmark") {
+        const door = landmarkDoor(scene, job.work.building)!;
+        expect(Math.hypot(a.spot.x - door[0], a.spot.z - door[1]), a.personaId).toBeLessThan(1.5);
       } else {
         expect(Math.hypot(a.spot.x - scene.agency!.entry[0], a.spot.z - scene.agency!.entry[1])).toBeLessThan(1.5);
       }

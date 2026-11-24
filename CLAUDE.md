@@ -31,6 +31,9 @@ something in Atlas updates the data behind the tabs in the same pull request, so
   leave outside services out of its `registry.responsibilities.tools` unless Khaneil wants a new
   tool building there (a major tool that works with that building).
 - Only record what is on `main` and what you checked; anything unproven stays "Not documented".
+- A new AI agent, even paused or a draft, is complete in the same pull request: identity and avatar,
+  city figure, a team role in `ESSENTIAL_ROLES`, and a place on the map. Automations need `owned_by`.
+  Follow `docs/adding-to-atlas.md`; `src/catalog/newAgentChecklist.test.ts` names anything missing.
 - `src/catalog/dashboardData.test.ts` guards this; the Workflow Automation Plant in the app lists
   any n8n workflow switched on but not in the catalog as "Not in Atlas yet".
 
