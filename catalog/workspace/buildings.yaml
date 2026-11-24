@@ -76,10 +76,19 @@ buildings:
     display_name: Business Finance Center
     organization: Benjaire
     former_names: [Corvane Capital]
-  "service:atlas-galleria":
+  # Nov 24: Business Operations HQ has its own building in the Financial District's east corner, with
+  # the Vendor & Supplier Hub as its annex. The Galleria that held it is now a filler building grouped
+  # with the HQ.
+  "service:business-operations-hq":
     display_name: Business Operations HQ
     organization: Benjaire
-    former_names: [Atlas Galleria, Vendor & Supplier Hub]
+  "service:supplier-hub":
+    display_name: Vendor & Supplier Hub
+    organization: Benjaire
+  "service:atlas-galleria":
+    display_name: Business Operations Galleria
+    organization: Filler building
+    former_names: [Business Operations HQ, Atlas Galleria, Vendor & Supplier Hub]
   "service:skyline-stadium":
     display_name: Atlas Commons Arena
     organization: Filler building

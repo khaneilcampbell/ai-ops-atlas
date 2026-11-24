@@ -8,6 +8,7 @@ import { DEALERSHIP_KEY } from "../views/map3d/dealershipPlan";
 import { FINANCIAL_BUILDINGS, financialKey } from "../views/map3d/financialPlan";
 import { LOOP_STATIONS } from "../views/map3d/perimeterRailPlan";
 import { GALLERIA_KEY } from "../views/map3d/galleriaPlan";
+import { BOH_KEY, SUPPLIER_HUB_KEY } from "../views/map3d/businessHqPlan";
 import { STADIUM_KEY } from "../views/map3d/stadiumPlan";
 import { PLAZA_KEY } from "../views/map3d/plazaPlan";
 import { AIRPORT_BUILDINGS, airportBuildingKey } from "../views/map3d/airportBuildings";
@@ -15,7 +16,7 @@ import { financialBuildingMatches, landmarkMatches } from "../lib/financialSearc
 import { BUILDING_NAMES, buildingAliases, buildingDisplayName, buildingNameIssues, buildingOrganization, currentBuildingName, parseBuildingNames } from "./names";
 
 /** Every building id the map draws itself and can be renamed in catalog/workspace/buildings.yaml. */
-const MAP_KEYS = new Set([AGENCY_KEY, MALL_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id), GALLERIA_KEY, STADIUM_KEY, PLAZA_KEY, ...AIRPORT_BUILDINGS.map((b) => airportBuildingKey(b.id))]);
+const MAP_KEYS = new Set([AGENCY_KEY, MALL_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id), GALLERIA_KEY, BOH_KEY, SUPPLIER_HUB_KEY, STADIUM_KEY, PLAZA_KEY, ...AIRPORT_BUILDINGS.map((b) => airportBuildingKey(b.id))]);
 
 describe("workspace building names", () => {
   it("loads without problems and only names buildings that exist on the map", () => {
@@ -38,7 +39,10 @@ describe("workspace building names", () => {
       [financialKey("circa"), "Team Residence Towers", "Benjaire"],
       [financialKey("insurance"), "Risk & Insurance Center", "Benjaire"],
       [financialKey("business-finance"), "Business Finance Center", "Benjaire"],
-      ["service:atlas-galleria", "Business Operations HQ", "Benjaire"],
+      // Nov 24: the HQ has its own building in the Financial District corner; the Galleria is a filler grouped with it.
+      [BOH_KEY, "Business Operations HQ", "Benjaire"],
+      [SUPPLIER_HUB_KEY, "Vendor & Supplier Hub", "Benjaire"],
+      ["service:atlas-galleria", "Business Operations Galleria", "Filler building"],
       ["service:skyline-stadium", "Atlas Commons Arena", "Filler building"],
       ["service:stadium-station", "Atlas Commons Station", "Filler building"],
       ["service:airport-building:terminal", "Atlas Airport Terminal", "Filler building"],

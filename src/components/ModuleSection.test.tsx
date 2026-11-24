@@ -16,7 +16,7 @@ const grouped = (of: { kind: "project" | "service"; id: string }) =>
   renderToStaticMarkup(<AtlasContext.Provider value={{ selection: null, catalog, repos: {}, uncataloged: [], settings: { refreshMinutes: 30 }, setView: noop, select: noop, setFilters: noop, clearFilters: noop } as never}><ModuleSection of={of} /></AtlasContext.Provider>);
 
 it("shows the module behind a building, keeping the building's own name out of the module", () => {
-  const html = render({ kind: "service", id: "atlas-galleria" });
+  const html = render({ kind: "service", id: "business-operations-hq" });
   expect(html).toContain("Business Operations HQ");
   expect(html).toContain("Partly available");
   expect(html).toContain("1 planned capability, not built yet");

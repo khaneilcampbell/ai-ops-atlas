@@ -1,4 +1,5 @@
 import {GALLERIA_FLOORS,GALLERIA_ID,GALLERIA_KEY,GALLERIA_NAME} from "../views/map3d/galleriaPlan";
+import {BOH_FLOORS,BOH_ID,BOH_KEY,BOH_NAME,SUPPLIER_HUB_ID,SUPPLIER_HUB_KEY,SUPPLIER_HUB_NAME} from "../views/map3d/businessHqPlan";
 import { AgentMemoryPanel } from "../views/tasks/MemoryPanels";
 import { RoutinePanel } from "../views/agents/RoutinePanel";
 import { BuildingInside } from "./BuildingInside";
@@ -67,7 +68,7 @@ export function DetailPanel({ docked = false }: { docked?: boolean }) {
 
   if (!selection) return null;
   const detail = selection.kind === "agent" ? <AgentDetail key={selection.id} id={selection.id} /> : selection.kind === "service" ? <ServiceDetail key={selection.id} id={selection.id} /> : selection.kind === "project" ? <ProjectDetail key={selection.id} id={selection.id} /> : <RepoDetail key={selection.id} name={selection.id} />;
-  const body = selection.kind === "project" || selection.kind === "service" ? <>{detail}<PartOf building={`${selection.kind}:${selection.id}`}/></> : detail;
+  const body = selection.kind === "project" || selection.kind === "service" ? <>{detail}{selection.id!==SUPPLIER_HUB_ID&&<PartOf building={`${selection.kind}:${selection.id}`}/>}</> : detail;
   if (docked)
     return (
       <aside className="panel docked" aria-label="Inspector">
@@ -173,12 +174,13 @@ function ServiceDetail({id}:{id:string}) {
       <dl className="kv"><dt>Commerce workers</dt><dd>Design Run · n8n Commerce workflow, desk on floor 1</dd><dt>Orders</dt><dd>Not read by Atlas yet. The catalog and orders stay planned.</dd><dt>Model usage</dt><dd>None in Atlas</dd></dl>
     </div>
   </>;
-  const galleriaModule=id===GALLERIA_ID?liveLandmarkModule(GALLERIA_ID):undefined;
+  if(id === BOH_ID) return <BusinessHqDetail/>;
+  if(id === SUPPLIER_HUB_ID) return <SupplierHubDetail/>;
   if(id === GALLERIA_ID) return <>
-    <Head eyebrow={`Business operations · Behind ${marketplaceName()}`} title={GALLERIA_NAME} building={GALLERIA_KEY}><span className="chip">{galleriaModule?`${galleriaModule.name} · ${galleriaModule.availability==="available"?"Available":"Partly available"}`:"Planned · Visual building"}</span><EnterBuildingButton id={GALLERIA_ID}/></Head>
-    <div className="panel-body selectable"><ModuleSection/><BusinessLink/><HousedBuildings host={GALLERIA_KEY}/><p>A three-storey shopping mall over a basement car park. Two curved wings meet at a V-shaped entrance with a fountain forecourt, and a rounded supermarket fills the far side. The floors step in and out under wavy white fins, with rope lights and planted terraces, round a central atrium with a steel funnel column under a polycarbonate canopy.</p>
+    <Head eyebrow={`Shopping mall · Behind ${marketplaceName()}`} title={GALLERIA_NAME} building={GALLERIA_KEY}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={GALLERIA_ID}/></Head>
+    <div className="panel-body selectable"><p>A three-storey shopping mall over a basement car park. Two curved wings meet at a V-shaped entrance with a fountain forecourt, and a rounded supermarket fills the far side. The floors step in and out under wavy white fins, with rope lights and planted terraces, round a central atrium with a steel funnel column under a polycarbonate canopy.</p>
       <section><div className="section-title">Floors</div><ul>{GALLERIA_FLOORS.map(f=><li key={f.floor}><strong>{f.label}</strong> · {f.summary}</li>)}</ul></section>
-      <dl className="kv"><dt>Shops</dt><dd>Labelled by what they sell. None are open, selling or connected to payments.</dd><dt>Assigned workers</dt><dd>None</dd><dt>Model usage</dt><dd>None</dd><dt>Repository / workflow</dt><dd>{galleriaModule?`Reads ${galleriaModule.connectors.join(", ")}`:"Not connected"}</dd></dl>
+      <dl className="kv"><dt>Shops</dt><dd>Labelled by what they sell. None are open, selling or connected to payments.</dd><dt>Assigned workers</dt><dd>None</dd><dt>Model usage</dt><dd>None</dd><dt>Repository / workflow</dt><dd>Not connected</dd></dl>
     </div>
   </>;
   if(id === "bmw-dealership") return <>
@@ -247,7 +249,8 @@ const selectionOf = (key: string) => ({ kind: key.startsWith("project:") ? "proj
  */
 export function HousedBuildings({ host }: { host: string }) {
   const { catalog, select } = useAtlas();
-  const housed = housedIn(host);
+  // The HQ's own annex has its own line in the HQ panel, so it is not listed as a filler building.
+  const housed = housedIn(host).filter(key => key !== SUPPLIER_HUB_KEY);
   if (!housed.length) return null;
   // A grouped building whose module is the one this building already houses adds nothing new.
   const own = buildingModule(host, catalog);
@@ -256,6 +259,32 @@ export function HousedBuildings({ host }: { host: string }) {
     {withModule.map(key => <ModuleSection key={key} of={selectionOf(key)} from={buildingName(key, catalog)}/>)}
     <section><div className="section-title">Filler buildings grouped here</div><ul className="link-list">{housed.map(key => { const mod = buildingModule(key, catalog); return <li key={key}><button className="text-btn" onClick={() => select(selectionOf(key))}>{buildingName(key, catalog)} →</button><span className="muted small">{!mod ? "Filler building · No module" : mod === own ? `Filler building · Its ${mod} module is this building's` : `Filler building · Its ${mod} module is shown here`}</span></li>; })}</ul></section>
   </>;
+}
+
+/**
+ * Business Operations HQ in the Financial District's east corner (Khaneil, 2026-11-24). Budget &
+ * Forecasting and Governance & Compliance moved in as floors; their towers are no longer drawn.
+ */
+function BusinessHqDetail() {
+  const { select } = useAtlas();
+  const live = liveLandmarkModule(BOH_ID);
+  return <><Head eyebrow="Business operations · Financial District corner" title={BOH_NAME} building={BOH_KEY}><span className="chip">{live?`${live.name} · ${live.availability==="available"?"Available":"Partly available"}`:"Planned · Visual building"}</span></Head>
+    <div className="panel-body selectable"><ModuleSection/><BusinessLink/>
+      <p>A green-glass and warm-stone mid-rise: a full-height glass atrium between two stone pylons, gold fins and a gold lobby canopy, planted terraces on the podium and roof, and a forecourt with a reflecting pool. The smaller Vendor &amp; Supplier Hub annex stands beside it, joined by a covered walkway.</p>
+      <section><div className="section-title">Floors</div><ul>{BOH_FLOORS.map(f=><li key={f.floor}><strong>{f.label}</strong> · {f.summary}</li>)}</ul></section>
+      <section><div className="section-title">Annex</div><button className="text-btn" onClick={()=>select(selectionOf(SUPPLIER_HUB_KEY))}>{SUPPLIER_HUB_NAME} →</button></section>
+      <HousedBuildings host={BOH_KEY}/>
+      <dl className="kv"><dt>Repository / workflow</dt><dd>{live?`Reads ${live.connectors.join(", ")}`:"Not connected"}</dd><dt>Model</dt><dd>Built in Blender (assets/business-operations-hq)</dd></dl>
+    </div></>;
+}
+
+/** The HQ's Vendor & Supplier Hub annex: its own click target, grouped with the HQ. */
+function SupplierHubDetail() {
+  const { select } = useAtlas();
+  return <><Head eyebrow={`Annex · Part of ${BOH_NAME}`} title={SUPPLIER_HUB_NAME} building={SUPPLIER_HUB_KEY}><span className="chip">Planned · Visual building</span></Head>
+    <div className="panel-body selectable"><p>A two-storey stone and glass annex with a gold fin screen and a green roof, joined to the HQ podium by a covered walkway. Vendors and suppliers belong to Business Operations HQ, which shows its module and data.</p>
+      <button className="text-btn" onClick={()=>select(selectionOf(BOH_KEY))}>Open {BOH_NAME} →</button>
+      <dl className="kv"><dt>Assigned workers</dt><dd>None</dd><dt>Repository / workflow</dt><dd>Not connected</dd></dl></div></>;
 }
 
 /** On a grouped building's own panel: which core building now holds its module. */

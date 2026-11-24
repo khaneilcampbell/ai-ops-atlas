@@ -68,9 +68,9 @@ describe("building instances", () => {
   });
 
   it("separates the workspace's building name from its platform module", () => {
-    // Khaneil, 2026-11-24: the former Vendor & Supplier Hub is the Business Operations HQ building, linked
+    // Khaneil, 2026-11-24: Business Operations HQ, its own building in the Financial District corner, linked
     // to Benjaire's project; Benjaire's own tower keeps its id and agents but houses no module.
-    const hq = workspaceBuildings(catalog).find((i) => i.id === "atlas-galleria")!;
+    const hq = workspaceBuildings(catalog).find((i) => i.id === "business-operations-hq")!;
     expect(hq).toMatchObject({ name: "Business Operations HQ", organization: "Benjaire", moduleType: "business-operations-hq", moduleProvenance: "declared", enabled: true, linked: { projectId: "benjaire-site" } });
     expect(MODULE_TYPES[hq.moduleType!].name).toBe("Business Operations HQ");
     expect(instances.find((i) => i.id === "benjaire-site")).toMatchObject({ name: "Business Operations Tower", moduleType: null });

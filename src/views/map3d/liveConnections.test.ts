@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { presentBusinessHq } from "./businessHqPlan";
 import { catalog } from "../../catalog";
 import { ATLAS_PROJECT, endpointKey, liveLandmarkConnections } from "../../lib/connections";
 import { landmarkInstances } from "../../modules/instances";
@@ -20,7 +21,7 @@ describe("live buildings connect to Atlas Command Center", () => {
     const live = liveLandmarks(instances, () => ({ health: "good", summary: "Live" }));
     expect(live.length).toBeGreaterThan(0);
     const layout = layoutMap(catalog, [], "district");
-    const anchors = anchorsOf(buildScene(layout), layout);
+    const anchors = anchorsOf(presentBusinessHq(buildScene(layout)), layout);
     const links = ends(live);
     for (const l of live) {
       const key = serviceKey(l.id);
