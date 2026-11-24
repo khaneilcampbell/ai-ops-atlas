@@ -55,6 +55,7 @@ beforeEach(async () => {
   const run = async (sql: string) => (pg ? pg.exec(sql) : withDb({ ATLAS_DATABASE_URL: external! }, (d) => d.query(sql)));
   await run(MIG("0001_atlas_core.sql"));
   await run(MIG("0002_executive.sql"));
+  await run(MIG("0004_engineering.sql"));
 });
 
 const OBJECTIVE = "Research one potential Benjaire AI automation product and prepare a structured opportunity report.";

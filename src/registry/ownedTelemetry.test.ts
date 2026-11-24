@@ -52,7 +52,7 @@ describe("owning agents run through their automations", () => {
     const t = agentTelemetry(catalog, agent("agent-operations-lead"), {}, intel(ok));
     expect(t.source).toBe("automations");
     expect(t.loaded).toBe(true);
-    expect(t.via).toEqual(["atlas-executive", "agent-registry-sync", "atlas-agent-factory", "atlas-step-runner", "atlas-task-writer"].map((id) => agent(id).name));
+    expect(t.via).toEqual(["atlas-executive", "atlas-qa", "agent-registry-sync", "atlas-agent-factory", "atlas-step-runner", "atlas-task-writer"].map((id) => agent(id).name));
     expect(t.executions[0].label.startsWith(agent("agent-registry-sync").name)).toBe(true);
     const r = runtimeFor(agent("agent-operations-lead"), t, undefined, 0, NOW);
     expect(r.state).toBe("idle");
