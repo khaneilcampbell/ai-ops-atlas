@@ -25,12 +25,16 @@ describe('Commerce-sized operations campus',()=>{
   }
  });
  it('keeps the actual Command and Commerce north street centerlines aligned and both connected',()=>{
-  const north=(id:string)=>{const d=district(id),t=scene.towers.find(t=>t.projectId===id)!;return towerRing(t,d.hq.size*1.25+1)!.z0;};
+  // The standard plaza ring's north side: the line the layout aligns the two campuses on. The Commerce
+  // wave tower's own ring runs wider (2026-11-24), so the through street meets it on its east side.
+  const north=(id:string)=>{const d=district(id),t=scene.towers.find(t=>t.projectId===id)!;return towerRing({x:t.x,z:t.z,size:t.size},d.hq.size*1.25+1)!.z0;};
   expect(north('ai-ops-atlas')).toBeCloseTo(north('commerce-pipeline'),9);
   const through=scene.transportConnections.find(c=>c.id==='operations-through-street')!;
   expect(through.road).toHaveLength(2);expect(through.road[1][1]).toBe(through.road[0][1]);
   expect(pathClear(through.road,[...scene.towers,...scene.kiosks].map(t=>({x:t.x,z:t.z,w:t.size,d:t.size})),.4)).toBe(true);
   for(const p of through.road)expect(p[1]).toBeCloseTo(north('commerce-pipeline'),9);
+  const c=scene.towers.find(t=>t.projectId==='commerce-pipeline')!,ring=towerRing(c,99)!;
+  expect(through.road[0][0]).toBeCloseTo(ring.x1,9);expect(through.road[0][1]).toBeGreaterThan(ring.z0);
   for(const id of OPERATIONS_DISTRICTS)expect(scene.carBridges.some(b=>b.ends.includes(id))).toBe(true);
  });
  it('preserves other parcels, Development Hub and building dimensions',()=>{

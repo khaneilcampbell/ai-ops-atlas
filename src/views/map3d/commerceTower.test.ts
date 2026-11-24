@@ -6,7 +6,9 @@ import {layoutMap,DISTRICT_MIN_SIZE,DISTRICT_HQ_SHARE,type GroupBy} from '../map
 import {buildScene} from './scene';
 import {towerTop} from './models';
 import {isRibbonTower} from './ribbonTowerPlan';
-import {COMMERCE,footprint,isCommerceTower,planAt,podiumHeight,poolRing,ribbonWindow,roofShare,roofTrees,signedArea,teardrop,twistAt} from './commerceTowerPlan';
+import {plazaRings} from './streetGraph';
+import {TRANSPORT} from './transportScale';
+import {COMMERCE,commerceScale,footprint,isCommerceTower,planAt,podiumHeight,poolRing,ribbonWindow,roofShare,roofTrees,signedArea,teardrop,twistAt} from './commerceTowerPlan';
 import {commerceGeometry,commerceTriangles} from './commerceTowerGeometry';
 
 const GROUPINGS:GroupBy[]=['none','district','status','tag'];
@@ -56,6 +58,17 @@ describe('Commerce Pipeline teardrop tower',()=>{
    }
   }
  });
+ it('runs its street ring just outside the plinth, and no street crosses the building (option A, 2026-11-24)',()=>{
+  for(const grouping of GROUPINGS){
+   const scene=buildScene(layoutMap(catalog,[],grouping)),t=scene.towers.find(t=>isCommerceTower(t.projectId))!,ring=plazaRings(scene).get(t.projectId)!;
+   const rim=COMMERCE.plinth*commerceScale(t.size),inner=Math.min(t.x-ring.x0,ring.x1-t.x,t.z-ring.z0,ring.z1-t.z)-TRANSPORT.cityWidth/2;
+   expect(inner,grouping).toBeGreaterThan(rim);
+   // Every road and bridge road keeps its carriageway off the plinth.
+   const roads=[...scene.transportConnections.map(c=>c.road),...scene.carBridges.flatMap(b=>b.roads)];
+   for(const r of roads)for(let i=1;i<r.length;i++){const [a,b]=[r[i-1],r[i]],n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.05);
+    for(let k=0;k<=n;k++){const x=a[0]+(b[0]-a[0])*k/n,z=a[1]+(b[1]-a[1])*k/n;expect(Math.max(Math.abs(x-t.x),Math.abs(z-t.z))-TRANSPORT.cityWidth/2,`${grouping} road at ${x.toFixed(2)},${z.toFixed(2)}`).toBeGreaterThan(rim);}}
+  }
+ });
  it('keeps the pool and the olive trees on the podium roof, clear of the tower',()=>{
   const tower=planAt(0,1,COMMERCE.finDepth);
   for(const p of poolRing())expect(inside(p,tower)).toBe(false);
@@ -74,7 +87,8 @@ describe('Commerce Pipeline teardrop tower',()=>{
  it('stays inside its performance budget: merged meshes, a few instances, no lights or frame loop',()=>{
   const g=commerceGeometry(1,COMMERCE.height*2);
   const meshes=Object.values(g).filter(v=>v&&typeof v==='object'&&'attributes' in v);
-  expect(meshes.length).toBeLessThanOrEqual(14);
+  // 15 since the grounds round the podium (2026-11-24) became one flat vertex-coloured mesh.
+  expect(meshes.length).toBeLessThanOrEqual(15);
   expect(commerceTriangles(g)).toBeLessThan(30000);
   const source=readFileSync(join(__dirname,'CommerceTower.tsx'),'utf8');
   expect(source).not.toMatch(/<(point|spot|directional|ambient|hemisphere|rectArea)Light/);expect(source).not.toMatch(/useFrame/);

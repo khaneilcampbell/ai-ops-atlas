@@ -10,7 +10,7 @@ import { openFloor, useInsideFloors } from "../../buildings/insideFloors";
 import { passWidth, standingClearHeight } from "./agentBody";
 import { cutCount, cutDepthMaterial, cutHeights, cutRects, CUT_MAX, setCutaway } from "./materials";
 import { FLOOR_BASE, towerTop } from "./models";
-import { pickInside, sameTiers, stepCut, type InsideCandidate, type InsideLimits, type InsideTiers } from "./inside";
+import { keepsExterior, pickInside, sameTiers, stepCut, type InsideCandidate, type InsideLimits, type InsideTiers } from "./inside";
 import type { Tower } from "./scene";
 
 /** One desk as the Inside view needs it: where it stands (the building definition) and its screen. */
@@ -231,8 +231,8 @@ function Rising({ items, geometry, material, rise, shadow = true }: { items: Par
 export function InsideView({ on, towers, offices, limits, reduced, night, selected, onOpen }: { on: boolean; towers: Tower[]; offices: Map<string, InsideOffice>; limits: InsideLimits; reduced: boolean; night: boolean; selected: string | null; onOpen?: (keys: string[]) => void }) {
   const { camera, scene, gl, invalidate } = useThree();
   const byKey = useMemo(() => new Map(towers.map((t) => [t.key, t])), [towers]);
-  // Only buildings with an office plan open up; the rest keep their exterior.
-  const cands = useMemo<InsideCandidate[]>(() => towers.filter((t) => offices.has(t.projectId)).map((t) => ({ key: t.key, x: t.x, y: FLOOR_BASE, z: t.z })), [towers, offices]);
+  // Only buildings with an office plan open up; the rest keep their exterior (see keepsExterior).
+  const cands = useMemo<InsideCandidate[]>(() => towers.filter((t) => offices.has(t.projectId) && !keepsExterior(t.projectId)).map((t) => ({ key: t.key, x: t.x, y: FLOOR_BASE, z: t.z })), [towers, offices]);
   // The floor picker and "Locate agent" choose which floor each building opens (insideFloors.ts).
   const floors = useInsideFloors();
   const lastOffices = useRef(offices);

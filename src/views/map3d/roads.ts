@@ -1,4 +1,5 @@
 import {TRANSPORT} from "./transportScale";
+import {commerceRingHalf, isCommerceTower} from "./commerceTowerPlan";
 // Where the decorative vehicles can drive: the lane round each headquarters, and the road bridges
 // that join neighboring districts. Pure data, shared by the scene (which paves and builds them)
 // and the vehicles (which drive them), so both agree on every coordinate.
@@ -40,8 +41,10 @@ export interface Ring {
 }
 
 /** The plaza lane for a tower of this size on a square plaza this wide, or null if there's no room. */
-export function towerRing(t: { x: number; z: number; size: number }, plazaW: number): Ring | null {
-  const lane = Math.min(plazaW / 2 - EDGE, t.size / 2 + LANE);
+export function towerRing(t: { x: number; z: number; size: number; projectId?: string }, plazaW: number): Ring | null {
+  // The Commerce wave tower outgrows its lot, so its ring runs just outside its plinth instead.
+  const want = t.projectId && isCommerceTower(t.projectId) ? commerceRingHalf(t.size) : t.size / 2 + LANE;
+  const lane = Math.min(plazaW / 2 - EDGE, want);
   if (lane < t.size / 2 + CLEAR) return null;
   return { x0: t.x - lane, z0: t.z - lane, x1: t.x + lane, z1: t.z + lane };
 }
@@ -77,7 +80,7 @@ export function ringParam(g: Ring, p: Pt): number {
  * Points along the ring from one exit to another, corners included. Goes counterclockwise unless
  * that would cross in front of the tower, where the entrance stairs are; then it goes round the back.
  */
-export function ringPath(g: Ring, from: Pt, to: Pt): Pt[] {
+export function ringPath(g: Ring, from: Pt, to: Pt, front = false): Pt[] {
   const w = g.x1 - g.x0;
   const d = g.z1 - g.z0;
   const corners = [0, w, w + d, 2 * w + d];
@@ -95,6 +98,9 @@ export function ringPath(g: Ring, from: Pt, to: Pt): Pt[] {
     return pts;
   };
   const ccw = walk(from, to);
+  // With `front`, the shorter way round, front included: the Commerce wave tower's ring runs past
+  // its forecourt and drop-off, clear of the entrance (2026-11-24).
+  if (front) { const cw = walk(to, from).reverse(), len = (pts: Pt[]) => [from, ...pts, to].reduce((n, p, i, a) => i ? n + dist(a[i - 1], p) : 0, 0); return [...(len(ccw) <= len(cw) ? ccw : cw), to]; }
   if (!ccw.some((p) => Math.abs(p[1] - g.z1) < 1e-6)) return [...ccw, to];
   return [...walk(to, from).reverse(), to];
 }

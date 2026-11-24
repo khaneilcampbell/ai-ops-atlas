@@ -248,8 +248,13 @@ export function windowLights(m: THREE.MeshStandardMaterial, glow: THREE.Texture,
       `#include <emissivemap_fragment>
       float win = floor((vEmissiveMapUv.x * 512.0 - ${offset.toFixed(1)}) / ${spacing.toFixed(1)});
       float lit = step(${(1 - Math.min(0.88, share + 0.22)).toFixed(2)}, litHash(vec3(win, vSeed.y * 3.13 + vSeed.x, vSeed.z * 1.7 + vSeed.x * 0.37)));
-      // Most windows warm at night, a few dim; unlit glass keeps a faint glow so facades never go flat.
-      totalEmissiveRadiance *= uNight * (0.1 + 0.9 * lit);`,
+      // Night realism pass (2026-11-24): fewer windows on, each at its own brightness, most a warm
+      // 2700K, about one in four a cooler 4000K office white; unlit glass keeps only a trace of glow.
+      float roll = litHash(vec3(win * 1.7, vSeed.y * 5.1 + vSeed.z, vSeed.x * 2.3));
+      lit *= step(0.22, roll);
+      float level = 0.55 + 0.6 * fract(roll * 7.31);
+      vec3 tint = mix(vec3(1.0), vec3(0.78, 0.9, 1.25), step(0.76, fract(roll * 3.17)));
+      totalEmissiveRadiance *= tint * uNight * (0.04 + 0.96 * lit * level);`,
     );
   };
   m.customProgramCacheKey = () => `atlas-windows-${offset}-${spacing}-${share}`;

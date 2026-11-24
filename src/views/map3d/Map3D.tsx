@@ -75,7 +75,7 @@ import { isRibbonTower } from "./ribbonTowerPlan";
 import { CommerceTower } from "./CommerceTower";
 import { CommerceAnnexes } from "./CommerceAnnexes";
 import { ANNEX, isCommerceAnnex } from "./commerceAnnexPlan";
-import { isCommerceTower } from "./commerceTowerPlan";
+import { COMMERCE_FLOOR, isCommerceTower } from "./commerceTowerPlan";
 import { GithubTower } from "./GithubTower";
 import { isGithubTower } from "./githubTowerPlan";
 import { districtRect, wholeBuilding, type Footprint } from "./buildingExtent";
@@ -1532,7 +1532,7 @@ function World({
       <Towers towers={scene.towers} strays={scene.strays} health={health} g={g} m={m} pick={pick} />
       {scene.towers.filter((t) => t.identity.landmark).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><AtlasHq tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
       {scene.towers.filter((t) => isRibbonTower(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><RibbonTower tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
-      {scene.towers.filter((t) => isCommerceTower(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><CommerceTower tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
+      {scene.towers.filter((t) => isCommerceTower(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><CommerceTower tower={t} base={TERRACE_H + COMMERCE_FLOOR} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
       {scene.towers.filter((t) => isGithubTower(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><GithubTower tower={t} annex={scene.githubAnnex} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
       {scene.towers.filter((t) => isIntelligenceHub(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><IntelligenceHub tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}
       {scene.towers.filter((t) => isPortfolioSite(t.projectId)).map((t) => <WholeBuildingGlow key={t.key} state={activity.get(t.key) ?? "idle"} reduced={reduced}><PortfolioSite tower={t} base={FLOOR_BASE} g={g} m={m} pick={pick.of([t.key])} night={lightMode === "night"} /></WholeBuildingGlow>)}

@@ -1,4 +1,5 @@
 import type {Pt} from './roads';
+import {TRANSPORT} from './transportScale';
 
 /**
  * Commerce Pipeline's headquarters, the teardrop tower (Khaneil, 2026-11-01): a glass tower on a
@@ -22,10 +23,10 @@ export const COMMERCE={
  refSize:2.944,
  /** Plinth half-size: nothing may stand outside it. Same share of the footprint as Benjaire HQ's. */
  plinth:1.67,
- /** Points round every plan outline. */
- ring:56,
+ /** Points round every plan outline (fine enough for the gold valley's curved walls). */
+ ring:112,
  /** Teardrop: the round end's radius, the point's radius, and how far apart their centres are. */
- round:.52,tip:.15,length:.92,
+ round:.82,tip:.24,length:1.32,
  /** The way the point faces (radians, 0 = +x, turning toward +z); the round end's centre sits
   * inside the podium's round end, touching it at the back (see podium.offset). */
  heading:-.62,
@@ -38,28 +39,75 @@ export const COMMERCE={
  /** The roof's cut: the round end's roof stands this share of the height below the point's. */
  slope:.1,
  /** Fins stand out this far and run on above the glass by this much at the top. */
- finDepth:.05,finEvery:2,screen:.22,
+ finDepth:.04,finEvery:2,screen:.22,
  /** Floor bands every this much of the height, as thin ledges. */
  floor:.24,
- /** The gold ribbon: how many outline points wide, and how far it winds round the plan. */
- ribbon:{width:7,wind:.07},
+ /**
+  * The gold ribbon (realism pass, 2026-11-24): no longer a stripe painted on the skin but a
+  * valley cut into the tower, splitting it into two silver blades with warm gold glass curving
+  * between them, as on the reference board. How many outline points wide, how far it winds
+  * round the plan, how deep the valley is cut, and how far the white lip trims stand out.
+  */
+ ribbon:{width:17,wind:.07,depth:.11,lip:.055},
  podium:{
-  /** Storey heights bottom up: a double-height lobby, then three office floors (about a fifth of the tower). */
-  floors:[.44,.26,.26,.26] as number[],
+  /** Storey heights bottom up: a grand clear-glass lobby (realism pass, 2026-11-24: taller, about two and a half storeys), then three office floors. */
+  floors:[.56,.26,.26,.26] as number[],
   /** The podium's teardrop, same heading as the tower's base: half as wide again and longer. */
-  round:1.02,tip:.38,length:1.98,
+  round:1.1,tip:.4,length:2.1,
   /** The podium's round-end centre, local to the tower. */
   centre:[-.56,.4] as Pt,
   /** Roof garden parapet, glass. */
   rail:.08,
  },
  /** The pool on the podium roof beyond the tower, along the axis toward the point: share of the podium's length, and radii. */
- pool:{at:.98,rx:.28,rz:.17},
+ pool:{at:1.04,rx:.24,rz:.16},
  /** The entrance canopy: a thin sweep over the lobby round the podium's front, as a share of its outline. */
- canopy:{span:.22,depth:.24,y:.46},
+ canopy:{span:.22,depth:.26,y:.58},
+ /**
+  * The lobby inside the clear glass (2026-11-24): a stone floor, the tower's core carried down
+  * as a warm stone wall (grown in from the tower's base outline), a reception desk facing the
+  * doors, slim white columns inside the glass line every this many podium points, and a lit soffit.
+  */
+ /**
+  * The grounds round the podium, after the reference site plan (Khaneil, 2026-11-24: "add the
+  * area surround from the pictures"): a pale stone forecourt following the teardrop, a drop-off
+  * lane curving past the entrance, striped car-park ramps down the long side, and the square
+  * plinth's open corners planted as lawns with trees. Widths are offsets from the podium's
+  * outline; `edge` is how far inside the plinth's rim everything stops (negative: the grounds run
+  * a little past it onto the level district plaza, which is wider than the plinth).
+  */
+ site:{forecourt:.16,lane:.15,laneSpan:20,ramp:[13,6] as [number,number],grid:.2,treeEvery:2,edge:0},
+ lobby:{core:-.16,desk:[.42,.075,.09] as [number,number,number],deskBack:.42,columnEvery:4,columnInset:.13,column:.022,soffit:.035},
 } as const;
 
 export const isCommerceTower=(projectId:string)=>projectId===COMMERCE.projectId;
+/**
+ * Floor level (Khaneil, 2026-11-24: "integrated with Atlas street design and flooring level"): the
+ * tower's forecourt is a thin slab this thick on the district plaza, not the 0.15 plinth the plain
+ * towers stand on, so the lobby floor, forecourt and drop-off lane sit level with the city's
+ * plaza paving and sidewalks and people walk straight in. World units above TERRACE_H.
+ */
+export const COMMERCE_FLOOR=.035;
+/**
+ * With the district's tool offices gone there is open plaza round the plinth, so the whole
+ * building, plinth included, stands this much bigger than its lot size (Khaneil, 2026-11-24:
+ * "expand the size"). Kept here, not in the district layout, so no street or neighbour moves.
+ */
+export const COMMERCE_GROW=1.35;
+/** Drawing scale for a Commerce tower of lot size `size`. */
+export const commerceScale=(size:number)=>size/COMMERCE.refSize*COMMERCE_GROW;
+/**
+ * The street ring round the tower (Khaneil, 2026-11-24, option A): once the building grew, the
+ * standard ring (half the tower's lot plus a lane) ran under the podium. The ring's centre line now
+ * runs a sidewalk and half a street outside the plinth's rim, so the kerb meets the forecourt.
+ * The kerb gap is set so the ring's west side falls on the avenue down from the Financial District
+ * (x 9.277 in the district view), so that avenue runs straight on along the ring. Half-widths from
+ * the tower's centre, in world units.
+ */
+export const COMMERCE_RING_KERB=.077;
+export const commerceRingHalf=(size:number)=>Math.floor((COMMERCE.plinth*commerceScale(size)+COMMERCE_RING_KERB+TRANSPORT.cityWidth/2)*1000)/1000;
+/** The plaza paving reaches past the ring by half a street and a kerb, the same edge the other plazas keep. */
+export const commercePlazaHalf=(size:number)=>commerceRingHalf(size)+TRANSPORT.cityWidth/2+.1;
 /** Roof height at the point: the reference drawing's, or the height the scene gives it. */
 export const commerceTop=(k=1,height?:number)=>height??COMMERCE.height*k;
 
@@ -117,7 +165,7 @@ export function planAt(t:number,k=1,grow=0):Pt[]{
  * full height and the roof falls toward the round end.
  */
 export function roofShare(i:number,n:number=COMMERCE.ring){
- const f=Math.min(i,n-i)/(n/2);
+ const w=((i%n)+n)%n,f=Math.min(w,n-w)/(n/2);
  return 1-COMMERCE.slope*Math.sin(f*Math.PI/2)**1.5;
 }
 
@@ -146,6 +194,12 @@ export function ribbonWindow(t:number,n:number=COMMERCE.ring){
  return out;
 }
 
+/**
+ * How far the gold valley is cut in at a point across it: x runs -1..1 lip to lip. A round
+ * scoop, so the lips meet the blades square and the gold curves away between them.
+ */
+export const valleyInset=(x:number)=>COMMERCE.ribbon.depth*Math.sqrt(Math.max(0,1-x*x));
+
 /** Floor band heights up the tower. */
 export function floorHeights(k=1,height=COMMERCE.height*k){
  const step=COMMERCE.floor*k,n=Math.floor(height*(1-COMMERCE.slope)/step);
@@ -156,10 +210,12 @@ export function floorHeights(k=1,height=COMMERCE.height*k){
 export const podiumTop=(level:number,k=1)=>COMMERCE.podium.floors.slice(0,level+1).reduce((a,b)=>a+b,0)*k;
 export const podiumHeight=(k=1)=>podiumTop(COMMERCE.podium.floors.length-1,k);
 
+/** The podium keeps the coarser outline: its curves are gentle and it is seen from above. */
+export const PODIUM_RING=56;
 /** The podium's outline: the full teardrop, unturned by the twist; `grow` pushes it out (negative pulls it in). */
 export function podiumRing(k=1,grow=0):Pt[]{
  const p=COMMERCE.podium,a=COMMERCE.heading;
- return teardrop(p.round+grow,p.tip+grow,p.length).map(([x,z])=>{const [rx,rz]=rot([x,z],a);return [(rx+p.centre[0])*k,(rz+p.centre[1])*k] as Pt;});
+ return teardrop(p.round+grow,p.tip+grow,p.length,PODIUM_RING).map(([x,z])=>{const [rx,rz]=rot([x,z],a);return [(rx+p.centre[0])*k,(rz+p.centre[1])*k] as Pt;});
 }
 
 /** The pool's outline on the podium roof, lying along the axis beyond the tower. */
@@ -179,12 +235,28 @@ export function roofTrees(k=1){
  return ring.filter((p,i)=>i%4===0&&!insidePoly(p,tower)&&!near(p,tower,.16)&&!near(p,pool,.12)).map(([x,z])=>({x:x*k,z:z*k,y:podiumHeight(k)}));
 }
 
+/** Keeps a ground point inside the plinth's rim. */
+const onPlinth=([x,z]:Pt):Pt=>{const e=COMMERCE.plinth-COMMERCE.site.edge;return [Math.max(-e,Math.min(e,x)),Math.max(-e,Math.min(e,z))];};
+/** A band of the podium's outline pushed out from `a` to `b`, clamped to the plinth (local, unscaled). */
+export function siteBand(a:number,b:number):[Pt[],Pt[]]{return [podiumRing(1,a).map(onPlinth),podiumRing(1,b).map(onPlinth)];}
+/** The open corners of the square plinth beyond the forecourt and lane: lawn tiles, with a tree on every other one. */
+export function siteLawns(k=1){
+ const S=COMMERCE.site,e=COMMERCE.plinth-S.edge,keep=podiumRing(1,S.forecourt+S.lane+.06),out:{x:number;z:number;s:number;tree:boolean}[]=[];
+ const n=Math.floor(2*e/S.grid);
+ for(let i=0;i<n;i++)for(let j=0;j<n;j++){
+  const x=-e+(i+.5)*S.grid,z=-e+(j+.5)*S.grid,h=S.grid/2;
+  if([[x-h,z-h],[x+h,z-h],[x-h,z+h],[x+h,z+h],[x,z]].some(p=>insidePoly(p as Pt,keep)))continue;
+  out.push({x:x*k,z:z*k,s:S.grid*.92*k,tree:(i+j)%S.treeEvery===0});
+ }
+ return out;
+}
+
 /** The outline point the lobby faces from: the podium's front (largest z), where the canopy is centred. */
 export function frontIndex(){
  const ring=podiumRing();let best=0;ring.forEach(([,z],i)=>{if(z>ring[best][1])best=i;});return best;
 }
 /** The canopy's outline span [first, last] (may run past the ring's end; wrap with modulo). */
-export function canopySpan(n:number=COMMERCE.ring):[number,number]{
+export function canopySpan(n:number=PODIUM_RING):[number,number]{
  const c=frontIndex(),h=Math.round(COMMERCE.canopy.span*n/2);return [c-h,c+h];
 }
 

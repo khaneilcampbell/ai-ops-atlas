@@ -15,6 +15,8 @@ import CutawayWall from "./CutawayWall";
 import CityOutside from "./CityOutside";
 import AtlasHqShell from "./AtlasHqShell";
 import { hqClearSpan, isAtlasHq, shellAxes } from "./atlasHqInteriorPlan";
+import CommerceShell from "./CommerceShell";
+import { commerceCityFit, commerceOutline, fixtures, frontZ, isCommerceInterior } from "./commerceInteriorPlan";
 import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
 import type { CityFigure } from "../../registry/cityFigures";
@@ -73,15 +75,18 @@ export default function OfficeScene(props: Props) {
     <Canvas style={{position:"absolute",inset:0,zIndex:0}} shadows="percentage" dpr={[1, power.maxDpr]} frameloop={visible ? "demand" : "never"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
       <FramePacer profile={power} running={!reduced} />
       <OfficeCamera allFloors={props.floor===-1} plan={props.plan} reduced={reduced} api={props.api} focus={props.selected ? props.desks.find((d) => d.ws.agentId === props.selected)?.ws : undefined} />
-      <CityOutside allFloors={props.floor===-1} projectId={props.plan.projectId} span={Math.max(props.plan.w,props.plan.d)} clearSpan={isAtlasHq(props.plan.projectId)?hqClearSpan(props.plan.w,props.plan.d):undefined} elevation={Math.max(0,props.floor??0)*3.4}/>
+      {isCommerceInterior(props.plan.projectId)
+        ?<CommerceCity plan={props.plan} allFloors={props.floor===-1} elevation={Math.max(0,props.floor??0)*3.4}/>
+        :<CityOutside allFloors={props.floor===-1} projectId={props.plan.projectId} span={Math.max(props.plan.w,props.plan.d)} clearSpan={isAtlasHq(props.plan.projectId)?hqClearSpan(props.plan.w,props.plan.d):undefined} elevation={Math.max(0,props.floor??0)*3.4}/>}
       {props.floor===-1&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,0.85,1]}><MovingLift reduced={reduced}/></group>}
       {(props.floor===-1?[0,1,2,3,4]:[props.floor??4]).map(level=><group key={level} position={[0,props.floor===-1?level*3.4:0,0]}>
         <FloorLabel level={level} width={props.plan.w} depth={props.plan.d+2}/>
         {props.floor!==undefined&&<Box p={[0,-0.06,props.plan.d/2+1]} s={[props.plan.w+0.4,0.12,2.2]} m={MAT.floor}/>}
         {isAtlasHq(props.plan.projectId)&&<AtlasHqShell w={props.plan.w} d={props.plan.d} level={level} night={props.light==="night"}/>}
-        <OfficeEnvironment shell={isAtlasHq(props.plan.projectId)} plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} residents={residentsLabel(desks.length,props.automations??0)} lighting={props.floor!==-1||level===4}/>
-        {(level===0||props.floor===undefined)&&<LobbyEntrance z={isAtlasHq(props.plan.projectId)?shellAxes(props.plan.w,props.plan.d).b:props.plan.d/2+0.08} width={1.4} height={2.2}/>}
-        {level<4&&!desks.some(d=>(d.floor??4)===level)&&<SharedFloor plan={props.plan} floor={level}/>}
+        {isCommerceInterior(props.plan.projectId)&&<CommerceShell w={props.plan.w} d={props.plan.d} level={level} night={props.light==="night"}/>}
+        <OfficeEnvironment shell={isAtlasHq(props.plan.projectId)||isCommerceInterior(props.plan.projectId)} fittings={isCommerceInterior(props.plan.projectId)?fixtures(props.plan.w,props.plan.d):undefined} plan={props.plan} wall={level<4?{...props.wall,line:["Welcome · Reception & business lobby","Collaboration · Meeting rooms","Research · Planning suites","Review · Training & expansion"][level]}:props.wall} light={props.light} residents={residentsLabel(desks.length,props.automations??0)} lighting={props.floor!==-1||level===4}/>
+        {(level===0||props.floor===undefined)&&<LobbyEntrance z={isAtlasHq(props.plan.projectId)?shellAxes(props.plan.w,props.plan.d).b:isCommerceInterior(props.plan.projectId)?frontZ(commerceOutline(props.plan.w,props.plan.d),0):props.plan.d/2+0.08} width={1.4} height={2.2}/>}
+        {level<4&&!desks.some(d=>(d.floor??4)===level)&&!(level===0&&isCommerceInterior(props.plan.projectId))&&<SharedFloor plan={props.plan} floor={level}/>}
         {props.floor!==undefined&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,1,1]}><ElevatorLanding door={isAtlasHq(props.plan.projectId)?0:undefined} lobbyWalk={false} level={level} reduced={reduced} labels={props.floor!==-1}/></group>}
         {desks.some(d=>(d.floor??4)===level)&&<WorkflowFloor desks={desks.filter(d=>(d.floor??4)===level)}/>}
         {desks.some(d=>(d.floor??4)===level)&&<LevelBands desks={desks} level={level}/>}
@@ -110,6 +115,13 @@ function SharedFloor({plan,floor}:{plan:OfficePlan;floor:number}) {
 
 type Pose = { target: THREE.Vector3; r: number; phi: number; theta: number };
 const AZ = Math.PI / 4;
+
+/** The city round the wave tower, scaled and centred so its streets run round the teardrop (commerceCityFit). */
+function CommerceCity({plan,allFloors,elevation}:{plan:OfficePlan;allFloors:boolean;elevation:number}){
+  const fit=(s:{towers:{projectId:string;x:number;z:number;size:number}[]})=>{const t=s.towers.find(t=>t.projectId===plan.projectId);return t&&commerceCityFit(plan.w,plan.d,t);};
+  const span=commerceCityFit(plan.w,plan.d,{x:0,z:0,size:1}).span;
+  return <CityOutside allFloors={allFloors} projectId={plan.projectId} span={span} clearSpan={span} elevation={elevation} scaleOverride={s=>fit(s)?.scale} anchorAt={s=>fit(s)?.anchor}/>;
+}
 
 function OfficeCamera({ plan, reduced, api, focus, allFloors }: { allFloors:boolean; plan: OfficePlan; reduced: boolean; api: Props["api"]; focus?: Workstation }) {
   const { camera, gl, invalidate, size } = useThree();
@@ -259,7 +271,7 @@ function Box({ p, s, m, r }: { p: [number, number, number]; s: [number, number, 
 // ---------------------------------------------------------------- environment
 
 /** OfficeEnvironment: floor, cutaway walls with windows, wall display, server rack and plants. */
-function OfficeEnvironment({ plan, wall, light, residents, lighting=true, shell=false }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; residents: string; lighting?:boolean; shell?: boolean }) {
+function OfficeEnvironment({ plan, wall, light, residents, lighting=true, shell=false, fittings }: { plan: OfficePlan; wall: Props["wall"]; light: LightMode; residents: string; lighting?:boolean; shell?: boolean; fittings?: ReturnType<typeof fixtures> }) {
   const { w, d } = plan;
   const night = light === "night";
   const H = 2.7;
@@ -331,7 +343,7 @@ function OfficeEnvironment({ plan, wall, light, residents, lighting=true, shell=
 
       {/* Wall display: the project and its verified CI line, the same facts as the map. */}
       <CutawayWall side="back" always={shell}>
-      <group position={[0, 1.6, -d / 2 + 0.03]}>
+      <group position={fittings ? [fittings.display.x, 1.6, fittings.display.z] : [0, 1.6, -d / 2 + 0.03]}>
         <Box p={[0, 0, 0]} s={[2.5, 1.3, 0.06]} m={MAT.dark} />
         <mesh position={[0, 0, 0.035]}>
           <planeGeometry args={[2.36, 1.18]} />
@@ -341,7 +353,7 @@ function OfficeEnvironment({ plan, wall, light, residents, lighting=true, shell=
       </CutawayWall>
 
       {/* Server rack in the back corner. Its lights are decoration, not telemetry. */}
-      <group position={shell ? [-w / 2 + 1.0, 0, -d / 2 + 1.0] : [-w / 2 + 0.55, 0, -d / 2 + 0.55]}>
+      <group position={fittings ? [fittings.rack.x, 0, fittings.rack.z] : shell ? [-w / 2 + 1.0, 0, -d / 2 + 1.0] : [-w / 2 + 0.55, 0, -d / 2 + 0.55]}>
         <Box p={[0, 0.95, 0]} s={[0.62, 1.9, 0.62]} m={MAT.dark} />
         {[0.5, 0.8, 1.1, 1.4, 1.7].map((y, i) => (
           <group key={y}>
@@ -351,9 +363,11 @@ function OfficeEnvironment({ plan, wall, light, residents, lighting=true, shell=
         ))}
       </group>
 
+      {fittings ? fittings.plants.map((p, i) => <Plant key={i} p={[p.x, 0, p.z]} s={[1.1, 0.9, 0.7][i]} />) : <>
       <Plant p={[w / 2 - 0.5, 0, -d / 2 + 0.5]} s={1.1} />
       <Plant p={[-w / 2 + 0.5, 0, d / 2 - 0.5]} s={0.9} />
       <Plant p={[-w / 2 + 1.35, 0, -d / 2 + 0.45]} s={0.7} />
+      </>}
     </group>
   );
 }
