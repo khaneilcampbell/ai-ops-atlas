@@ -1,4 +1,5 @@
 import {GALLERIA_FLOORS,GALLERIA_ID,GALLERIA_KEY,GALLERIA_NAME} from "../views/map3d/galleriaPlan";
+import { AgentMemoryPanel } from "../views/tasks/MemoryPanels";
 import { RoutinePanel } from "../views/agents/RoutinePanel";
 import { BuildingInside } from "./BuildingInside";
 import { AutomationPlazaPanel } from "./AutomationPlazaPanel";
@@ -31,7 +32,7 @@ import { projectRepositories } from "../catalog/projects";
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "./Icon";
 import { CopyValue, ExternalLink, HealthBadge, Indicator, LANG_COLORS, StatusPill } from "./bits";
-import { activityFeed, attentionItems, effectiveLastRun, latestPerWorkflow, observedRun, overallHealth, repoData, repoHealth, type Health } from "../lib/derive";
+import { activityFeed, attentionItems, ciSuccess, effectiveLastRun, latestPerWorkflow, observedRun, overallHealth, repoData, repoHealth, type Health } from "../lib/derive";
 import { frameworkColor } from "../views/mapLayout";
 import { formatDate, relative } from "../lib/time";
 import { useAtlas } from "../state";
@@ -361,6 +362,7 @@ export function AgentDetail({ id, onClose }: { id: string; onClose?:()=>void }) 
             </ul>
           )}
         </div>
+        <AgentMemoryPanel agentId={agent.id} />
         </>}
       </div>
     </>
@@ -626,13 +628,18 @@ function RepoInsights({ name }: { name: string }) {
         <IntelPanel repo={name} />
       </>
     );
-  const done = snap.runs.filter((r) => r.status === "completed");
-  const ok = done.filter((r) => r.conclusion === "success").length;
+  const ci = ciSuccess(snap.runs);
+  const branch = snap.defaultBranch ?? "the default branch";
+  const ciNote = ci.counted
+    ? `${ci.ok} of ${ci.counted} finished runs on ${branch}${ci.ignored ? ` · ${ci.ignored} skipped or cancelled, not counted` : ""}`
+    : ci.ignored
+      ? `Only skipped or cancelled runs on ${branch}`
+      : `No finished runs on ${branch} synced`;
   const since = Date.now() - 14 * 86_400_000;
   const recentCommits = snap.commits.filter((c) => Date.parse(c.date) >= since).length;
   const authors = new Set(snap.commits.map((c) => c.author)).size;
   const tiles = [
-    { label: "CI success", value: done.length ? `${Math.round((ok / done.length) * 100)}%` : "Unknown", note: done.length ? `${ok} of ${done.length} synced runs` : "No completed runs synced" },
+    { label: "CI success", value: ci.counted ? `${Math.round((ci.ok / ci.counted) * 100)}%` : "Unknown", note: ciNote },
     { label: "Commits, 14 days", value: snap.commits.length ? String(recentCommits) : "Unknown", note: snap.commits.length ? `of the latest ${snap.commits.length} synced` : "No commits synced" },
     { label: "Last push", value: snap.pushedAt ? relative(snap.pushedAt) : "Unknown", note: snap.pushedAt ? formatDate(snap.pushedAt) : "GitHub didn't report it" },
     { label: "Contributors", value: snap.commits.length ? String(authors) : "Unknown", note: snap.commits.length ? "in the synced commits" : "No commits synced" },

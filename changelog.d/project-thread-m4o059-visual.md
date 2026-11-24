@@ -1,0 +1,1 @@
+- 2026-11-22 · Screenshot checks match the new sidebar again, so they stop failing on every pull request (#512)
