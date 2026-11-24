@@ -26,18 +26,18 @@ describe("workspace building names", () => {
   it("applies Khaneil's operational names, keeping each original organization as metadata", () => {
     const want: [string, string, string][] = [
       [AGENCY_KEY, "Product & Growth Studio", "Benjaire"],
-      [financialKey("residence"), "Business Operations Tower 4", "Benjaire"],
-      [financialKey("banks"), "Business Operations Tower 1", "Benjaire"],
-      [financialKey("budget"), "Business Operations Tower 6", "Benjaire"],
-      [financialKey("records"), "Business Operations Tower 2", "Benjaire"],
-      [DEALERSHIP_KEY, "Security & Infrastructure Annex", "Vantor Motors"],
-      [financialKey("investments"), "Business Operations Tower 3", "Benjaire"],
-      [MALL_KEY, "Product & Growth Annex", "Atlas"],
+      [financialKey("residence"), "Briarcliff Tower", "Benjaire"],
+      [financialKey("banks"), "Larkspur Tower", "Benjaire"],
+      [financialKey("budget"), "Elmhurst Tower", "Benjaire"],
+      [financialKey("records"), "Maplewood Tower", "Benjaire"],
+      [DEALERSHIP_KEY, "Ironwood Hall", "Vantor Motors"],
+      [financialKey("investments"), "Ashford Tower", "Benjaire"],
+      [MALL_KEY, "Seaview Arcade", "Atlas"],
       ["service:atlas-station", "Workflow Automation Hub", "Atlas"],
-      [financialKey("harbor-residence"), "Business Operations Tower 8", "Benjaire"],
+      [financialKey("harbor-residence"), "Harborlight Tower", "Benjaire"],
       [financialKey("circa"), "Team Residence Towers", "Benjaire"],
-      [financialKey("insurance"), "Business Operations Tower 7", "Benjaire"],
-      [financialKey("business-finance"), "Business Operations Tower 5", "Benjaire"],
+      [financialKey("insurance"), "Fairhaven Tower", "Benjaire"],
+      [financialKey("business-finance"), "Cedar Row Tower", "Benjaire"],
       ["service:atlas-galleria", "Business Operations HQ", "Benjaire"],
       ["service:skyline-stadium", "Team Events Arena", "Atlas"],
       ["service:stadium-station", "Events Arena Station", "Atlas"],
@@ -55,9 +55,9 @@ describe("workspace building names", () => {
   it("renames catalog buildings in their manifests, keeping ids, modules and the old name as an alias", () => {
     const want: [string, string, string | undefined, ...string[]][] = [
       ["ai-ops-atlas", "Atlas Command Center", "Atlas", "Atlas HQ"],
-      ["benjaire-site", "Business Operations Tower 9", "Benjaire", "Benjaire HQ", "Business Operations HQ"],
+      ["benjaire-site", "Kestrel Tower", "Benjaire", "Benjaire HQ", "Business Operations HQ"],
       ["intelligence-hub", "Agent Operations Center", undefined, "Intelligence Hub"],
-      ["commerce-pipeline", "Business Operations Annex", undefined, "Commerce Pipeline", "Commerce Operations Center"],
+      ["commerce-pipeline", "Juniper House", undefined, "Commerce Pipeline", "Commerce Operations Center"],
       ["soc-lab", "Security & Infrastructure Center", undefined, "SOC Lab", "Security Operations Center"],
       ["portfolio-site", "Projects & Portfolio Studio", undefined, "Portfolio Site", "Portfolio Web Studio"],
     ];
@@ -71,7 +71,7 @@ describe("workspace building names", () => {
     expect(buildingDisplayName("service:financial-park", "Financial Park")).toBe("Financial Park");
     expect(buildingDisplayName("service:atlas-commons", "Atlas Commons")).toBe("Atlas Commons");
     expect(buildingOrganization("service:financial-park")).toBeUndefined();
-    expect(currentBuildingName("Atlas Marketplace")).toBe("Product & Growth Annex");
+    expect(currentBuildingName("Atlas Marketplace")).toBe("Seaview Arcade");
     expect(currentBuildingName("Financial District")).toBe("Financial District");
   });
 

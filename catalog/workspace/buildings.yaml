@@ -21,35 +21,35 @@ buildings:
   # finance and operations buildings; the fictional brands they used to carry stay in former_names
   # so search still finds them. What Benjaire data each building holds: catalog/workspace/finance.yaml.
   "service:financial:residence":
-    display_name: Business Operations Tower 4
+    display_name: Briarcliff Tower
     organization: Benjaire
     former_names: [Aldren Insights, Data Intelligence Center]
   "service:financial:banks":
-    display_name: Business Operations Tower 1
+    display_name: Larkspur Tower
     organization: Benjaire
     former_names: [Bayvale Bank, Financial Operations Tower]
   "service:financial:financial-planning":
-    display_name: AI Engineering Annex
+    display_name: Willow Court
     organization: Benjaire
     former_names: [Ravelle Advisors, Knowledge & Research Center]
   "service:financial:budget":
-    display_name: Business Operations Tower 6
+    display_name: Elmhurst Tower
     organization: Benjaire
     former_names: [Ellery Budget Center, Budget & Forecasting Center]
   "service:financial:records":
-    display_name: Business Operations Tower 2
+    display_name: Maplewood Tower
     organization: Benjaire
     former_names: [Halden Trust, Governance & Compliance Center]
   "service:bmw-dealership":
-    display_name: Security & Infrastructure Annex
+    display_name: Ironwood Hall
     organization: Vantor Motors
     former_names: [Vantor Motors, Infrastructure Operations Hub]
   "service:financial:investments":
-    display_name: Business Operations Tower 3
+    display_name: Ashford Tower
     organization: Benjaire
     former_names: [Robin Exchange, Integration Exchange, Investment Operations Center]
   "service:atlas-marketplace":
-    display_name: Product & Growth Annex
+    display_name: Seaview Arcade
     organization: Atlas
     former_names: [Atlas Marketplace, Product Marketplace]
   "service:atlas-station":
@@ -62,7 +62,7 @@ buildings:
   # doesn't exist yet, so it houses none. Vendor & Supplier Hub houses Integration Exchange
   # (workspace.yaml), whose vendor catalog lists the outside services the manifests name.
   "service:financial:harbor-residence":
-    display_name: Business Operations Tower 8
+    display_name: Harborlight Tower
     organization: Benjaire
     former_names: [Camton Hotel, Client Success Center]
   "service:financial:circa":
@@ -70,17 +70,17 @@ buildings:
     organization: Benjaire
     former_names: [Ellipse Residences]
   "service:financial:insurance":
-    display_name: Business Operations Tower 7
+    display_name: Fairhaven Tower
     organization: Benjaire
     former_names: [Merrow Credit Union, Risk & Insurance Center]
   "service:financial:business-finance":
-    display_name: Business Operations Tower 5
+    display_name: Cedar Row Tower
     organization: Benjaire
     former_names: [Corvane Capital, Business Finance Center]
   "service:atlas-galleria":
     display_name: Business Operations HQ
     organization: Benjaire
-    former_names: [Atlas Galleria, Vendor & Supplier Hub, Business Operations Pavilion]
+    former_names: [Atlas Galleria, Vendor & Supplier Hub]
   "service:skyline-stadium":
     display_name: Team Events Arena
     organization: Atlas

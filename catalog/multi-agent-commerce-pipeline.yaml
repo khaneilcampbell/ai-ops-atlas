@@ -4,7 +4,7 @@ schema: atlas/v2
 
 project:
   id: commerce-pipeline
-  name: Business Operations Annex
+  name: Juniper House
   former_names: [Commerce Pipeline, Commerce Operations Center]
   summary: >-
     Product pipeline on n8n Cloud: Claude turns each idea into a Canva template

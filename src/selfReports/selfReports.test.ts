@@ -10,7 +10,7 @@ describe("agent self-report schedule", () => {
   it("parses the workspace file with no problems: one named agent per half-hour slot", () => {
     expect(SELF_REPORT_ISSUES).toEqual([]);
     expect(SELF_REPORTS.building).toBe("service:financial:residence");
-    expect(BUILDING_NAMES[SELF_REPORTS.building]?.displayName).toBe("Business Operations Tower 4");
+    expect(BUILDING_NAMES[SELF_REPORTS.building]?.displayName).toBe("Briarcliff Tower");
     expect(SELF_REPORTS.workflowId).toBe("SBtrX3tY3OKT8qzn");
     const times = Object.values(SELF_REPORTS.slots);
     expect(new Set(times).size).toBe(times.length);

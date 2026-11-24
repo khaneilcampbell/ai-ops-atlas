@@ -4,7 +4,7 @@ schema: atlas/v2
 
 project:
   id: benjaire-site
-  name: Business Operations Tower 9
+  name: Kestrel Tower
   organization: Benjaire
   former_names: [Benjaire HQ, Business Operations HQ]
   summary: >-

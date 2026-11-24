@@ -254,7 +254,7 @@ export function HousedBuildings({ host }: { host: string }) {
   const withModule = housed.filter(key => { const mod = buildingModule(key, catalog); return mod && mod !== own; });
   return <>
     {withModule.map(key => <ModuleSection key={key} of={selectionOf(key)} from={buildingName(key, catalog)}/>)}
-    <section><div className="section-title">Grouped with this building</div><ul className="link-list">{housed.map(key => { const mod = buildingModule(key, catalog); return <li key={key}><button className="text-btn" onClick={() => select(selectionOf(key))}>{buildingName(key, catalog)} →</button><span className="muted small">{!mod ? "No module" : mod === own ? `Its ${mod} module is this building's` : `Its ${mod} module is shown here`}</span></li>; })}</ul></section>
+    <section><div className="section-title">Filler buildings grouped here</div><ul className="link-list">{housed.map(key => { const mod = buildingModule(key, catalog); return <li key={key}><button className="text-btn" onClick={() => select(selectionOf(key))}>{buildingName(key, catalog)} →</button><span className="muted small">{!mod ? "Filler building · No module" : mod === own ? `Filler building · Its ${mod} module is this building's` : `Filler building · Its ${mod} module is shown here`}</span></li>; })}</ul></section>
   </>;
 }
 
@@ -263,7 +263,7 @@ function PartOf({ building }: { building: string }) {
   const { catalog, select } = useAtlas();
   const host = hostOf(building);
   if (!host) return null;
-  return <div className="panel-body"><section><div className="section-title">Grouped with {buildingName(host, catalog)}</div><p className="muted small">This building houses no module for now. Its module is shown in {buildingName(host, catalog)}; its agents and records are unchanged.</p><button className="text-btn" onClick={() => select(selectionOf(host))}>Open {buildingName(host, catalog)} →</button></section></div>;
+  return <div className="panel-body"><section><div className="section-title">Filler building</div><p className="muted small">No module for now. It is grouped with {buildingName(host, catalog)}, which shows this building's module. Its agents and records are unchanged.</p><button className="text-btn" onClick={() => select(selectionOf(host))}>Open {buildingName(host, catalog)} →</button></section></div>;
 }
 
 /** A project owns its building and agents; repositories are linked resources. */
