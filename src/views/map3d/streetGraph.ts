@@ -1,4 +1,5 @@
 import { crossing, ringPath, towerRing, type Pt, type Pt3, type Ring } from "./roads";
+import { isCommerceTower } from "./commerceTowerPlan";
 import type { Scene3D } from "./scene";
 
 /**
@@ -51,7 +52,7 @@ export function plazaLanes(scene: Pick<Scene3D, "towers" | "clearedLots" | "pavi
       ...(scene.transportConnections ?? []).flatMap((c) => [c.road[0], c.road[c.road.length - 1]]).filter((p) => onRing(g, p))])
       if (!entries.some((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) < 1e-6)) entries.push(p);
     for (let a = 0; a < entries.length; a++) for (let b = a + 1; b < entries.length; b++) {
-      const path = [entries[a], ...ringPath(g, entries[a], entries[b])];
+      const path = [entries[a], ...ringPath(g, entries[a], entries[b], isCommerceTower(id))];
       for (let i = 1; i < path.length; i++) {
         const key = [path[i - 1].join(":"), path[i].join(":")].sort().join("|");
         if (!seen.has(key) && Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]) > 1e-6) { seen.add(key); out.push([path[i - 1], path[i]]); }

@@ -4,7 +4,7 @@ import type {Pt} from './roads';
 import {compact,fins,lid,skin as skin2} from './atlasHqGeometry';
 import type {Pt3} from './atlasHqPlan';
 import {annulus,slab} from './ribbonTowerGeometry';
-import {COMMERCE,along,commerceFront,canopySpan,floorHeights,planAt,podiumRing,podiumTop,poolCentre,poolRing,ribbonCentre,roofShare,roofTrees,siteBand,siteLawns,frontIndex,PODIUM_RING,valleyInset} from './commerceTowerPlan';
+import {COMMERCE,along,commerceFront,canopySpan,floorHeights,planAt,podiumRing,podiumTop,poolCentre,poolRing,ribbonCentre,roofShare,roofTrees,siteBand,siteLawns,frontIndex,PODIUM_RING,valleyInset,COMMERCE_RING_KERB} from './commerceTowerPlan';
 
 /** Commerce Pipeline's teardrop tower: a few merged meshes, built once. See commerceTowerPlan for the design. */
 
@@ -209,6 +209,12 @@ function siteGround(k:number){
  band(F+L-.018,F+L-.008,y*1.6,f-h,f+h,()=>'#f7f2df');
  // A zebra crossing over the lane to the entrance doors, like the city's junction crossings.
  band(F,F+L,y*1.8,f-2,f+2,i=>i%2?'#424b50':'#f7f2df');
+ // Each end of the lane runs straight on to the street along the front of the plaza, so the
+ // drop-off is a lay-by off that street (2026-11-24), not a strip that stops on the paving.
+ const [ri,ro]=siteBand(F,F+L),street=(COMMERCE.plinth*k+COMMERCE_RING_KERB)/k;
+ for(const e of [f-h,f+h]){const i=((e%n)+n)%n,cx=(ri[i][0]+ro[i][0])/2,cz=Math.max(ri[i][1],ro[i][1]),w=L/2,m=pos.length;
+  quad(pos,[(cx-w)*k,y,cz*k],[(cx-w)*k,y,street*k],[(cx+w)*k,y,street*k],[(cx+w)*k,y,cz*k]);
+  const c=new THREE.Color('#424b50');for(let v=m;v<pos.length;v+=3)col.push(c.r,c.g,c.b);}
  // Car-park ramps down the long side, striped like the plan's hatching.
  const [r0,len]=S.ramp;
  for(const start of [f+r0,f-r0-len])band(F,F+L*.8,y,start,start+len,i=>i%2?'#efe3bf':'#d4b45e');

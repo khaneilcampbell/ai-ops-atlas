@@ -43,6 +43,8 @@ const VIEWS=({x,z}:{x:number;z:number}):View[]=>[
  ['district',[x,.8,z],[x+1.5,17,z+12]],
  // The grounds round the podium (2026-11-24): forecourt, drop-off lane, ramps and corner lawns from above.
  ['grounds',[x,.7,z+.2],[x+.6,11,z+5.5]],
+ // Khaneil's street-level angle from the south-east (2026-11-24 screenshot).
+ ['street',[x-.5,1,z+1],[x+5,7,z+9]],
  ['context',[x+1,1,z-1],[x+14,16,z+16]],
 ];
 for(const light of ['day','night'] as const)test(`Commerce district, ${light}`,async({page})=>{

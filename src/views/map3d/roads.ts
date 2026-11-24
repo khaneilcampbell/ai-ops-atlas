@@ -80,7 +80,7 @@ export function ringParam(g: Ring, p: Pt): number {
  * Points along the ring from one exit to another, corners included. Goes counterclockwise unless
  * that would cross in front of the tower, where the entrance stairs are; then it goes round the back.
  */
-export function ringPath(g: Ring, from: Pt, to: Pt): Pt[] {
+export function ringPath(g: Ring, from: Pt, to: Pt, front = false): Pt[] {
   const w = g.x1 - g.x0;
   const d = g.z1 - g.z0;
   const corners = [0, w, w + d, 2 * w + d];
@@ -98,6 +98,9 @@ export function ringPath(g: Ring, from: Pt, to: Pt): Pt[] {
     return pts;
   };
   const ccw = walk(from, to);
+  // With `front`, the shorter way round, front included: the Commerce wave tower's ring runs past
+  // its forecourt and drop-off, clear of the entrance (2026-11-24).
+  if (front) { const cw = walk(to, from).reverse(), len = (pts: Pt[]) => [from, ...pts, to].reduce((n, p, i, a) => i ? n + dist(a[i - 1], p) : 0, 0); return [...(len(ccw) <= len(cw) ? ccw : cw), to]; }
   if (!ccw.some((p) => Math.abs(p[1] - g.z1) < 1e-6)) return [...ccw, to];
   return [...walk(to, from).reverse(), to];
 }
