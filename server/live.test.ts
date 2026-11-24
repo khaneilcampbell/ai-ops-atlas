@@ -24,7 +24,7 @@ function fakeD1() {
     all: async <T,>() => {
       if (sql.includes("MAX(id)")) return { results: [{ id: rows.length ? rows[rows.length - 1].id : null }] as T[] };
       const [x, limit] = args as [string | number, number];
-      const hit = sql.includes("WHERE at >=") ? rows.filter((r) => r.at >= (x as string)) : rows.filter((r) => r.id > (x as number));
+      const hit = sql.includes("kind = 'agent_run'") ? rows.filter((r) => r.kind === "agent_run" && r.at >= (x as string)) : sql.includes("WHERE at >=") ? rows.filter((r) => r.at >= (x as string)) : rows.filter((r) => r.id > (x as number));
       return { results: hit.slice().reverse().slice(0, limit) as T[] };
     },
   });
@@ -144,6 +144,21 @@ describe("live hooks", () => {
     expect(JSON.parse(d.rows[0].body)).toEqual({ ...run, at: "2026-10-28T07:59:00.000Z" });
     // The feed key can only write: reading the feed still needs the sync key.
     expect((await readFeed(new Request("https://x/api/hooks/feed", { headers: { authorization: `Bearer ${FEED}` } }), env, NOW)).status).toBe(401);
+  });
+
+  it("sends kept agent runs older than the six-hour backfill to a fresh client", async () => {
+    const d = fakeD1();
+    const env = { LIVE: d.db, AGENT_FEED_TOKEN: "f".repeat(40) };
+    const run = { project: "benjaire-site", agents: ["benjaire-flow-digest"], phase: "Daily schedule check", status: "ok", at: "2026-10-28T08:00:00Z" };
+    const post = () => new Request("https://x/api/hooks/agents", { method: "POST", headers: { authorization: `Bearer ${"f".repeat(40)}` }, body: JSON.stringify(run) });
+    await receiveAgents(post(), env, NOW);
+    const later = NOW + 17 * 3_600_000;
+    const fresh = await (await readEvents(new URL("https://x/api/events"), env, later)).json();
+    expect(fresh.events).toEqual([]);
+    expect(fresh.agentRuns).toHaveLength(1);
+    expect(fresh.agentRuns[0]).toMatchObject({ kind: "agent_run", body: { agents: ["benjaire-flow-digest"] } });
+    // A normal catch-up read doesn't resend them.
+    expect((await (await readEvents(new URL(`https://x/api/events?after=${fresh.cursor}`), env, later)).json()).agentRuns).toBeUndefined();
   });
 
   it("checks every field of a pipeline run", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Catalog } from "../catalog/types";
 import type { RepoSnapshot } from "../github/types";
-import { attentionItems, ciHealth, ciSuccess, ciSummary, overallHealth, repoHealth, effectiveLastRun, verifiedState } from "./derive";
+import { attentionItems, ciHealth, ciSuccess, ciSummary, overallHealth, repoHealth, effectiveLastRun, staleAfterDays, verifiedState } from "./derive";
 
 const snap = (over: Partial<RepoSnapshot> = {}): RepoSnapshot => ({
   fullName: "me/demo", description: null, url: "", homepage: null, language: "Python", languages: {}, visibility: "public",
@@ -148,5 +148,14 @@ describe("ciSummary", () => {
       "me/c": { kind: "ok" as const, stale: false, data: snap() },
     };
     expect(ciSummary(["me/a", "me/b", "me/c", "me/d"], repos)).toEqual({ failing: ["me/b"], passing: 1, checked: 2, total: 4 });
+  });
+});
+
+describe("staleAfterDays", () => {
+  it("gives monthly and weekly agents room before flagging them", () => {
+    expect(staleAfterDays('Schedule: 09:00 ET on the 1st of each month (task "Monthly next-product report")')).toBe(35);
+    expect(staleAfterDays("Weekly, Mondays 9am ET")).toBe(9);
+    expect(staleAfterDays("Every 4 hours and the Refresh button; Top 10 Sundays 9am ET")).toBe(7);
+    expect(staleAfterDays(undefined)).toBe(7);
   });
 });
