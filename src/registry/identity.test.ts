@@ -12,7 +12,7 @@ const PUBLIC = join(__dirname, "../../public");
 const own = catalog.agents.filter((a) => a.registry?.identity);
 
 describe("agent identities in the catalog", () => {
-  it("gives the 17 team agents an identity and nobody else", () => {
+  it("gives the 19 team agents an identity and nobody else", () => {
     expect(own.map((a) => a.id).sort()).toEqual(
       [
         "agent-operations-lead",
@@ -32,6 +32,8 @@ describe("agent identities in the catalog", () => {
         "repo-intelligence",
         "site-builder",
         "soc-detection-lead",
+        "trade-desk",
+        "market-research",
       ].sort(),
     );
     // A persona is for an AI agent; automations and CI jobs show their owner instead.
@@ -77,7 +79,7 @@ describe("agent identities in the catalog", () => {
     const p = portraitPrompt("Irish man in his early 30s, short ginger hair.", "#38BDF8");
     expect(p).toBe(`Flat vector illustrated avatar of a fictional character: Irish man in his early 30s, short ginger hair. ${PORTRAIT_HOUSE_STYLE} Solid circular background in #38BDF8 on a plain warm off-white square. Clearly an illustration, not a photo. No text, no logos.`);
     expect(p).not.toMatch(/photoreal/i);
-    expect(identities(catalog.agents)).toHaveLength(17);
+    expect(identities(catalog.agents)).toHaveLength(19);
   });
 });
 

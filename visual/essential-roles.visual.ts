@@ -36,8 +36,9 @@ for (const width of [1512, 390])
     // Inactive: the Atlas Task Writer (n8n draft, #506), the Atlas Executive (paused until its n8n
     // workflows are published, #508), Atlas Engineering and Atlas QA (paused until switched on, #516), and the
     // Atlas Security Sheet (n8n draft, #510). Agent Self-Reports (#517) left when Khaneil published it on 2026-11-24.
-    await page.getByRole("tab", { name: /^Inactive 5/ }).click();
-    for (const id of ["atlas-executive", "atlas-engineer", "atlas-qa"]) await expect(page.getByRole("list", { name: "Inactive entries" }).locator(`[data-id="${id}"]`)).toHaveCount(1);
+    // Investment Operations and the five trading team seats are paused while trading is off (#518).
+    await page.getByRole("tab", { name: /^Inactive 11/ }).click();
+    for (const id of ["atlas-executive", "atlas-engineer", "atlas-qa", "investment-operations", "trade-desk"]) await expect(page.getByRole("list", { name: "Inactive entries" }).locator(`[data-id="${id}"]`)).toHaveCount(1);
     await expect(page.getByRole("list", { name: "Inactive entries" }).locator('[data-id="agent-self-reports"]')).toHaveCount(0);
     await page.getByRole("tab", { name: "All entries" }).click();
     await expect(page.locator(".reg-row").first()).toBeVisible();
