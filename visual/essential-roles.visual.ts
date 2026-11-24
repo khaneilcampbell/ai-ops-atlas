@@ -35,9 +35,10 @@ for (const width of [1512, 390])
     await page.screenshot({ path: `${out}/archived-${width}.png` });
     // Inactive: the Atlas Task Writer (n8n draft, #506), the Atlas Executive (paused until its n8n
     // workflows are published, #508), Atlas Engineering and Atlas QA (paused until switched on, #516), and the
-    // Atlas Security Sheet (n8n draft, #510), and Agent Self-Reports (n8n draft, #517).
-    await page.getByRole("tab", { name: /^Inactive 6/ }).click();
-    for (const id of ["atlas-executive", "atlas-engineer", "atlas-qa", "agent-self-reports"]) await expect(page.getByRole("list", { name: "Inactive entries" }).locator(`[data-id="${id}"]`)).toHaveCount(1);
+    // Atlas Security Sheet (n8n draft, #510). Agent Self-Reports (#517) left when Khaneil published it on 2026-11-24.
+    await page.getByRole("tab", { name: /^Inactive 5/ }).click();
+    for (const id of ["atlas-executive", "atlas-engineer", "atlas-qa"]) await expect(page.getByRole("list", { name: "Inactive entries" }).locator(`[data-id="${id}"]`)).toHaveCount(1);
+    await expect(page.getByRole("list", { name: "Inactive entries" }).locator('[data-id="agent-self-reports"]')).toHaveCount(0);
     await page.getByRole("tab", { name: "All entries" }).click();
     await expect(page.locator(".reg-row").first()).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
