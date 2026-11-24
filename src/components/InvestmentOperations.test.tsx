@@ -33,3 +33,23 @@ it("tells the Mac how to sync before the first snapshot", () => {
   expect(html).toContain("/demo/snapshot.json");
   expect(html).toContain("Refresh");
 });
+
+it("shows the trading desk read only: limits, the six seats and the journal, with no order buttons", () => {
+  const journal = { entries: [{ at: new Date(Date.now() - 3600_000).toISOString(), seat: "trade-desk" as const, side: "buy" as const, symbol: "DEMOA", asset_class: "equity" as const, amount: 20, check: "passed" as const, status: "filled" as const, note: "Demo" }] };
+  const html = renderToStaticMarkup(<InvestmentOperations initial={{ kind: "ok", path: "/demo/snapshot.json", snapshot }} initialJournal={{ kind: "ok", journal }} initialTab="desk" />);
+  expect(html).toContain("Agentic ••1111");
+  expect(html).toContain("$80 of agent trades · $60 left");
+  expect(html).toContain("Buy $20 DEMOA");
+  for (const seat of ["Trade Desk", "Portfolio Sync", "Risk &amp; Limits", "Trade Journal", "Market Research", "Reporting"]) expect(html).toContain(seat);
+  expect(html).toContain("Demo ••0000 · $100 · view only");
+  expect(html).not.toContain("Invented data");
+  expect(html).not.toMatch(/>(Buy|Sell|Place order|Cancel order)</);
+  expect(html).toContain("not investment advice");
+});
+
+it("previews the trading desk on the website with invented data only", () => {
+  const html = renderToStaticMarkup(<InvestmentOperations initial={{ kind: "web" }} initialJournal={{ kind: "web" }} initialTab="desk" />);
+  expect(html).toContain("Invented data · not your account");
+  expect(html).toContain("Demo agentic ••0000");
+  expect(html).toContain("No account snapshot yet");
+});

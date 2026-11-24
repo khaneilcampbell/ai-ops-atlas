@@ -1,8 +1,9 @@
-//! Investment Operations Center: the one snapshot file Atlas reads, in its app data folder
-//! (`investments/snapshot.json`). Claude Code on this Mac writes it on Khaneil's "sync my
-//! investments" (with every Robinhood trading tool denied); Atlas only reads it and, on Disconnect,
-//! deletes it. The contents are checked against the allowlist in `src/finance/investments.ts`
-//! before anything is shown. Nothing here talks to a brokerage or sends the file anywhere.
+//! Investment Operations Center: the files Atlas reads in its app data folder. Claude Code on
+//! this Mac writes `investments/snapshot.json` on Khaneil's "sync my investments" (read tools
+//! only), and the Trade Desk (a Claude Code session Khaneil runs) writes the trade journal
+//! `investments/journal.json`. Atlas only reads them and, on Disconnect, deletes both. The contents
+//! are checked against the allowlists in `src/finance/investments.ts` and `tradingDesk.ts` before
+//! anything is shown. Nothing here talks to a brokerage or sends a file anywhere.
 
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -22,9 +23,19 @@ pub struct SnapshotFile {
     modified_ms: Option<u64>,
 }
 
-fn snapshot_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+fn investments_file(app: &tauri::AppHandle, name: &str) -> Result<PathBuf, String> {
     let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    Ok(dir.join("investments").join("snapshot.json"))
+    Ok(dir.join("investments").join(name))
+}
+
+fn snapshot_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    investments_file(app, "snapshot.json")
+}
+
+/// The trade journal the Trade Desk (a Claude Code session Khaneil runs) writes next to the
+/// snapshot. Atlas only reads it; the contents are checked in `src/finance/tradingDesk.ts`.
+fn journal_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    investments_file(app, "journal.json")
 }
 
 pub fn read_snapshot(path: &Path) -> Result<SnapshotFile, String> {
@@ -73,10 +84,17 @@ pub fn investments_snapshot(app: tauri::AppHandle) -> Result<SnapshotFile, Strin
     read_snapshot(&snapshot_path(&app)?)
 }
 
-/// Disconnect: deletes the snapshot so no account data is left in Atlas's folder.
+/// Reads the trade journal, with the same limits as the snapshot.
+#[tauri::command]
+pub fn investments_journal(app: tauri::AppHandle) -> Result<SnapshotFile, String> {
+    read_snapshot(&journal_path(&app)?)
+}
+
+/// Disconnect: deletes the snapshot and the trade journal so no account data is left in Atlas's folder.
 #[tauri::command]
 pub fn investments_disconnect(app: tauri::AppHandle) -> Result<(), String> {
-    delete_snapshot(&snapshot_path(&app)?)
+    delete_snapshot(&snapshot_path(&app)?)?;
+    delete_snapshot(&journal_path(&app)?)
 }
 
 #[cfg(test)]

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { connectionState, dataQualityIssues, portfolioName, portfolioTotal, summarizeChange, SYNTHETIC_SNAPSHOTS, usd, type InvestmentSnapshot, type PortfolioKind } from "../finance/investments";
-import { disconnectLocalSnapshot, readLocalSnapshot, type LocalSnapshot } from "../finance/investmentsLocal";
+import { disconnectLocalSnapshot, readLocalJournal, readLocalSnapshot, type LocalJournal, type LocalSnapshot } from "../finance/investmentsLocal";
+import { TradingDesk } from "./TradingDesk";
 import { formatDateTime } from "../lib/timezone";
 
 const STATE_LABEL = { "not-connected": "Not connected", synced: "Synced", stale: "Stale" } as const;
@@ -52,11 +53,13 @@ function SyntheticPreview() {
  * the first sync, it shows only invented preview data, labelled as such. Atlas places no orders and
  * moves no money.
  */
-export function InvestmentOperations({ initial }: { initial?: LocalSnapshot } = {}) {
+export function InvestmentOperations({ initial, initialJournal, initialTab = "accounts" }: { initial?: LocalSnapshot; initialJournal?: LocalJournal; initialTab?: "accounts" | "desk" } = {}) {
   const [local, setLocal] = useState<LocalSnapshot | null>(initial ?? null);
+  const [journal, setJournal] = useState<LocalJournal | null>(initialJournal ?? null);
+  const [tab, setTab] = useState(initialTab);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
-  const refresh = useCallback(async () => { setBusy(true); setLocal(await readLocalSnapshot()); setBusy(false); }, []);
+  const refresh = useCallback(async () => { setBusy(true); const [s, j] = await Promise.all([readLocalSnapshot(), readLocalJournal()]); setLocal(s); setJournal(j); setBusy(false); }, []);
   useEffect(() => { if (!initial) void refresh(); }, [initial, refresh]);
   const disconnect = async () => { setBusy(true); try { await disconnectLocalSnapshot(); } finally { setConfirming(false); } await refresh(); };
 
@@ -69,10 +72,15 @@ export function InvestmentOperations({ initial }: { initial?: LocalSnapshot } = 
   return (
     <section className="investment-ops" aria-label="Investment operations">
       <div className="section-title">Investment operations</div>
+      <div className="investment-tabs" role="tablist" aria-label="Investment operations views">
+        <button type="button" role="tab" aria-selected={tab === "accounts"} className={tab === "accounts" ? "on" : ""} onClick={() => setTab("accounts")}>Accounts</button>
+        <button type="button" role="tab" aria-selected={tab === "desk"} className={tab === "desk" ? "on" : ""} onClick={() => setTab("desk")}>Trading desk</button>
+      </div>
+      {tab === "desk" ? <TradingDesk snapshot={snapshot} stale={state === "stale"} journal={journal} /> : <>
       <dl className="kv">
         <dt>Connection</dt><dd><span className={`chip finance-status ${state}`}>{STATE_LABEL[state]}</span> Read only</dd>
         <dt>Last sync</dt><dd>{snapshot ? formatDateTime(snapshot.as_of) : "Never"}</dd>
-        <dt>Stored</dt><dd>{local?.kind === "web" ? "Nothing on the website. Account data stays on your Mac." : "One summary file on this Mac, replaced on each sync and deleted by Disconnect. Account numbers show as the last four only."}</dd>
+        <dt>Stored</dt><dd>{local?.kind === "web" ? "Nothing on the website. Account data stays on your Mac." : "One summary file and the agent trade journal on this Mac, both deleted by Disconnect. Account numbers show as the last four only."}</dd>
       </dl>
       {local?.kind === "error" && <p className="small">Couldn't read the snapshot: {local.message}</p>}
       {local?.kind === "refused" && <div className="small"><strong>Snapshot refused</strong><ul className="muted small">{local.errors.map((e) => <li key={e}>{e}</li>)}</ul></div>}
@@ -84,11 +92,12 @@ export function InvestmentOperations({ initial }: { initial?: LocalSnapshot } = 
       {onMac && <div className="finance-row">
         <button type="button" className="btn" onClick={() => void refresh()} disabled={busy}>Refresh</button>
         {hasFile && !confirming && <button type="button" className="btn" onClick={() => setConfirming(true)} disabled={busy}>Disconnect</button>}
-        {confirming && <><span className="small">Delete the snapshot from this Mac?</span><button type="button" className="btn" onClick={() => void disconnect()} disabled={busy}>Delete</button><button type="button" className="btn" onClick={() => setConfirming(false)}>Cancel</button></>}
+        {confirming && <><span className="small">Delete the snapshot and trade journal from this Mac?</span><button type="button" className="btn" onClick={() => void disconnect()} disabled={busy}>Delete</button><button type="button" className="btn" onClick={() => setConfirming(false)}>Cancel</button></>}
       </div>}
       {onMac && !snapshot && <p className="muted small">To sync, ask Claude on this Mac: “sync my investments”. It reads your Robinhood accounts with trading switched off and writes the summary here{"path" in local ? <>: <code>{local.path}</code></> : null}.</p>}
       {local?.kind === "web" && <p className="muted small">Live account data shows only in the Atlas Mac app.</p>}
       {!snapshot && <SyntheticPreview />}
+      </>}
       <p className="muted small">Operational summaries only, not investment advice. Atlas never places, changes or cancels orders, and never moves money.</p>
     </section>
   );

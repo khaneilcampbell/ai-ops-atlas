@@ -1,5 +1,6 @@
 import { isTauri } from "../lib/env";
 import { sanitizeSnapshot, type InvestmentSnapshot } from "./investments";
+import { sanitizeJournal, type Journal } from "./tradingDesk";
 
 // The Mac app's side of the Investment Operations Center: reads the one snapshot file Claude Code
 // writes on "sync my investments" (src-tauri/src/investments.rs) and deletes it on Disconnect.
@@ -37,4 +38,30 @@ export async function disconnectLocalSnapshot(): Promise<void> {
   if (!isTauri()) return;
   const { invoke } = await import("@tauri-apps/api/core");
   await invoke("investments_disconnect");
+}
+
+export type LocalJournal =
+  | { kind: "web" }
+  | { kind: "none" }
+  | { kind: "ok"; journal: Journal }
+  | { kind: "refused"; errors: string[] }
+  | { kind: "error"; message: string };
+
+/** The trade journal the Trade Desk writes beside the snapshot. Refused whole if anything is off the allowlist. */
+export function parseLocalJournal(file: SnapshotFile, now: Date = new Date()): LocalJournal {
+  if (file.contents == null) return { kind: "none" };
+  let json: unknown;
+  try { json = JSON.parse(file.contents); } catch { return { kind: "refused", errors: ["journal: not valid JSON"] }; }
+  const r = sanitizeJournal(json, now);
+  return r.ok ? { kind: "ok", journal: r.journal } : { kind: "refused", errors: r.errors };
+}
+
+export async function readLocalJournal(): Promise<LocalJournal> {
+  if (!isTauri()) return { kind: "web" };
+  const { invoke } = await import("@tauri-apps/api/core");
+  try {
+    return parseLocalJournal(await invoke<SnapshotFile>("investments_journal"));
+  } catch (e) {
+    return { kind: "error", message: String(e) };
+  }
 }

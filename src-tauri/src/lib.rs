@@ -100,6 +100,7 @@ pub fn run() {
             export::save_backup,
             power::power_on_battery,
             investments::investments_snapshot,
+            investments::investments_journal,
             investments::investments_disconnect,
         ])
         .run(tauri::generate_context!())

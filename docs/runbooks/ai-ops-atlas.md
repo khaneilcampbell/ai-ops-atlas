@@ -106,3 +106,16 @@ Paused. Fixed rules in `src/finance/investments.ts`, shown in the Investment Ope
 - **Healthy:** the panel reads "Not connected" and "Last sync: Never" until a supported read-only source exists. It must never show Synced for the synthetic preview.
 - **When it fails:** a refused snapshot lists field names only; never copy a payload into an issue, log or chat.
 - **Stop it:** nothing runs on its own. Remove the section from `DetailPanel.tsx` or revert the pull request.
+
+## Trading desk
+
+Trade Desk, Risk & Limits, Trade Journal, Trading Reporting and Market Research: the trading team in
+Robin Exchange. All paused while trading is off. Details: [docs/benjaire-finance.md](../benjaire-finance.md#trading-desk).
+
+- **Healthy:** the Trading desk tab reads "Trading is off in Atlas", the weekly limit shows $80, and
+  the log is empty or lists only entries that passed the limits.
+- **When it fails:** a refused journal lists field names only; never copy a journal into an issue,
+  log or chat. A "Weekly limit reached" or "rejected by Robinhood" alert means stop and look.
+- **Stop it:** keep (or put back) the Robinhood order tools in the deny list in
+  `~/.claude/settings.json` on the Mac; with Robinhood trade approvals on, every order also waits for
+  Khaneil in the Robinhood app. Disconnect in the panel deletes the snapshot and journal.

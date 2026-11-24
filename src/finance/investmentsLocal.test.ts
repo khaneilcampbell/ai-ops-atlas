@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseLocalSnapshot, readLocalSnapshot } from "./investmentsLocal";
+import { parseLocalJournal, parseLocalSnapshot, readLocalJournal, readLocalSnapshot } from "./investmentsLocal";
 
 // Synthetic data only.
 const NOW = new Date("2026-10-28T15:00:00Z");
@@ -25,5 +25,19 @@ describe("parseLocalSnapshot", () => {
 
   it("reads nothing on the website", async () => {
     expect(await readLocalSnapshot()).toEqual({ kind: "web" });
+  });
+});
+
+describe("parseLocalJournal", () => {
+  const entry = { at: "2026-10-28T14:00:00Z", seat: "trade-desk", side: "buy", symbol: "DEMOA", asset_class: "equity", amount: 10, check: "passed", status: "filled", note: "Demo" };
+  it("is 'none' before the first trade, 'ok' after the allowlist, and refused otherwise", () => {
+    expect(parseLocalJournal({ path, contents: null, modified_ms: null }, NOW)).toEqual({ kind: "none" });
+    expect(parseLocalJournal({ path, contents: JSON.stringify({ entries: [entry] }), modified_ms: 1 }, NOW).kind).toBe("ok");
+    expect(parseLocalJournal({ path, contents: "{", modified_ms: 1 }, NOW)).toEqual({ kind: "refused", errors: ["journal: not valid JSON"] });
+    expect(parseLocalJournal({ path, contents: JSON.stringify({ entries: [{ ...entry, bank: "x" }] }), modified_ms: 1 }, NOW).kind).toBe("refused");
+  });
+
+  it("reads nothing on the website", async () => {
+    expect(await readLocalJournal()).toEqual({ kind: "web" });
   });
 });
