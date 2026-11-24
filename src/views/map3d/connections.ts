@@ -4,6 +4,8 @@ import {stadiumGate} from './stadiumGeometry';
 import {routeAround} from './routing';
 import {pathClear,type Box,type Pt} from './roads';
 export interface DistrictConnection {id:string;road:Pt[];walk:Pt[];
+ /** A private drive into one building: paved and walked, but left out of the cars' street network (a dead end). */
+ private?:boolean;
  /** A district street the highway collector may leave from directly (a clean T, not a run along it). */
  frontage?:Pt[]}
 /** Public access remains on the city-facing side, completely outside the aircraft apron. */

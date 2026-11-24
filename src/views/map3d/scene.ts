@@ -26,7 +26,7 @@ import {type HillsPlan} from "./hillsPlan";
 import {planDealership,type DealershipPlan} from "./dealershipPlan";
 import {type FreightPlan} from "./freight";
 import {planStadium,type StadiumPlan} from "./stadiumPlan";
-import {stadiumGate,stadiumPlaza} from "./stadiumGeometry";
+import {stadiumPlaza} from "./stadiumGeometry";
 import {planStadiumSite,type StadiumSite} from "./stadiumSite";
 import {planAgency,type AgencyPlan} from "./marketingAgencyPlan";
 import {planMall,type MallPlan} from "./mallPlan";
@@ -53,8 +53,6 @@ export const TERRACE_M = 0.35;
 /** The sea sits this far below the meadow; the cliffs fill the gap. */
 export const WATER_Y = -1.4;
 export const LAND_BOTTOM = -1.8;
-/** The Security Operations Center's old parcel, kept as land when it moved beside Business Operations HQ. */
-const SOC_RESERVE = "street-reserve:soc-lab";
 /**
  * Atlas stands on one ground plane (Khaneil, 2026-11-07): open land is level with the district terraces,
  * streets, bridges' landings and stations, instead of a meadow 0.6 below them. It sits a hair under
@@ -470,7 +468,6 @@ function buildCity(layout: Layout): Scene3D {
     ];
   });
   const carBridges = planBridges(sites, roadsOf);
-  const bridgeSlabs = new Map<CarBridge, Slab[]>();
   const roadStart = paving.length;
   for (const br of carBridges)
     br.roads.forEach((road, end) =>
@@ -485,7 +482,6 @@ function buildCity(layout: Layout): Scene3D {
         const slab = strip(x0, z0, x1, z1, ROAD_W, top);
         paving.push(slab);
         pavedIn.get(br.ends[end])!.push(slab);
-        bridgeSlabs.set(br, [...(bridgeSlabs.get(br) ?? []), slab]);
       }),
     );
   const roadPaving = paving.slice(roadStart);
@@ -923,7 +919,7 @@ function buildCity(layout: Layout): Scene3D {
   }
   // Atlas Stadium takes the open land round its lot, last, so no other plan moves.
   const env=cityEnvelope(land);
-  let stadiumSite=stadium&&env?planStadiumSite({stadium,envelope:env,
+  const stadiumSite=stadium&&env?planStadiumSite({stadium,envelope:env,
     land:[...land.filter(r=>!meadowLand.includes(r)),...forecourtLand,...brooks,...bridges,...ponds.map(p=>({x:p.x-p.r,z:p.z-p.r,w:p.r*2,d:p.r*2})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),
       ...fountains.map(f=>({x:f.x-FOUNTAIN_R*(f.k??1),z:f.z-FOUNTAIN_R*(f.k??1),w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))],
     paths:[...connections.flatMap(c=>[c.road,c.walk,...(c.frontage?[c.frontage]:[])]),...carBridges.flatMap(b=>b.roads),...stationWalks,
@@ -988,56 +984,6 @@ function buildCity(layout: Layout): Scene3D {
       if(ia){const q=rimOf([w.x1,w.z1],[w.x0,w.z0]);w.x0=q[0];w.z0=q[1];}
       else if(ib){const q=rimOf([w.x0,w.z0],[w.x1,w.z1]);w.x1=q[0];w.z1=q[1];}
     }
-  }
-  // Atlas Stadium stands where the Security Operations Center was (Khaneil, 2026-11-24): on its old parcel, gate facing
-  // GitHub Profile across one short street. Every other street, the ring road and the stadium grounds keep the place they
-  // were planned in, so nothing else moves; only the building, its own street and what stood on the parcel change.
-  const socSite=terraces.find(t=>t.id===`park:cleared:${SOC_RESERVE}`);
-  if(stadium&&socSite&&profile){
-    const moved={...stadium,x:profile.x-1.05-stadium.w,z:socSite.z+socSite.d/2-stadium.d/2+1},box={x:moved.x,z:moved.z,w:moved.w,d:moved.d};
-    for(let i=carBridges.length-1;i>=0;i--)if(carBridges[i].ends.includes(SOC_RESERVE)){
-      for(const slab of bridgeSlabs.get(carBridges[i])??[]){const k=paving.indexOf(slab);if(k>=0)paving.splice(k,1);}
-      carBridges.splice(i,1);
-    }
-    const gate=stadiumGate(moved),outside=moved.x+moved.w+1,from=profile.x+1.1,link=connections.find(c=>c.id==="profile-stadium");
-    let gateWalk:Scene3D["walks"][number]|undefined;
-    if(link){
-      const old=link.walk;
-      link.road=[[from,stadium.accessZ],[outside,stadium.accessZ],[outside,gate[1]],gate];
-      link.walk=[[from,stadium.accessZ+.6],[outside+.6,stadium.accessZ+.6],[outside+.6,gate[1]+.6],[gate[0],gate[1]+.6],gate];
-      const w=walks.find(w=>w.route&&w.x0===old[0][0]&&w.z0===old[0][1]&&w.x1===old[old.length-1][0]&&w.z1===old[old.length-1][1]);
-      if(w){w.route=link.walk.map(([gx,gy])=>({gx,gy}));[w.x0,w.z0]=link.walk[0];[w.x1,w.z1]=link.walk[link.walk.length-1];gateWalk=w;}
-    }
-    // The airport road and the Financial District's local road now reach the gate along the cross street south of it and
-    // up its east side. Their old run on to the old lot stays as a plain street, so the ring road still meets it.
-    const cross=connections.find(c=>c.id==="skyline-airport");
-    if(link&&cross){
-      const crossZ=cross.road[0][1],walkZ=cross.walk[0][1],westX=cross.road[cross.road.length-1][0],walkX=cross.walk[cross.walk.length-2]?.[0]??westX-.8;
-      const accessZ=stadium.accessZ,turn=(r:[number,number][])=>r.findIndex(p=>Math.abs(p[0]-westX)<1e-6&&Math.abs(p[1]-accessZ)<1e-6);
-      const air=connections.find(c=>c.id==="stadium-airport"),local=connections.find(c=>c.id==="financial-stadium-local");
-      const tail=local&&turn(local.road)>=0?local.road.slice(turn(local.road)):air&&turn(air.road)>=0?air.road.slice(turn(air.road)):undefined;
-      if(tail)connections.push({id:"west-shore-street",road:tail,walk:[]});
-      if(air&&turn(air.road)>=0){
-        air.road=[air.road[0],[westX,crossZ],[outside,crossZ],[outside,gate[1]],gate];
-        air.walk=[air.walk[0],[walkX,walkZ],[outside+.6,walkZ],[outside+.6,gate[1]+.6],[gate[0],gate[1]+.6],gate];
-      }
-      if(local&&turn(local.road)>=0){local.road=local.road.slice(0,turn(local.road)+1);const k=local.walk.findIndex(p=>p[1]>accessZ);if(k>0)local.walk=[...local.walk.slice(0,k),[local.walk[k-1][0],accessZ+.6],[walkX,accessZ+.6]];}
-      for(const c of [air,local])if(c){const w=walks.find(w=>w.route&&c.walk.length&&w.route[0].gx===c.walk[0][0]&&w.route[0].gy===c.walk[0][1]);if(w){w.route=c.walk.map(([gx,gy])=>({gx,gy}));[w.x1,w.z1]=c.walk[c.walk.length-1];}}
-    }
-    for(const items of [trees,bushes,rocks,bollards,ponds])for(let i=items.length-1;i>=0;i--)if(inRect(box,items[i].x,items[i].z,.4))items.splice(i,1);
-    // Paths and boardwalks that led onto the parcel would end at the stadium wall; they go with it.
-    for(let i=walks.length-1;i>=0;i--){const w=walks[i];if(w!==gateWalk&&[[w.x0,w.z0],[w.x1,w.z1],[(w.x0+w.x1)/2,(w.z0+w.z1)/2]].some(([x,z])=>inRect(box,x,z,.8)))walks.splice(i,1);}
-    // Its old lot is left as open lawn: the palm ring, beds and grounds round the old building go with it.
-    const oldLot={x:stadium.x-2,z:stadium.z-2,w:stadium.w+4,d:stadium.d+4};
-    for(const items of [trees,bushes,bollards])for(let i=items.length-1;i>=0;i--)if(inRect(oldLot,items[i].x,items[i].z,.5))items.splice(i,1);
-    stadiumSite=undefined;
-    // A few of its lit avenue palms come along (Khaneil, 2026-11-24: "a few, not excessive"): along the south side and either
-    // side of the gate (the north side is the canal shore), wherever that spot is clear of streets and paths.
-    const lanes=[...connections.flatMap(c=>[c.road,...(c.frontage?[c.frontage]:[])]),...carBridges.flatMap(b=>b.roads)],paths=[...connections.map(c=>c.walk),...walks.map((w):[number,number][]=>[[w.x0,w.z0],[w.x1,w.z1]])];
-    const x0=box.x-.55,x1=box.x+box.w+.4,z1=box.z+box.d+.55,mx=box.x+box.w/2;
-    for(const [x,z] of [[x0,z1],[mx,z1],[x1,z1],[x1,gate[1]-1.6],[x1,gate[1]+1.6]])
-      if(onLand(x,z)&&!lanes.some(r=>distanceToRoad([x,z],r)<ROAD_W/2+.3)&&!paths.some(q=>distanceToRoad([x,z],q)<.35))trees.push({x,z,y:top,s:.26,kind:'palm'});
-    stadium=moved;
   }
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {
