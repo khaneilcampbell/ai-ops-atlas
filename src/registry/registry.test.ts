@@ -38,10 +38,10 @@ describe("bundled registry", () => {
   const { catalog, issues } = buildCatalog(files);
   const entries = buildRegistry(catalog, {}, null);
 
-  it("keeps all 7 projects and 74 agents discoverable with no manifest problems", () => {
+  it("keeps all 7 projects and 75 agents discoverable with no manifest problems", () => {
     expect(issues).toEqual([]);
     expect(catalog.projects).toHaveLength(7);
-    expect(entries).toHaveLength(74);
+    expect(entries).toHaveLength(75);
   });
 
 
@@ -55,7 +55,7 @@ describe("bundled registry", () => {
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 28, B: 13, C: 23, D: 9, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 28, B: 14, C: 23, D: 9, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 
@@ -276,7 +276,7 @@ describe("directory", () => {
 
   it("filters by function, type, project and search", () => {
     expect(filterEntries(entries, { ...EMPTY_FILTER, category: "security" }).map((e) => e.profile.id).sort()).toEqual(
-      ["bruteforce-detection", "security-check", "soc-case-notes", "soc-detection-lead"].sort(),
+      ["bruteforce-detection", "connor-security-sheet", "security-check", "soc-case-notes", "soc-detection-lead"].sort(),
     );
     expect(filterEntries(entries, { ...EMPTY_FILTER, classification: "A", project: "commerce-pipeline" })).toHaveLength(7);
     expect(filterEntries(entries, { ...EMPTY_FILTER, query: "site ci" }).map((e) => e.profile.id).sort()).toEqual(["benjaire-site-ci", "site-ci"]);
@@ -287,7 +287,7 @@ describe("directory", () => {
   it("groups by agent type in type order and by project", () => {
     const g = groupEntries(entries, "classification");
     expect(g.map((x) => x.key)).toEqual(["A", "B", "C", "D", "E"]);
-    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(74);
+    expect(groupEntries(entries, "project").reduce((n, x) => n + x.entries.length, 0)).toBe(75);
   });
 
   it("sorts verified runs first and keeps the rest stable by title", () => {
@@ -305,11 +305,11 @@ describe("directory", () => {
     const reasons = s.needsReview.flatMap((e) => e.review);
     expect(reasons.filter((r) => r.startsWith("Classification is") || r.includes("no permissions"))).toEqual([]);
     // Items with a source of their own (Atlas Executive since 2026-11-22; Atlas Engineering and QA since
-    // 2026-11-23 count once between them here, as QA links the same dispatch run), 11 with n8n workflow links
-    // (9 automations, including the Career Execution Agent and Task Writer drafts, Benjaire Product Lab,
+    // 2026-11-23 count once between them here, as QA links the same dispatch run), 12 with n8n workflow links
+    // (10 automations, including the Career Execution Agent, Task Writer and Atlas Security Sheet drafts, Benjaire Product Lab,
     // which links its hand-off workflow, and Product Lab Market Research, which links Atlas · Executive
     // Dispatch), and 11 owning agents through their automations.
-    expect(s.observable).toBe(60);
+    expect(s.observable).toBe(61);
   });
 });
 
