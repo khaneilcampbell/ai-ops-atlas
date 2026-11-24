@@ -25,6 +25,11 @@ export interface AgentPolicy {
   memory?: "read" | "write";
   /** The catalog agent (catalog/*.yaml id) this key runs for, so its agent page shows the key's runs and memory. */
   catalogId?: string;
+  /**
+   * May read GET reports/agents: per-agent counts only (runs, failures, tokens, cost, memory items,
+   * feedback), never a record's content. For the Data Intelligence Center's agent self-reports.
+   */
+  agentReports?: boolean;
 }
 
 /**
@@ -35,6 +40,9 @@ export interface AgentPolicy {
 export const AGENT_POLICIES: Readonly<Record<string, AgentPolicy>> = {
   // The example n8n flow in docs/data-foundation.md: reads project context, files tasks, logs runs.
   "task-writer": { name: "Task writer (n8n)", areas: ["business", "projects", "career"], read: ["goals", "projects", "tasks", "decisions", "documents"], write: ["tasks"], documents: ["shared", "internal"], memory: "write", catalogId: "atlas-task-writer" },
+  // n8n "Data Intelligence · Agent Self-Reports": counts about each agent for its daily self-report.
+  // No areas, tables, documents or memory content: only GET reports/agents.
+  "self-reports": { name: "Agent self-reports (n8n)", areas: [], read: [], write: [], documents: [], agentReports: true, catalogId: "agent-self-reports" },
 };
 
 export type Actor = { kind: "owner"; id: string; name: string } | { kind: "agent"; id: string; name: string; policy: AgentPolicy };
@@ -75,5 +83,6 @@ export const canWrite = (a: Actor, table: FactTable) => a.kind === "owner" || a.
 export const inArea = (a: Actor, area: string) => a.kind === "owner" || (a.policy.areas as readonly string[]).includes(area);
 export const areasOf = (a: Actor): readonly string[] | null => (a.kind === "owner" ? null : a.policy.areas);
 export const canReadMemory = (a: Actor) => a.kind === "owner" || a.policy.memory === "read" || a.policy.memory === "write";
+export const canReadAgentReports = (a: Actor) => a.kind === "owner" || a.policy.agentReports === true;
 export const canWriteMemory = (a: Actor) => a.kind === "owner" || a.policy.memory === "write";
 export const documentCategoriesOf = (a: Actor): readonly string[] | null => (a.kind === "owner" ? null : a.policy.documents.filter((c) => c !== "restricted"));

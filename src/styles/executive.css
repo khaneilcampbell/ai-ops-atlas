@@ -80,3 +80,7 @@
   .exec-node-wrap { width: 100%; }
 }
 .exec-ctl .chips .chip { white-space: normal; text-align: left; max-width: 100%; }
+
+/* Engineering Operations rows that aren't buttons */
+.eng-row { cursor: default; }
+.eng-row:hover { background: none; }

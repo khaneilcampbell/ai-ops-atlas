@@ -24,6 +24,7 @@
 //   GET  memory/agents/<agentId>      one agent's memory, runs and performance
 //   POST feedback                     a run's checks against its success criteria, and a lesson
 //   POST maintenance/sweep            mark stale runs timed out, expire working memory (Khaneil only)
+//   GET  reports/agents               per-agent counts for the daily self-reports (server/data/agentReports.ts)
 //
 // Every write runs in one transaction. Agents never change a record Khaneil created or confirmed:
 // the change is filed as a pending "fact_change" approval and applied only when he approves it.
@@ -53,7 +54,8 @@ import { bearerOk } from "../live";
 import { logEvent, type Sink } from "../log";
 import { connectionStringOf, DbUnavailable, withDb, type Db, type DbEnv } from "./db";
 import { agentMemory, memoryOverview, memoryReady, NOT_MIGRATED, prepare, reviewMemory, search, sweep, writeFeedback, writeMemory, type MemoryCtx } from "../memory/service";
-import { agentFor, areasOf, canRead, canWrite, documentCategoriesOf, inArea, ownerActor, parseKeys, type Actor } from "./policy";
+import { agentReports } from "./agentReports";
+import { agentFor, areasOf, canRead, canReadAgentReports, canWrite, documentCategoriesOf, inArea, ownerActor, parseKeys, type Actor } from "./policy";
 
 export interface DataEnv extends DbEnv {
   /** "key-id:key" pairs for agent callers; ids must be listed in server/data/policy.ts. */
@@ -269,6 +271,8 @@ function routeOf(method: string, p: string[]): Route | null {
     if (method === "POST" && !c) return { name: "record.write", idempotent: true, table: () => b, run: writeRecord };
   }
   if (method === "POST" && a === "runs" && !b) return { name: "run.write", run: writeRun };
+  if (method === "GET" && a === "reports" && b === "agents" && !c)
+    return { name: "reports.agents", run: async ({ db, actor }) => (canReadAgentReports(actor) ? ok(await agentReports(db, await memoryReady(db))) : no(403, "This key can't read agent reports.")) };
   if (method === "POST" && a === "notes" && !b) return { name: "note.write", idempotent: true, run: writeNote };
   const mem = (name: string, run: (c: MemoryCtx) => Promise<Answer>, extra: Partial<Route> = {}): Route => ({ name, ...extra, run: async (c) => ((await memoryReady(c.db)) ? run(c) : NOT_MIGRATED) });
   if (a === "memory") {

@@ -38,10 +38,13 @@ const HEALTHY = new Set(["active", "idle"]);
 
 /**
  * The autonomy level an action needs. Read-only work is level 1, work inside Atlas and budgeted
- * research is level 2, allowlisted outside changes would be level 3 (none are allowlisted yet), and
- * anything that needs a person's approval, publishes or changes an outside system is level 4.
+ * research is level 2, allowlisted outside changes are level 3, and anything else that needs a
+ * person's approval, publishes or changes an outside system is level 4.
+ *
+ * Level 3 allowlist (Phase 2, 2026-11-23): pushing an isolated atlas-eng/ branch and opening a pull
+ * request from it. Neither can merge, deploy or touch main; merging stays Khaneil's.
  */
-export const LEVEL3_ALLOWLIST: ReadonlySet<string> = new Set<string>();
+export const LEVEL3_ALLOWLIST: ReadonlySet<string> = new Set<string>(["engineering.implement_fix", "engineering.deliver_pr"]);
 
 export function actionLevel(cap: Capability): Autonomy {
   if (cap.approval?.length || cap.sideEffect === "publish") return 4;

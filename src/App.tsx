@@ -21,6 +21,7 @@ import { SettingsView } from "./views/Settings";
 import { IntelligenceView } from "./views/Intelligence";
 import { ProjectsView } from "./views/Projects";
 import { AtlasApiView, AtlasIntelligenceView } from "./views/AtlasIntelligence";
+import { GuideView } from "./views/Guide";
 import { UsageView } from "./views/Usage";
 import { TaskCenterView } from "./views/tasks/TaskCenter";
 import { WorkflowIntelligenceView } from "./views/workflows/WorkflowIntelligence";
@@ -46,8 +47,8 @@ const PHONE_BAR: { view: View; label: string; icon: IconName }[] = [
   { view: "map", label: "Map", icon: "map" },
   { view: "agents", label: "Agents", icon: "agents" },
   { view: "overview", label: "Mission", icon: "overview" },
-  // Intel, as in the sidebar; Activity is one of its tabs.
-  { view: "intel", label: "Intel", icon: "spark" },
+  // Intel, as in the sidebar, opening on its first tab (the Overview guide); Activity is one of its tabs.
+  { view: "guide", label: "Intel", icon: "spark" },
 ];
 
 /** The page a section opens on remembers the tab used last this session. */
@@ -182,6 +183,7 @@ export default function App() {
           {view === "automations" && <AgentsView key="automations" kind="automations" />}
           {/* Intel → Repositories: repository intelligence, then the repositories read from GitHub. */}
           {view === "repos" && <><IntelligenceView /><ReposView /></>}
+          {view === "guide" && <GuideView />}
           {view === "intel" && <AtlasIntelligenceView />}
           {view === "intel-api" && <AtlasApiView />}
           {view === "review" && <IntelligenceView only="review" />}

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { View } from "../state";
 import { SECTIONS, SIDEBAR_SECTIONS, sectionEntry, sectionOf, tabOf } from "./sections";
 
-const ALL: View[] = ["overview", "workflows", "tasks", "business", "agents", "automations", "repos", "map", "projects", "grid", "activity", "intel", "review", "usage", "api-costs", "api-github", "intel-api", "workspace", "settings", "preferences"];
+const ALL: View[] = ["overview", "workflows", "tasks", "business", "agents", "automations", "repos", "map", "projects", "grid", "activity", "intel", "review", "usage", "api-costs", "api-github", "intel-api", "workspace", "settings", "preferences", "guide"];
 
 describe("sidebar sections", () => {
   it("lists the sidebar sections with their pages in order", () => {
@@ -12,7 +12,7 @@ describe("sidebar sections", () => {
       ["Auto", ["Automations"]],
       ["Tasks", ["Tasks"]],
       ["Hub", ["Workspace"]],
-      ["Intel", ["Intelligence", "Engineering Review", "Repositories", "Activity", "API"]],
+      ["Intel", ["Overview", "Intelligence", "Engineering Review", "Repositories", "Activity", "API"]],
       ["Grid", ["Grid"]],
       ["Settings", ["Connections", "Preferences"]],
     ]);
@@ -59,8 +59,8 @@ describe("sidebar sections", () => {
 
   it("reopens a section on its last tab, else its first", () => {
     const intel = SECTIONS.find((s) => s.id === "intel")!;
-    expect(sectionEntry(intel, {})).toBe("intel");
+    expect(sectionEntry(intel, {})).toBe("guide");
     expect(sectionEntry(intel, { intel: "repos" })).toBe("repos");
-    expect(sectionEntry(intel, { intel: "agents" })).toBe("intel");
+    expect(sectionEntry(intel, { intel: "agents" })).toBe("guide");
   });
 });
