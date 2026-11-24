@@ -585,6 +585,20 @@
    "automations": 0
   },
   {
+   "id": "service:community-cafe",
+   "name": "Community Pavilion & Café",
+   "kind": "Public space",
+   "area": "Bay",
+   "organization": "Atlas",
+   "status": "Simulated",
+   "project": "",
+   "source": "src/views/map3d/cafePlan.ts",
+   "module": "",
+   "agent_ids": [],
+   "ai_agents": 0,
+   "automations": 0
+  },
+  {
    "id": "service:atlas-galleria",
    "name": "Vendor & Supplier Hub",
    "kind": "Landmark",
@@ -2284,6 +2298,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-24T09:12:16.682Z",
- "commit": "cb2383fed61f507c8ce2b33b457f201a36cb8753"
+ "generated_at": "2026-11-24T12:04:44.414Z",
+ "commit": "4357ec5191375aa9bb92d8687486388a5302fd1f"
 }
