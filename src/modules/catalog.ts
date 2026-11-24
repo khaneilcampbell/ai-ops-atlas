@@ -50,7 +50,7 @@ const TYPES: AtlasModuleType[] = [
     connectors: ["github", "agent-feed", "atlas-intel", "usage-sync"], views: ["agents", "usage"], actions: [], permissions: [],
   },
   {
-    id: "workflow-automation-plant", version: V, name: "Workflow Automation Plant", productDistrict: "ai-automation",
+    id: "workflow-automation-plant", version: V, name: "Workflow Automation Hub", productDistrict: "ai-automation",
     description: "Read-only visibility into the workspace's automation workflows.",
     capabilities: [
       on("inventory", "Automation inventory", "src/views/Agents.tsx kind=automations"),
@@ -97,7 +97,7 @@ const TYPES: AtlasModuleType[] = [
     connectors: ["github"], views: ["repos", "grid"], actions: ["rerun-failed-jobs"], permissions: ["github:actions:write"],
   },
   {
-    id: "security-operations-center", version: V, name: "Security Operations Center", productDistrict: "infrastructure-engineering",
+    id: "security-operations-center", version: V, name: "Security & Infrastructure Center", productDistrict: "infrastructure-engineering",
     description: "Detections, security scanning and incident response.",
     capabilities: [later("detections", "Detection inventory"), on("scanning", "Security scanning results", "src/security/alerts.ts useSecurityAlerts"), on("incidents", "Security incidents", "src/security/incidents.ts securityIncidents")],
     connectors: ["github-security"], views: [], actions: [], permissions: [],
@@ -129,7 +129,7 @@ const TYPES: AtlasModuleType[] = [
     connectors: ["usage-sync", "stripe-sales"], views: ["usage", "business"], actions: [], permissions: [],
   },
   {
-    id: "growth-marketing-studio", version: V, name: "Growth & Marketing Studio", productDistrict: "business-operations",
+    id: "growth-marketing-studio", version: V, name: "Product & Growth Studio", productDistrict: "business-operations",
     description: "Campaigns, content and audience growth.",
     capabilities: [
       later("campaigns", "Campaigns"),

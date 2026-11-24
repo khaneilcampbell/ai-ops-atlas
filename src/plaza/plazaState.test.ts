@@ -110,7 +110,7 @@ describe("plaza snapshot", () => {
     const lab = { id: "lab", name: "Benjaire Product Lab", projectId: "benjaire-com", workplace: { building: "Benjaire Marketing Agency" }, links: [{ label: "n8n workflow", url: "https://x.app.n8n.cloud/workflow/WF9" }] };
     const n8n: N8nState = { state: "ready", message: null, value: { state: "ok", instance: "https://x.app.n8n.cloud", fetchedAt: iso(0), window: 50, workflows: [{ id: "WF9", name: "Product Lab hand-off", active: true, failures24h: 0, runs: [{ id: "5", status: "waiting", mode: "integrated", startedAt: iso(3), stoppedAt: null }] }] } };
     const s = plazaSnapshot(inputs({ agents: [...agents, lab], projectNames: new Map([...projectNames, ["benjaire-com", "Business Operations HQ"]]), n8n }));
-    expect(s.running[0]).toMatchObject({ agentName: "Benjaire Product Lab", buildingKey: "service:benjaire-marketing", buildingName: "Growth & Marketing Studio" });
+    expect(s.running[0]).toMatchObject({ agentName: "Benjaire Product Lab", buildingKey: "service:benjaire-marketing", buildingName: "Product & Growth Studio" });
   });
 
   it("counts running and queued work from tasks, runtimes and n8n, once per piece of work", () => {

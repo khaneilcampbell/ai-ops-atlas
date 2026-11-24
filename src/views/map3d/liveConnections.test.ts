@@ -31,10 +31,10 @@ describe("live buildings connect to Atlas Command Center", () => {
     expect(anchors.has(COMMAND_CENTER)).toBe(true);
   });
 
-  it("connects Growth & Marketing Studio once its live data answers", () => {
+  it("connects Product & Growth Studio once its live data answers", () => {
     const live = liveLandmarks(instances, (_, type) => (type === "growth-marketing-studio" ? { health: "good", summary: "Live" } : { health: "unknown", summary: "Not verified" }));
     expect(ends(live)).toEqual([["service:benjaire-marketing", COMMAND_CENTER]]);
-    expect(instances.find((l) => l.id === "benjaire-marketing")?.name).toBe("Growth & Marketing Studio");
+    expect(instances.find((l) => l.id === "benjaire-marketing")?.name).toBe("Product & Growth Studio");
   });
 
   it("draws no line for a building that is not live, and keeps the line and status dot in step", () => {

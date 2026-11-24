@@ -3,10 +3,12 @@ import { catalog } from "../catalog";
 import { buildingForSelection } from "./lookup";
 
 it("finds the module building behind a map selection by stable id", () => {
-  expect(buildingForSelection({ kind: "project", id: "benjaire-site" }, catalog)?.moduleType).toBe("business-operations-hq");
+  expect(buildingForSelection({ kind: "service", id: "atlas-galleria" }, catalog)?.moduleType).toBe("business-operations-hq");
   expect(buildingForSelection({ kind: "project", id: "intelligence-hub" }, catalog)?.moduleType).toBe("agent-operations-center");
   expect(buildingForSelection({ kind: "service", id: "benjaire-marketing" }, catalog)?.moduleType).toBe("growth-marketing-studio");
-  expect(buildingForSelection({ kind: "service", id: "financial:investments" }, catalog)?.moduleType).toBe("integration-exchange");
+  // Grouped with Business Operations HQ: no module of its own, but the HQ still finds it.
+  expect(buildingForSelection({ kind: "service", id: "financial:investments" }, catalog)).toBeUndefined();
+  expect(buildingForSelection({ kind: "service", id: "financial:investments" }, catalog, { grouped: true })?.moduleType).toBe("integration-exchange");
   expect(buildingForSelection({ kind: "service", id: "atlas-station" }, catalog)?.moduleType).toBe("workflow-automation-plant");
   expect(buildingForSelection({ kind: "project", id: "portfolio-site" }, catalog)?.moduleType).toBe("development-repository-hub");
 });
@@ -24,11 +26,12 @@ it("returns nothing for selections that are not module buildings", () => {
 describe("landmarkModuleStatus", () => {
   it("tells a landmark with real data apart from a planned one, and names what it reads", async () => {
     const { landmarkModuleStatus } = await import("./lookup");
-    const ops = landmarkModuleStatus("airport-building:operations");
-    expect(ops?.name).toBe("Observability Center");
-    expect(ops?.availability).toBe("partial");
-    expect(ops?.connectors).toContain("GitHub");
-    expect(landmarkModuleStatus("airport-building:cargo")?.availability).toBe("partial");
+    const plant = landmarkModuleStatus("atlas-station");
+    expect(plant?.name).toBe("Workflow Automation Hub");
+    expect(plant?.connectors.length).toBeGreaterThan(0);
+    // Grouped with a core building (Khaneil, 2026-11-24): the airport buildings house no module of their own.
+    expect(landmarkModuleStatus("airport-building:operations")).toBeUndefined();
+    expect(landmarkModuleStatus("airport-building:cargo")).toBeUndefined();
     expect(landmarkModuleStatus("airport-building:nope")).toBeUndefined();
   });
 });

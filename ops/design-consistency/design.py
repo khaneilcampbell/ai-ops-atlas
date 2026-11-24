@@ -266,15 +266,17 @@ def label_problems(name, kind):
         problems.append("contains a domain")
     if re.search(r"\s[-–—]\s|_|(?<=[a-z])-(?=[a-z]+-)", name) or (kind == "project" and "-" in name):
         problems.append("contains dashes or underscores")
-    words = name.split()
+    # "&" joins two words ("Projects & Portfolio Studio"): it is not a word to capitalize or count.
+    words = [w for w in name.split() if w != "&"]
     for i, w in enumerate(words):
         head = w.split("-")[0]
         if not head or (i and head in SMALL_WORDS):
             continue
         if not (head[0].isupper() or head[0].isdigit()):
             problems.append(f'"{w}" is not capitalized')
-    if kind == "project" and len(words) > 3:
-        problems.append("is longer than 3 words")
+    # Four words fit the core building names (Khaneil, 2026-11-24: "AI Engineering & Research Center").
+    if kind == "project" and len(words) > 4:
+        problems.append("is longer than 4 words")
     if kind == "agent" and len(words) > 5:
         problems.append("is longer than 5 words")
     if name != name.strip() or "  " in name:

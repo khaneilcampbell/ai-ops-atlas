@@ -12,7 +12,7 @@ import {RING_ROAD_ID} from './ringRoad';
  * - West avenue: the street beside the airport runs on south past Atlas Commons' west side to the
  *   ring road's south side.
  * - Middle avenue: the avenue down from the Financial District continues south from the
- *   Career & Portfolio cross street to the cross street by Security & Infrastructure.
+ *   Career & Commerce cross street to the cross street by Transport & Infrastructure.
  * - East avenue: the street out to the AI Engineering tower runs on south along the east shore and
  *   turns west onto the Marketplace boulevard, short of Atlas Central Station's stairs.
  *

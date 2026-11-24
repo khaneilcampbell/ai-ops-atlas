@@ -17,7 +17,7 @@ import { PLAZA_KEY, PLAZA_NAME } from "../views/map3d/plazaPlan";
 import { DEALERSHIP_KEY } from "../views/map3d/dealershipPlan";
 import { planDistrictLife } from "../views/map3d/districtLifePlan";
 import { planDistrictWalkers } from "../views/map3d/districtWalkers";
-import { FINANCIAL_KEY, FINANCIAL_PARK_KEY, financialKey } from "../views/map3d/financialPlan";
+import { FINANCIAL_PARK_KEY, financialKey } from "../views/map3d/financialPlan";
 import { GALLERIA_KEY, GALLERIA_NAME } from "../views/map3d/galleriaPlan";
 import { planGalleriaLife } from "../views/map3d/galleriaLifePlan";
 import { HILLS_KEY } from "../views/map3d/hillsPlan";
@@ -166,7 +166,6 @@ function buildingsOf(catalog: Catalog, layout: Layout, scene: Scene3D): Inventor
   }
   for (const k of scene.kiosks) add({ id: k.key, name: k.name, kind: "Tool office", area: area.get(k.projectId) ?? "", status: PLANNED, project: k.projectId, source: "catalog tools (src/catalog/roles.ts servicesOf)" });
   if (scene.financial) {
-    add({ id: FINANCIAL_KEY, name: "Financial District", kind: "Public space", area: "Financial District", status: PLANNED, project: "", source: "src/views/map3d/financialPlan.ts" });
     for (const b of scene.financial.buildings) add({ id: financialKey(b.id), name: b.name, kind: "Financial District building", area: "Financial District", status: PLANNED, project: "", source: "src/views/map3d/financialPlan.ts" });
     add({ id: FINANCIAL_PARK_KEY, name: "Financial Park", kind: "Public space", area: "Financial District", status: PLANNED, project: "", source: "src/views/map3d/financialPlan.ts" });
   }

@@ -10,9 +10,13 @@ vi.mock("../intel/state", () => ({ useIntel: () => ({ telemetry: null }) }));
 const noop = () => {};
 const render = (selection: unknown, repos: Record<string, unknown> = {}) =>
   renderToStaticMarkup(<AtlasContext.Provider value={{ selection, catalog, repos, uncataloged: [], settings: { refreshMinutes: 30 }, setView: noop, select: noop, setFilters: noop, clearFilters: noop } as never}><ModuleSection /></AtlasContext.Provider>);
+// A building grouped with a core building (workspace.yaml `merged`) has no module of its own; the core
+// building shows its module with `of`.
+const grouped = (of: { kind: "project" | "service"; id: string }) =>
+  renderToStaticMarkup(<AtlasContext.Provider value={{ selection: null, catalog, repos: {}, uncataloged: [], settings: { refreshMinutes: 30 }, setView: noop, select: noop, setFilters: noop, clearFilters: noop } as never}><ModuleSection of={of} /></AtlasContext.Provider>);
 
 it("shows the module behind a building, keeping the building's own name out of the module", () => {
-  const html = render({ kind: "project", id: "benjaire-site" });
+  const html = render({ kind: "service", id: "atlas-galleria" });
   expect(html).toContain("Business Operations HQ");
   expect(html).toContain("Partly available");
   expect(html).toContain("1 planned capability, not built yet");
@@ -27,7 +31,8 @@ it("reports health as not verified when CI has not loaded, and names the source"
 });
 
 it("shows the publishing pipeline in the Product Marketplace, with stages switched off on purpose as not running", () => {
-  const html = render({ kind: "service", id: "atlas-marketplace" });
+  const html = grouped({ kind: "service", id: "atlas-marketplace" });
+  expect(render({ kind: "service", id: "atlas-marketplace" })).toBe("");
   expect(html).toContain("Commerce &amp; Product Marketplace");
   expect(html).toContain("Products and releases, the pipelines that publish them");
   expect(html).toContain('aria-label="Publishing pipeline"');
@@ -42,9 +47,9 @@ it("has no operating agent in the Product Marketplace since Marketplace Steward 
   expect(html).not.toContain("Healthy");
 });
 
-it("shows site traffic and research briefs in the Growth & Marketing Studio, loading until data arrives", () => {
+it("shows site traffic and research briefs in the Product & Growth Studio, loading until data arrives", () => {
   const html = render({ kind: "service", id: "benjaire-marketing" });
-  expect(html).toContain("Growth &amp; Marketing Studio");
+  expect(html).toContain("Product &amp; Growth Studio");
   expect(html).toContain('aria-label="Site traffic"');
   expect(html).toContain("Site traffic · Loading");
   expect(html).toContain('aria-label="Product research briefs"');
@@ -56,7 +61,7 @@ it("shows site traffic and research briefs in the Growth & Marketing Studio, loa
 });
 
 it("shows the model inventory and cost per model in the Model Intelligence Lab", () => {
-  const html = render({ kind: "service", id: "airport-building:cargo" });
+  const html = grouped({ kind: "service", id: "airport-building:cargo" });
   expect(html).toContain("Model Intelligence Lab");
   expect(html).toContain('aria-label="Model inventory"');
   expect(html).toContain('aria-label="Cost per model"');
@@ -86,12 +91,12 @@ it("opens the Agents directory scoped to a project building, and unscoped from a
 });
 
 it("shows connected signals in the Observability Center and the document inventory in the Knowledge Repository", () => {
-  const ops = render({ kind: "service", id: "airport-building:operations" });
+  const ops = grouped({ kind: "service", id: "airport-building:operations" });
   expect(ops).toContain("Observability Center");
   expect(ops).toContain('aria-label="Connected signals"');
   expect(ops).toContain("GitHub");
   expect(ops).toContain("3 planned capabilities");
-  const docs = render({ kind: "service", id: "financial:financial-planning" });
+  const docs = grouped({ kind: "service", id: "financial:financial-planning" });
   expect(docs).toContain("Knowledge Repository");
   expect(docs).toContain('aria-label="Document inventory"');
   expect(docs).toContain("github.com/khaneilcampbell/ai-ops-atlas");

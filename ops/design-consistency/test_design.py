@@ -111,7 +111,8 @@ class Labels(unittest.TestCase):
         self.assertIn("contains a domain", design.label_problems("benjaire.com", "project"))
         self.assertIn("contains dashes or underscores", design.label_problems("Multi-Agent Commerce", "project"))
         self.assertIn('"pipeline" is not capitalized', design.label_problems("Commerce pipeline", "project"))
-        self.assertIn("is longer than 3 words", design.label_problems("The Big Commerce Pipeline", "project"))
+        self.assertIn("is longer than 4 words", design.label_problems("The Big Commerce Pipeline Hub", "project"))
+        self.assertEqual(design.label_problems("AI Engineering & Research Center", "project"), [])
 
     def test_reads_names_and_repeats_from_the_catalog(self):
         repo = Repo("", "project:\n  id: d\n  name: multi-agent-commerce-pipeline\n  links:\n    - name: ignored\nagents:\n"

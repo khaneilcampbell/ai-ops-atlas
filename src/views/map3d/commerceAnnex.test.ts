@@ -7,12 +7,18 @@ import {annexGeometry,annexTriangles} from './commerceAnnexGeometry';
 import {isCommerceTower} from './commerceTowerPlan';
 
 describe('Commerce district tool offices',()=>{
- const scene=buildScene(layoutMap(catalog,[],'district'));
+ const layout=layoutMap(catalog,[],'district'),scene=buildScene(layout);
  const tower=scene.towers.find(t=>isCommerceTower(t.projectId))!;
- const annexes=scene.kiosks.filter(isCommerceAnnex).sort((a,b)=>a.key<b.key?-1:1);
+ // Tool buildings are off the map (Khaneil, 2026-11-24), so the office shapes are checked on the lots Commerce's tools
+ // still reserve, built the way the scene used to build them.
+ const commerce=layout.districts.find(d=>d.project.id===ANNEX.projectId)!;
+ const annexes=commerce.kiosks.map(k=>({key:`service:${ANNEX.projectId}:${k.service.id}`,projectId:ANNEX.projectId,name:k.service.name,users:k.service.users.map(a=>a.name),
+  x:k.gx+k.size/2,z:k.gy+k.size/2,size:k.size,canopy:'#c9a35a',height:undefined as number|undefined})).sort((a,b)=>a.key<b.key?-1:1);
  it('covers every Commerce tool and no other district',()=>{
   expect(annexes.map(k=>k.name).sort()).toEqual(expect.arrayContaining(['Design Studio','Search Desk','Payments Office']));
-  for(const k of scene.kiosks)expect(isCommerceAnnex(k)).toBe(k.projectId==='commerce-pipeline');
+  for(const k of annexes)expect(isCommerceAnnex(k)).toBe(true);
+  // None is drawn: Commerce is one building and its tools are listed in its panel.
+  expect(scene.kiosks).toEqual([]);
  });
  it('fits each office and its plinth inside its own lot',()=>{
   annexes.forEach((k,i)=>{const r=annexReach(annexShape(k,tower,i));expect(r.x).toBeLessThanOrEqual(k.size/2+.02);expect(r.z).toBeLessThanOrEqual(k.size/2+.02);});
