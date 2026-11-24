@@ -7,12 +7,13 @@ import { FinanceList } from "../components/BenjaireFinance";
 import { buildingFinance, datasetState, FINANCE_BUSINESS, FINANCE_PLAN, financePlanIssues, financeSignLines, parseFinancePlan } from "./benjaire";
 
 describe("Benjaire finance plan", () => {
-  it("loads cleanly and gives every Financial District building, all owned by Benjaire, a place for its data", () => {
+  it("loads cleanly and gives every Financial District building, owned by Benjaire or labelled a filler building, a place for its data", () => {
     expect(financePlanIssues).toEqual([]);
     expect(FINANCE_BUSINESS).toBe("Benjaire");
     for (const b of FINANCIAL_BUILDINGS) {
       const key = financialKey(b.id);
-      expect(buildingOrganization(key), key).toBe("Benjaire");
+      // Nov 24: Financial District buildings with no module carry a neutral filler name, labelled "Filler building".
+      expect(["Benjaire", "Filler building"], key).toContain(buildingOrganization(key));
       expect(buildingFinance(key)?.datasets.length, key).toBeGreaterThan(0);
     }
     const mapKeys = new Set(FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)));
