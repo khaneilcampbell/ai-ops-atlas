@@ -1,1 +1,1 @@
-- 2026-11-24 · Fixed the failing security check: updated a Mac app library (cookie) that got a security advisory today, so pull requests can pass again (#PR)
+- 2026-11-24 · Fixed the failing security check: updated a Mac app library (cookie) that got a security advisory today, so pull requests can pass again (#519)
