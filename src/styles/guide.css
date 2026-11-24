@@ -1,0 +1,25 @@
+/* Intel → Overview, the guide to Atlas (src/views/Guide.tsx). */
+.guide-ops h2 { margin: 0 0 10px; }
+.guide-rules { margin: 0 0 16px; padding-left: 20px; display: grid; gap: 6px; color: var(--ink-2); font-size: 14px; }
+.guide-rules b { color: var(--ink); }
+.guide-leads td { vertical-align: top; }
+.guide-places-title { margin: 24px 0 12px; }
+.guide-places { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.guide-place p { margin: 6px 0 0; font-size: 14px; }
+.guide-place-head { display: flex; align-items: center; gap: 8px; }
+.guide-place-head h3 { margin: 0; }
+.guide-place-head .grow { flex: 1; }
+.guide-tabs { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid rgba(29, 43, 34, 0.08); display: grid; gap: 6px; font-size: 13px; }
+.guide-tabs dt { font-weight: 600; display: inline; }
+.guide-tabs dt::after { content: " · "; color: var(--ink-3); font-weight: 400; }
+.guide-tabs dd { display: inline; margin: 0; color: var(--ink-2); }
+.guide-narrow { display: none; }
+@media (max-width: 640px) {
+  .guide-wide { display: none; }
+  .guide-narrow { display: inline; }
+  .guide-places { grid-template-columns: 1fr; }
+  table.table.guide-leads { width: 100%; min-width: 0; }
+  .guide-leads .small, .guide-leads th:nth-child(5), .guide-leads td:nth-child(5) { display: none; }
+  .guide-leads th, .guide-leads td { padding-left: 6px; padding-right: 6px; }
+  .guide-leads th { letter-spacing: 0.04em; }
+}
