@@ -127,6 +127,17 @@ export function effectiveLastRun(agent: Agent, snap: RepoSnapshot | undefined): 
   return agent.lastRun;
 }
 
+/** Days without a run before an active agent is flagged: a monthly agent is quiet for weeks on
+ *  purpose, a weekly one for a week. Everything else gets a week. */
+export function staleAfterDays(trigger: string | null | undefined): number {
+  const t = (trigger ?? "").toLowerCase();
+  // The most frequent schedule named wins: "every 4 hours ... Top 10 Sundays" is not weekly.
+  if (/\b(hour|hours|hourly|daily|every day|minutes)\b/.test(t)) return 7;
+  if (/\b(monthly|each month|every month|of each month|of the month)\b/.test(t)) return 35;
+  if (/\b(weekly|each week|every week)\b|\bevery (monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?\b|\bsundays\b|\bmondays\b/.test(t)) return 9;
+  return 7;
+}
+
 export interface AttentionItem {
   id: string;
   severity: "high" | "medium" | "low";
@@ -167,7 +178,7 @@ export function attentionItems(
       const waitsForTrigger = trigger === "event" || trigger === "manual";
       if (d === null) {
         if (observed) items.push({ id: `agent:${a.id}:norun`, severity: "low", title: a.name, detail: "Active, but no run is recorded yet", target });
-      } else if (d > 7 && !waitsForTrigger) {
+      } else if (d > staleAfterDays(a.trigger) && !waitsForTrigger) {
         items.push({ id: `agent:${a.id}:stale`, severity: "medium", title: a.name, detail: `Active, but last run was ${d} days ago`, target });
       }
     }

@@ -253,7 +253,18 @@ export async function readEvents(url: URL, env: LiveEnv, now = Date.now()): Prom
     const { results: last } = await env.LIVE.prepare("SELECT MAX(id) AS id FROM events").all<{ id: number | null }>();
     cursor = last[0]?.id ?? 0;
   }
-  return reply(200, { configured: true, cursor, events, gap: !fresh && results.length === PAGE });
+  const gap = !fresh && results.length === PAGE;
+  // A fresh client (the Mac app restarts on every update) only gets six hours of events, and a gap
+  // skips the middle, so a once-a-day heartbeat was lost and the agent looked silent. Agent runs
+  // are few, so send every kept one alongside the page.
+  let agentRuns: LiveEvent[] | undefined;
+  if (fresh || gap) {
+    const { results: runs } = await env.LIVE.prepare("SELECT id, at, source, kind, repo, body FROM events WHERE kind = 'agent_run' AND at >= ? ORDER BY id DESC LIMIT ?")
+      .bind(new Date(now - KEEP_MS).toISOString(), PAGE)
+      .all<{ id: number; at: string; source: LiveEvent["source"]; kind: string; repo: string | null; body: string }>();
+    agentRuns = runs.reverse().map((r) => ({ ...r, body: JSON.parse(r.body) }));
+  }
+  return reply(200, { configured: true, cursor, events, gap, ...(agentRuns ? { agentRuns } : {}) });
 }
 
 /** GET /api/hooks/feed: the same feed for the Mac app, with its sync key instead of Access. */
