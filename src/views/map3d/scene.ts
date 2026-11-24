@@ -742,7 +742,7 @@ function buildCity(layout: Layout): Scene3D {
   if(financial?.circa){const c=financial.circa;land.push({x:c.x,z:c.z,w:c.w,d:c.d});}
   const community:CommunityPlan|undefined=undefined;
   // BMW takes the waterfront parcel east of the district; the train now stops in Financial Park.
-  const dealership=planDealership({financial});
+  let dealership=planDealership({financial});
   if(dealership)land.push(dealership.lot);
   const connections=districtConnections(airport,stadium,[...[...towers,...kiosks].map(b=>({x:b.x,z:b.z,w:b.size,d:b.size})),...fountains.map(f=>({x:f.x,z:f.z,w:FOUNTAIN_R*2*(f.k??1),d:FOUNTAIN_R*2*(f.k??1)}))]);
   if (cleared.has("street-reserve:ai-ops-atlas")) {
@@ -945,6 +945,19 @@ function buildCity(layout: Layout): Scene3D {
       if(ia){const q=rimOf([w.x1,w.z1],[w.x0,w.z0]);w.x0=q[0];w.z0=q[1];}
       else if(ib){const q=rimOf([w.x0,w.z0],[w.x1,w.z1]);w.x1=q[0];w.z1=q[1];}
     }
+  }
+  // Business Operations HQ is the Commerce tower now (Khaneil, 2026-11-24): it and its tool offices stand on the right side of
+  // the Financial District, past Financial Park, where the Infrastructure Operations Hub stood. The hub's showroom takes
+  // the tower's old spot for now. Streets are planned as before, so nothing else moves: the hub's drive serves the tower,
+  // and the tower's old plaza serves the showroom.
+  const businessHq=towers.find(t=>t.projectId==="commerce-pipeline");
+  if(businessHq&&dealership){
+    const r=dealership.showroom,dx=dealership.x+r.cx-businessHq.x,dz=dealership.z+r.cz-businessHq.z;
+    businessHq.x+=dx;businessHq.z+=dz;
+    for(const k of kiosks)if(k.projectId==="commerce-pipeline"){k.x+=dx;k.z+=dz;}
+    const clear=(x:number,z:number)=>Math.hypot(x-businessHq.x,z-businessHq.z)<4;
+    for(const items of [trees,bushes,rocks,bollards])for(let i=items.length-1;i>=0;i--)if(clear(items[i].x,items[i].z))items.splice(i,1);
+    dealership={...dealership,x:dealership.x-dx,z:dealership.z-dz,road:[],walk:[],service:[],drive:[],promenade:[],cars:[]};
   }
   if(stadiumSite)stadiumSite.palms=trees.filter(t=>t.kind==='palm').map(t=>[t.x,t.z] as [number,number]);
   return {

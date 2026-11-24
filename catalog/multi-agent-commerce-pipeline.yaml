@@ -4,8 +4,8 @@ schema: atlas/v2
 
 project:
   id: commerce-pipeline
-  name: Commerce Operations Center
-  former_names: [Commerce Pipeline]
+  name: Business Operations HQ
+  former_names: [Commerce Operations Center, Commerce Pipeline]
   summary: >-
     Product pipeline on n8n Cloud: Claude turns each idea into a Canva template
     and listing images, Khaneil approves it, Stripe sells it on the shop page and
@@ -14,7 +14,7 @@ project:
   repository: khaneilcampbell/multi-agent-commerce-pipeline
   tags: [claude, stripe, canva, n8n, automation]
   district: business-operations
-  module: commerce-product-marketplace
+  module: business-operations-hq
   links:
     - label: Case study
       url: https://khaneilcampbell.com/commerce-pipeline.html

@@ -4,9 +4,9 @@ schema: atlas/v2
 
 project:
   id: benjaire-site
-  name: Business Operations HQ
+  name: Product & Growth Studio
   organization: Benjaire
-  former_names: [Benjaire HQ]
+  former_names: [Business Operations HQ, Benjaire HQ]
   summary: >-
     Website for Benjaire, an Astro site on Cloudflare Workers with a contact
     Worker that forwards inquiries to the Benjaire Flow intake in n8n.
@@ -14,7 +14,7 @@ project:
   repository: khaneilcampbell/benjaire.com
   tags: [benjaire, astro, cloudflare, n8n]
   district: business-operations
-  module: business-operations-hq
+  module: growth-marketing-studio
   links:
     - label: Live site
       url: https://benjaire.com
