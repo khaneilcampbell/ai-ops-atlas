@@ -18,7 +18,7 @@ import {GOLD_JET_ID,GOLD_JET_KEY,GOLD_JET_NAME,GOLD_JET_OFFICE_ID,GOLD_JET_PASSE
 import {AGENCY_BUILDING,agencyRoom} from "../views/office/agencyWorkplaces";
 import {AIRPORT_BUILDINGS,airportBuilding} from "../views/map3d/airportBuildings";
 import {landmarkModuleStatus} from "../modules/lookup";
-import {WORKSPACE,hostOf,housedIn} from "../modules/workspace";
+import {WORKSPACE,groupMembers,groupOf,hostOf,housedIn} from "../modules/workspace";
 import {moduleType} from "../modules/catalog";
 import type {Catalog} from "../catalog/types";
 import { AgentOutput } from "./AgentOutput";
@@ -248,11 +248,14 @@ const selectionOf = (key: string) => ({ kind: key.startsWith("project:") ? "proj
 export function HousedBuildings({ host }: { host: string }) {
   const { catalog, select } = useAtlas();
   const housed = housedIn(host);
-  if (!housed.length) return null;
+  const members = groupMembers(host);
+  const group = members.length > 0 && <section><div className="section-title">Module buildings in this group</div><ul className="link-list">{members.map(key => <li key={key}><button className="text-btn" onClick={() => select(selectionOf(key))}>{buildingName(key, catalog)} →</button><span className="muted small">{buildingModule(key, catalog) ?? "No module"}</span></li>)}</ul></section>;
+  if (!housed.length) return group || null;
   // A grouped building whose module is the one this building already houses adds nothing new.
   const own = buildingModule(host, catalog);
   const withModule = housed.filter(key => { const mod = buildingModule(key, catalog); return mod && mod !== own; });
   return <>
+    {group}
     {withModule.map(key => <ModuleSection key={key} of={selectionOf(key)} from={buildingName(key, catalog)}/>)}
     <section><div className="section-title">Filler buildings grouped here</div><ul className="link-list">{housed.map(key => { const mod = buildingModule(key, catalog); return <li key={key}><button className="text-btn" onClick={() => select(selectionOf(key))}>{buildingName(key, catalog)} →</button><span className="muted small">{!mod ? "Filler building · No module" : mod === own ? `Filler building · Its ${mod} module is this building's` : `Filler building · Its ${mod} module is shown here`}</span></li>; })}</ul></section>
   </>;
@@ -262,6 +265,8 @@ export function HousedBuildings({ host }: { host: string }) {
 function PartOf({ building }: { building: string }) {
   const { catalog, select } = useAtlas();
   const host = hostOf(building);
+  const core = groupOf(building);
+  if (core) return <div className="panel-body"><section><div className="section-title">Part of {buildingName(core, catalog)}'s group</div><p className="muted small">This building houses its own module. {buildingName(core, catalog)} leads its group.</p><button className="text-btn" onClick={() => select(selectionOf(core))}>Open {buildingName(core, catalog)} →</button></section></div>;
   if (!host) return null;
   return <div className="panel-body"><section><div className="section-title">Filler building</div><p className="muted small">No module for now. It is grouped with {buildingName(host, catalog)}, which shows this building's module. Its agents and records are unchanged.</p><button className="text-btn" onClick={() => select(selectionOf(host))}>Open {buildingName(host, catalog)} →</button></section></div>;
 }

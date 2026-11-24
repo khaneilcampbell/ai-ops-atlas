@@ -31,8 +31,7 @@ it("reports health as not verified when CI has not loaded, and names the source"
 });
 
 it("shows the publishing pipeline in the Product Marketplace, with stages switched off on purpose as not running", () => {
-  const html = grouped({ kind: "service", id: "atlas-marketplace" });
-  expect(render({ kind: "service", id: "atlas-marketplace" })).toBe("");
+  const html = render({ kind: "service", id: "atlas-marketplace" });
   expect(html).toContain("Commerce &amp; Product Marketplace");
   expect(html).toContain("Products and releases, the pipelines that publish them");
   expect(html).toContain('aria-label="Publishing pipeline"');
@@ -61,7 +60,7 @@ it("shows site traffic and research briefs in the Product & Growth Studio, loadi
 });
 
 it("shows the model inventory and cost per model in the Model Intelligence Lab", () => {
-  const html = grouped({ kind: "service", id: "airport-building:cargo" });
+  const html = render({ kind: "service", id: "airport-building:cargo" });
   expect(html).toContain("Model Intelligence Lab");
   expect(html).toContain('aria-label="Model inventory"');
   expect(html).toContain('aria-label="Cost per model"');
@@ -91,14 +90,19 @@ it("opens the Agents directory scoped to a project building, and unscoped from a
 });
 
 it("shows connected signals in the Observability Center and the document inventory in the Knowledge Repository", () => {
-  const ops = grouped({ kind: "service", id: "airport-building:operations" });
+  const ops = render({ kind: "service", id: "airport-building:operations" });
   expect(ops).toContain("Observability Center");
   expect(ops).toContain('aria-label="Connected signals"');
   expect(ops).toContain("GitHub");
   expect(ops).toContain("3 planned capabilities");
-  const docs = grouped({ kind: "service", id: "financial:financial-planning" });
+  const docs = render({ kind: "service", id: "financial:financial-planning" });
   expect(docs).toContain("Knowledge Repository");
   expect(docs).toContain('aria-label="Document inventory"');
   expect(docs).toContain("github.com/khaneilcampbell/ai-ops-atlas");
   expect(docs).toContain("Open Repositories →");
+});
+
+it("shows a filler building's module only inside its core building", () => {
+  expect(render({ kind: "service", id: "financial:business-finance" })).toBe("");
+  expect(grouped({ kind: "service", id: "financial:business-finance" })).toContain("Finance &amp; Analytics Tower");
 });

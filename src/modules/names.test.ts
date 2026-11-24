@@ -26,13 +26,13 @@ describe("workspace building names", () => {
   it("applies Khaneil's operational names, keeping each original organization as metadata", () => {
     const want: [string, string, string][] = [
       [AGENCY_KEY, "Product & Growth Studio", "Benjaire"],
-      [financialKey("residence"), "Briarcliff Tower", "Filler building"],
-      [financialKey("banks"), "Larkspur Tower", "Filler building"],
+      [financialKey("residence"), "Data Intelligence Center", "Benjaire"],
+      [financialKey("banks"), "Financial Operations Tower", "Benjaire"],
       [financialKey("budget"), "Elmhurst Tower", "Filler building"],
-      [financialKey("records"), "Maplewood Tower", "Filler building"],
-      [DEALERSHIP_KEY, "Ironwood Hall", "Filler building"],
-      [financialKey("investments"), "Ashford Tower", "Filler building"],
-      [MALL_KEY, "Seaview Arcade", "Filler building"],
+      [financialKey("records"), "Governance & Compliance Center", "Benjaire"],
+      [DEALERSHIP_KEY, "Infrastructure Operations Hub", "Atlas"],
+      [financialKey("investments"), "Investment Operations Center", "Benjaire"],
+      [MALL_KEY, "Product Marketplace", "Atlas"],
       ["service:atlas-station", "Workflow Automation Hub", "Atlas"],
       [financialKey("harbor-residence"), "Harborlight Tower", "Filler building"],
       [financialKey("circa"), "Alder Towers", "Filler building"],
@@ -43,8 +43,8 @@ describe("workspace building names", () => {
       ["service:stadium-station", "Pinecrest Station", "Filler building"],
       ["service:airport-building:terminal", "Hawthorn Hall", "Filler building"],
       ["service:airport-building:tower", "Rowan Tower", "Filler building"],
-      ["service:airport-building:cargo", "Quarry House", "Filler building"],
-      ["service:airport-building:operations", "Sparrow Hall", "Filler building"],
+      ["service:airport-building:cargo", "Model Intelligence Lab", "Atlas Airport"],
+      ["service:airport-building:operations", "Observability Center", "Atlas Airport"],
       // Nov 24: buildings that house no module carry a neutral filler name, labelled "Filler building".
       ["service:financial-station", "Birch Lane Station", "Filler building"],
     ];
@@ -73,7 +73,7 @@ describe("workspace building names", () => {
     expect(buildingDisplayName("service:financial-park", "Financial Park")).toBe("Financial Park");
     expect(buildingDisplayName("service:atlas-commons", "Atlas Commons")).toBe("Atlas Commons");
     expect(buildingOrganization("service:financial-park")).toBeUndefined();
-    expect(currentBuildingName("Atlas Marketplace")).toBe("Seaview Arcade");
+    expect(currentBuildingName("Atlas Marketplace")).toBe("Product Marketplace");
     expect(currentBuildingName("Financial District")).toBe("Financial District");
   });
 
@@ -89,7 +89,7 @@ describe("workspace building names", () => {
     expect(financialBuildingMatches("Financial Operations").map((b) => b.id)).toContain("banks");
     expect(landmarkMatches("Vantor").map((n) => n.key)).toEqual([DEALERSHIP_KEY]);
     expect(landmarkMatches("Central Station").map((n) => n.key)).toEqual(["service:atlas-station"]);
-    expect(buildingAliases(MALL_KEY)).toEqual(["Atlas Marketplace", "Product Marketplace"]);
+    expect(buildingAliases(MALL_KEY)).toEqual(["Atlas Marketplace", "Seaview Arcade"]);
   });
 
   it("reports bad entries instead of throwing, and lets another workspace bring its own names", () => {

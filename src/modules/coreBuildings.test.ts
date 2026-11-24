@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog";
-import { WORKSPACE, hostOf, housedIn, onMapKey, parseWorkspace } from "./workspace";
+import { WORKSPACE, groupMembers, groupOf, hostOf, housedIn, onMapKey, parseWorkspace } from "./workspace";
 import { buildingForSelection, landmarkModuleStatus } from "./lookup";
 import type { ManifestIssue } from "../catalog/types";
 import { financialKey } from "../views/map3d/financialPlan";
@@ -13,17 +13,24 @@ describe("eight core buildings", () => {
   it("groups every other building with a core building or Atlas Commons, and never a core building itself", () => {
     for (const h of new Set(Object.values(WORKSPACE.merged ?? {}))) expect([...CORE, "service:atlas-commons"]).toContain(h);
     for (const k of [...CORE, "service:atlas-commons", "service:logistics-airport", financialKey("circa")]) expect(hostOf(k), k).toBeUndefined();
-    expect(housedIn("service:atlas-galleria")).toEqual(expect.arrayContaining(["project:benjaire-site", financialKey("banks"), financialKey("insurance"), financialKey("budget")]));
-    expect(housedIn("project:github-profile")).toEqual([financialKey("financial-planning"), "service:airport-building:cargo"]);
-    expect(housedIn("service:benjaire-marketing")).toEqual(["service:atlas-marketplace", "project:commerce-pipeline"]);
-    expect(housedIn("project:soc-lab")).toEqual(["service:bmw-dealership", "service:airport-building:operations"]);
+    expect(housedIn("service:atlas-galleria")).toEqual(expect.arrayContaining(["project:benjaire-site", financialKey("insurance"), financialKey("budget")]));
+    expect(housedIn("service:benjaire-marketing")).toEqual(["project:commerce-pipeline"]);
+    // Khaneil, 2026-11-24: one module building per module, in its core building's group.
+    for (const c of new Set(Object.values(WORKSPACE.groups ?? {}))) expect(CORE).toContain(c);
+    expect(groupMembers("project:github-profile")).toEqual([financialKey("financial-planning"), "service:airport-building:cargo"]);
+    expect(groupMembers("service:atlas-galleria")).toEqual([financialKey("banks"), financialKey("records"), financialKey("investments"), financialKey("residence")]);
+    expect(groupMembers("service:benjaire-marketing")).toEqual(["service:atlas-marketplace"]);
+    expect(groupMembers("project:soc-lab")).toEqual(["service:bmw-dealership", "service:airport-building:operations"]);
+    expect(groupOf(financialKey("banks"))).toBe("service:atlas-galleria");
+    expect(hostOf(financialKey("banks"))).toBeUndefined();
     expect(onMapKey("project:benjaire-site")).toBe("service:atlas-galleria");
   });
 
   it("gives a grouped building no module of its own, while core buildings keep theirs", () => {
     expect(buildingForSelection({ kind: "project", id: "commerce-pipeline" }, catalog)).toBeUndefined();
     expect(buildingForSelection({ kind: "project", id: "benjaire-site" }, catalog)).toBeUndefined();
-    expect(landmarkModuleStatus("financial:banks")).toBeUndefined();
+    expect(landmarkModuleStatus("financial:budget")).toBeUndefined();
+    expect(landmarkModuleStatus("financial:banks")?.name).toBe("Finance & Analytics Tower");
     // Khaneil, 2026-11-24: the former Vendor & Supplier Hub is the Business Operations HQ building.
     expect(buildingForSelection({ kind: "service", id: "atlas-galleria" }, catalog)?.moduleType).toBe("business-operations-hq");
     expect(buildingForSelection({ kind: "service", id: "benjaire-marketing" }, catalog)?.moduleType).toBe("growth-marketing-studio");
