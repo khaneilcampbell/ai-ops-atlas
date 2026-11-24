@@ -61,4 +61,4 @@
   .team-life > div:first-child { border-top: 0; }
 }
 /* A lead's own steps (Leila's Product Lab) are one quiet chip, not a row of copies of her face. */
-.team-steps { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 999px; border: 1px dashed var(--sage); font-size: 12px; color: var(--ink-3); }
+.team-steps { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 999px; border: 1px dashed var(--sage-400); font-size: 12px; color: var(--ink-3); }
