@@ -526,6 +526,8 @@ agents:
     trigger: Its automations run every 4 hours and Mondays 8am ET
     last_run: null
     history:
+      - at: 2026-11-24
+        event: Coordinates the read-only agent portfolio review in Agents > Review. Plain rules over the registry, no model; a Claude brief appears only after Khaneil approves a recommendation
       - at: 2026-11-13
         event: Added as the owning agent of Agent Registry Clerk, Agent Factory, at Khaneil's request
       - at: 2026-11-17
@@ -565,9 +567,9 @@ agents:
         beneficiaries:
           - Khaneil
       responsibilities:
-        tasks: [Keep the Agent Registry sheet current, Propose at most one new agent a week, Plan executive goals with registered agents, Delegate approved goal plans to the Task Center, Build executive briefings from Atlas records, "Carry agent, task and goal incident tasks"]
+        tasks: [Keep the Agent Registry sheet current, Propose at most one new agent a week, Plan executive goals with registered agents, Delegate approved goal plans to the Task Center, Build executive briefings from Atlas records, "Carry agent, task and goal incident tasks", Review the agent portfolio and propose improvements (read-only)]
         tools: [Its automations]
-        outputs: [The results of its automations, Executive goal plans, Executive briefings]
+        outputs: [The results of its automations, Executive goal plans, Executive briefings, Portfolio review recommendations in the Agents tab]
         inputs:
           - The catalog
           - n8n runs

@@ -29,8 +29,23 @@ The Agents page is a registry of every agent, automation and pipeline in the cat
 | `src/registry/profile.ts` | v1/v2 to full profile migration, documentation completeness |
 | `src/registry/telemetry.ts` | Executions, operational state, observed KPIs, trends |
 | `src/registry/registry.ts` | Directory entries, filters, sorting, grouping, portfolio summary |
-| `src/views/Agents.tsx` | Directory, Portfolio and Goals views |
+| `src/views/Agents.tsx` | Directory, Portfolio, Review and Goals views |
+| `src/registry/portfolioReview.ts` | Read-only portfolio review: rules, recommendations, Claude brief |
+| `src/views/agents/PortfolioReview.tsx` | Agents > Review, coordinated by the Agent Operations Lead |
 | `src/views/agents/Inspector.tsx` | Six-tab agent inspector |
+
+## Portfolio review
+
+Agents > Review is the Agent Operations Lead's (Yusuf Demir's) review of every registry entry, archived
+ones included, each labelled active, inactive, planned or archived. Plain rules run over the registry
+Atlas already builds (catalog profile plus the runs it already observed); no model call, no extra fetch.
+Each recommendation names the agent, area, observed evidence, proposed change, benefit, risk,
+dependencies and confidence. Missing data shows as "Not documented"; an active entry with a live source
+but no run in 14 days is reported as stale.
+
+The review is read-only. Approve, Defer and Mark implemented are kept on this device only and change
+nothing else. Approving only reveals a copy-ready Claude brief; Claude then opens a draft pull request
+for Khaneil to merge.
 
 ## Performance
 

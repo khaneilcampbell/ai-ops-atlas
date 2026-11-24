@@ -192,3 +192,10 @@ p.ess-skills { background: none; border: 0; padding: 0; }
 .reg-inspector .tabs { overflow-x: auto; scrollbar-width: thin; }
 .reg-inspector .tabs button { flex: 0 0 auto; white-space: nowrap; }
 .ess .section-title { overflow-wrap: anywhere; }
+
+/* Agent portfolio review (Agents > Review) */
+.review-rec-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.review-rec-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.review-brief { margin-top: 10px; border-top: 1px solid var(--sage-200); padding-top: 8px; }
+.review-brief pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; margin: 6px 0 0; max-height: 260px; overflow: auto; }
+.review-entry { padding: 3px 0; }

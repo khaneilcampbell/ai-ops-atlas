@@ -1,0 +1,1 @@
+- 2026-11-24 · Agents > Review: Yusuf Demir reviews every agent and automation and lists improvement recommendations with the evidence behind them. It changes nothing; approving one only shows a Claude brief to copy (#522)
