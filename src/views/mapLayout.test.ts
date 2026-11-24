@@ -241,6 +241,7 @@ it("leaves the land of removed towers in every grouping",()=>{
     if(group==="district") {
       expected["ai-ops-atlas"]=[35.725,9.75,10];
       expected["intelligence-hub"]=[37.975,22,10];
+      expected["soc-lab"]=[-2.5,2.5,7.5];
     }
     expect(at(layout)).toEqual(expected);
     const lots=layout.parks.filter(p=>p.vacant).map(p=>p.id).sort();

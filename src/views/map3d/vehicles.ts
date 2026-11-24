@@ -434,6 +434,9 @@ export function trafficJunctions(scene: Scene3D): [number, number][] {
   const out: [number, number][] = [];
   const around = g.nodes.map(() => new Set<number>());
   g.next.forEach((ns, i) => ns.forEach(j => { around[i].add(j); around[j].add(i); }));
-  g.nodes.forEach((p, i) => { if (around[i].size >= 3 && !out.some(q => Math.hypot(q[0] - p[0], q[1] - p[2]) < 0.3)) out.push([p[0], p[2]]); });
+  // A corner of a two-way street is taken in turn too: two vehicles turning it in opposite directions swing into each other's lane.
+  const corner = (i: number) => { if (around[i].size !== 2) return false; const [a, b] = [...around[i]].map(j => g.nodes[j]), p = g.nodes[i];
+    const ux = a[0] - p[0], uz = a[2] - p[2], vx = b[0] - p[0], vz = b[2] - p[2]; return Math.abs(ux * vz - uz * vx) > 0.5 * Math.hypot(ux, uz) * Math.hypot(vx, vz) && g.next[i].length === 2; };
+  g.nodes.forEach((p, i) => { if ((around[i].size >= 3 || corner(i)) && !out.some(q => Math.hypot(q[0] - p[0], q[1] - p[2]) < 0.3)) out.push([p[0], p[2]]); });
   return out;
 }
