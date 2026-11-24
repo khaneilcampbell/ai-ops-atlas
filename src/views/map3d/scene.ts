@@ -1,3 +1,4 @@
+import { movePortfolioOntoPond } from "./portfolioPond";
 import {uncoveredLand} from "./neighborhoodLinks";
 import {planStationPlaza,type StationPlaza} from "./stationPlazaPlan";
 import {planCommons,commonsPlanting,type CommonsPlan} from './commonsPlan';
@@ -301,6 +302,7 @@ export function socLakeFill(terraces: Terrace[], land: Rect[]): Rect[] {
 export function buildScene(layout: Layout): Scene3D {
   const scene = buildCity(layout);
   addGithubAnnex(scene);
+  movePortfolioOntoPond(scene);
   return scene;
 }
 
