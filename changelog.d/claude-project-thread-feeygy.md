@@ -1,1 +1,1 @@
-- 2026-11-24 · The Security Operations Center now stands on the lake beside Business Operations HQ; the leftover pond round it is filled with lawn, and its old spot stays open land (#523)
+- 2026-11-24 · The Security Operations Center now stands on the lake beside Business Operations HQ; the leftover pond, dry pit and west ditch round it are filled with planted lawn, the old boardwalk is a paved path, and its old spot stays open land (#523)

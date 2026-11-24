@@ -273,6 +273,26 @@ export function districtGrove(d: { ox: number; oy: number; size: number; hq: { s
   return out;
 }
 
+/**
+ * Land filling the lake round the Security Operations Center: from Business Operations HQ's north shore to the next
+ * parcel south, and from the SOC's west edge to Business Operations HQ's own land, minus ground that is already land.
+ */
+export function socLakeFill(terraces: Terrace[], land: Rect[]): Rect[] {
+  const soc = terraces.find(t => t.id === "soc-lab"), hq = terraces.find(t => t.id === "benjaire-site");
+  if (!soc || !hq) return [];
+  const x0 = soc.x, x1 = Math.max(...land.filter(r => r.w > 2 && r.x > soc.x + soc.w - 1e-6 && r.x <= hq.x && r.z < hq.z + hq.d && r.z + r.d > hq.z).map(r => r.x), soc.x + soc.w);
+  const top = Math.min(hq.z, soc.z), north = land.filter(r => r.z + r.d <= top + 1e-6 && r.x <= x0 + 1e-6 && r.x + r.w >= x1 - 1e-6).map(r => r.z + r.d);
+  const z0 = north.length ? Math.max(...north) : top;
+  const south = land.filter(r => r.w > 2 && r.d > 2 && r.z >= soc.z + soc.d - 1e-6 && r.x < x1 && r.x + r.w > x0).sort((a, b) => a.z - b.z)[0];
+  const z1 = south ? south.z : soc.z + soc.d;
+  const fill = [{ x: x0, z: z0, w: x1 - x0, d: z1 - z0 }];
+  // The lake's narrow west arm, down the side of the parcel south of it, would be left a dry ditch: it is filled too.
+  if (south && south.x > x0) fill.push({ x: x0, z: z1, w: south.x - x0, d: south.d });
+  const out: Rect[] = [];
+  for (const r of fill) out.push(...uncoveredLand(r, [...land, soc, ...out]));
+  return out;
+}
+
 /** The whole city, then the GitHub tower's podium on whatever open ground is left (githubAnnex.ts). */
 export function buildScene(layout: Layout): Scene3D {
   const scene = buildCity(layout);
@@ -786,6 +806,24 @@ function buildCity(layout: Layout): Scene3D {
   // moves the Marketplace toward the island's edge.
   // Fill only new project ground before closing the existing square shoreline.
   for (const t of terraces.filter(t => OPERATIONS_DISTRICTS.has(t.id))) land.push(...uncoveredLand(t, land));
+  // The Security Operations Center stands where the lake beside Business Operations HQ was (Khaneil, 2026-11-24):
+  // the rest of that lake is filled in level with the city, so no cut-off pools or bare basin walls are left round it.
+  const lakeFill=cleared.has("street-reserve:soc-lab")?socLakeFill(terraces,land):[];
+  land.push(...lakeFill);
+  if(lakeFill.length){
+    const inFill=(x:number,z:number)=>lakeFill.some(r=>inRect(r,x,z));
+    // A boardwalk that crossed the lake is now a paved path on the lawn.
+    for(const w of walks)if(w.bridge&&inFill((w.x0+w.x1)/2,(w.z0+w.z1)/2)){w.bridge=false;paving.push(strip(w.x0,w.z0,w.x1,w.z1,.48,top));}
+    // The new lawn is planted like the city round it: round trees and cones, clear of streets, paths, paving and buildings.
+    const lanes=[...connections.flatMap(c=>[c.road,...(c.frontage?[c.frontage]:[])]),...carBridges.flatMap(b=>b.roads)],paths=[...connections.map(c=>c.walk),...walks.map((w):[number,number][]=>[[w.x0,w.z0],[w.x1,w.z1]])];
+    const clear=(x:number,z:number)=>!lanes.some(r=>distanceToRoad([x,z],r)<ROAD_W/2+.45)&&!paths.some(p=>distanceToRoad([x,z],p)<.5)
+      &&!paving.some(p=>p.y>=top&&inRect(p,x,z,.35))&&!terraces.some(t=>inRect(t,x,z,.3))&&!trees.some(t=>Math.hypot(t.x-x,t.z-z)<.8);
+    for(const r of lakeFill)for(let x=r.x+.7;x<r.x+r.w-.5;x+=1.15)for(let z=r.z+.7;z<r.z+r.d-.5;z+=1.15){
+      const k=hash(`soc-lake:${x.toFixed(2)}:${z.toFixed(2)}`),jx=x+((k%7)-3)*.06,jz=z+(((k>>3)%7)-3)*.06;
+      if(k%5===0||!clear(jx,jz))continue;
+      if(k%4===1)bushes.push({x:jx,y:top,z:jz,s:.13+(k%3)*.02});else trees.push({x:jx,z:jz,y:top,s:.26+(k%3)*.03,kind:(k%3===1?'cone':'round') as TreeKind});
+    }
+  }
   const meadowLand=compactSquareLand(land,cityLand);
   land.push(...meadowLand);
   let galleria=mall?planGalleria(mall,land,[...[...towers,...kiosks].map(b=>({x:b.x-b.size/2,z:b.z-b.size/2,w:b.size,d:b.size})),...houses.map(h=>({x:h.x-h.w/2,z:h.z-h.d/2,w:h.w,d:h.d})),...paving.filter(p=>p.y>=top)],top,{roads:[...connections.map(c=>c.road),...carBridges.flatMap(b=>b.roads)],walks:connections.map(c=>c.walk)}):undefined;
