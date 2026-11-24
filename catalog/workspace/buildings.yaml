@@ -41,17 +41,17 @@ buildings:
     organization: Benjaire
     former_names: [Halden Trust]
   "service:bmw-dealership":
-    display_name: Ironwood Hall
+    display_name: Security & Infrastructure Annex
     organization: Filler building
-    former_names: [Vantor Motors, Infrastructure Operations Hub]
+    former_names: [Ironwood Hall, Vantor Motors, Infrastructure Operations Hub]
   "service:financial:investments":
     display_name: Investment Operations Center
     organization: Benjaire
     former_names: [Robin Exchange, Integration Exchange]
   "service:atlas-marketplace":
-    display_name: Seaview Arcade
+    display_name: Product & Growth Arcade
     organization: Filler building
-    former_names: [Atlas Marketplace, Product Marketplace]
+    former_names: [Seaview Arcade, Atlas Marketplace, Product Marketplace]
   "service:atlas-station":
     display_name: Workflow Automation Hub
     organization: Atlas
@@ -81,37 +81,39 @@ buildings:
     organization: Benjaire
     former_names: [Atlas Galleria, Vendor & Supplier Hub]
   "service:skyline-stadium":
-    display_name: Oakridge Hall
+    display_name: Atlas Commons Arena
     organization: Filler building
-    former_names: [Team Events Arena, Atlas Stadium]
+    former_names: [Oakridge Hall, Team Events Arena, Atlas Stadium]
   # Nov 18: public plaza in front of the Growth & Marketing Studio; its sign shows live automation status.
   "service:automation-plaza":
     display_name: Atlas Automation Plaza
     organization: Atlas
   "service:stadium-station":
-    display_name: Pinecrest Station
+    display_name: Atlas Commons Station
     organization: Filler building
-    former_names: [Events Arena Station, Stadium Station]
+    former_names: [Pinecrest Station, Events Arena Station, Stadium Station]
   "service:airport-building:terminal":
-    display_name: Hawthorn Hall
+    display_name: Atlas Airport Terminal
     organization: Filler building
-    former_names: [Passenger Terminal, Atlas · Terminal]
+    former_names: [Hawthorn Hall, Passenger Terminal, Atlas · Terminal]
   "service:airport-building:tower":
-    display_name: Rowan Tower
+    display_name: Atlas Airport Control Tower
     organization: Filler building
-    former_names: [Air Traffic Control, Atlas · Air Traffic]
+    former_names: [Rowan Tower, Air Traffic Control, Atlas · Air Traffic]
   "service:airport-building:cargo":
-    display_name: Quarry House
+    display_name: AI Engineering Annex
     organization: Filler building
-    former_names: [Atlas · Cargo, Model Intelligence Lab]
+    former_names: [Quarry House, Atlas · Cargo, Model Intelligence Lab]
   "service:airport-building:operations":
-    display_name: Sparrow Hall
+    display_name: Security & Infrastructure Hangar
     organization: Filler building
-    former_names: [Atlas · Operations, Observability Center]
+    former_names: [Sparrow Hall, Atlas · Operations, Observability Center]
   # Nov 24: buildings that house no module get a neutral filler name, so nobody reads a purpose into them
   # (Khaneil: "make the other buildings not in a module a random building name ... label it as a filler
   # building"). Their earlier names stay in former_names for search.
   "service:financial-station":
-    display_name: Birch Lane Station
+    display_name: Business Operations Station
     organization: Filler building
-    former_names: [Financial District Station]
+    former_names: [Birch Lane Station, Financial District Station]
+  # Nov 24: filler buildings are named after the core building or place they are grouped with (workspace.yaml merged),
+  # so the map reads by group: "Security & Infrastructure Annex", "Product & Growth Arcade", "Atlas Airport Terminal".

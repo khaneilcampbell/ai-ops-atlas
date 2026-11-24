@@ -7,3 +7,4 @@
 - 2026-11-24 · Back to the organized setup: every building stays on the map, and each module lives in the one core building it matches. The clean start and the Business Operations HQ move are undone (#528)
 - 2026-11-24 · The Security Operations Center is back in its own spot (the Business Operations lake move is undone) and the Financial District towers have their real names again instead of filler names (#528)
 - 2026-11-24 · The Financial District is no longer selected as one block: its towers belong to different core buildings now, so you select each tower or Financial Park on its own (#528)
+- 2026-11-24 · Filler buildings are named after the core building or place they belong with, so the map reads by group: Business Operations Tower and Station, Product & Growth Tower and Arcade, Security & Infrastructure Annex and Hangar, AI Engineering Annex, Atlas Commons Arena and Station, Atlas Airport Terminal and Control Tower. Old names still find them in search (#528)

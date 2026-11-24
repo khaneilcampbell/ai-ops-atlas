@@ -30,23 +30,23 @@ describe("workspace building names", () => {
       [financialKey("banks"), "Financial Operations Tower", "Benjaire"],
       [financialKey("budget"), "Budget & Forecasting Center", "Benjaire"],
       [financialKey("records"), "Governance & Compliance Center", "Benjaire"],
-      [DEALERSHIP_KEY, "Ironwood Hall", "Filler building"],
+      [DEALERSHIP_KEY, "Security & Infrastructure Annex", "Filler building"],
       [financialKey("investments"), "Investment Operations Center", "Benjaire"],
-      [MALL_KEY, "Seaview Arcade", "Filler building"],
+      [MALL_KEY, "Product & Growth Arcade", "Filler building"],
       ["service:atlas-station", "Workflow Automation Hub", "Atlas"],
       [financialKey("harbor-residence"), "Client Success Center", "Benjaire"],
       [financialKey("circa"), "Team Residence Towers", "Benjaire"],
       [financialKey("insurance"), "Risk & Insurance Center", "Benjaire"],
       [financialKey("business-finance"), "Business Finance Center", "Benjaire"],
       ["service:atlas-galleria", "Business Operations HQ", "Benjaire"],
-      ["service:skyline-stadium", "Oakridge Hall", "Filler building"],
-      ["service:stadium-station", "Pinecrest Station", "Filler building"],
-      ["service:airport-building:terminal", "Hawthorn Hall", "Filler building"],
-      ["service:airport-building:tower", "Rowan Tower", "Filler building"],
-      ["service:airport-building:cargo", "Quarry House", "Filler building"],
-      ["service:airport-building:operations", "Sparrow Hall", "Filler building"],
+      ["service:skyline-stadium", "Atlas Commons Arena", "Filler building"],
+      ["service:stadium-station", "Atlas Commons Station", "Filler building"],
+      ["service:airport-building:terminal", "Atlas Airport Terminal", "Filler building"],
+      ["service:airport-building:tower", "Atlas Airport Control Tower", "Filler building"],
+      ["service:airport-building:cargo", "AI Engineering Annex", "Filler building"],
+      ["service:airport-building:operations", "Security & Infrastructure Hangar", "Filler building"],
       // Nov 24: buildings that house no module carry a neutral filler name, labelled "Filler building".
-      ["service:financial-station", "Birch Lane Station", "Filler building"],
+      ["service:financial-station", "Business Operations Station", "Filler building"],
     ];
     for (const [key, name, org] of want) {
       expect(buildingDisplayName(key, "fallback"), key).toBe(name);
@@ -57,9 +57,9 @@ describe("workspace building names", () => {
   it("renames catalog buildings in their manifests, keeping ids, modules and the old name as an alias", () => {
     const want: [string, string, string | undefined, ...string[]][] = [
       ["ai-ops-atlas", "Atlas Command Center", "Atlas", "Atlas HQ"],
-      ["benjaire-site", "Kestrel Tower", "Benjaire", "Benjaire HQ", "Business Operations HQ"],
+      ["benjaire-site", "Business Operations Tower", "Benjaire", "Kestrel Tower", "Benjaire HQ", "Business Operations HQ"],
       ["intelligence-hub", "Agent Operations Center", undefined, "Intelligence Hub"],
-      ["commerce-pipeline", "Juniper House", undefined, "Commerce Pipeline", "Commerce Operations Center"],
+      ["commerce-pipeline", "Product & Growth Tower", undefined, "Juniper House", "Commerce Pipeline", "Commerce Operations Center"],
       ["soc-lab", "Security & Infrastructure Center", undefined, "SOC Lab", "Security Operations Center"],
       ["portfolio-site", "Projects & Portfolio Studio", undefined, "Portfolio Site", "Portfolio Web Studio"],
     ];
@@ -73,7 +73,7 @@ describe("workspace building names", () => {
     expect(buildingDisplayName("service:financial-park", "Financial Park")).toBe("Financial Park");
     expect(buildingDisplayName("service:atlas-commons", "Atlas Commons")).toBe("Atlas Commons");
     expect(buildingOrganization("service:financial-park")).toBeUndefined();
-    expect(currentBuildingName("Atlas Marketplace")).toBe("Seaview Arcade");
+    expect(currentBuildingName("Atlas Marketplace")).toBe("Product & Growth Arcade");
     expect(currentBuildingName("Financial District")).toBe("Financial District");
   });
 
@@ -89,7 +89,7 @@ describe("workspace building names", () => {
     expect(financialBuildingMatches("Financial Operations").map((b) => b.id)).toContain("banks");
     expect(landmarkMatches("Vantor").map((n) => n.key)).toEqual([DEALERSHIP_KEY]);
     expect(landmarkMatches("Central Station").map((n) => n.key)).toEqual(["service:atlas-station"]);
-    expect(buildingAliases(MALL_KEY)).toEqual(["Atlas Marketplace", "Product Marketplace"]);
+    expect(buildingAliases(MALL_KEY)).toEqual(["Seaview Arcade", "Atlas Marketplace", "Product Marketplace"]);
   });
 
   it("reports bad entries instead of throwing, and lets another workspace bring its own names", () => {

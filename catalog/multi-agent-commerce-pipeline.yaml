@@ -4,8 +4,8 @@ schema: atlas/v2
 
 project:
   id: commerce-pipeline
-  name: Juniper House
-  former_names: [Commerce Pipeline, Commerce Operations Center]
+  name: Product & Growth Tower
+  former_names: [Juniper House, Commerce Pipeline, Commerce Operations Center]
   summary: >-
     Product pipeline on n8n Cloud: Claude turns each idea into a Canva template
     and listing images, Khaneil approves it, Stripe sells it on the shop page and
