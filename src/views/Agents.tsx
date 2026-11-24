@@ -14,6 +14,7 @@ import { Inspector } from "./agents/Inspector";
 import { Manage } from "./agents/Manage";
 import { CLASS_COLOR, ClassBadge, OperationalPill, RiskPill } from "./agents/parts";
 import { Portfolio } from "./agents/Portfolio";
+import { PortfolioReview } from "./agents/PortfolioReview";
 import { RegistryRefresh } from "./agents/RegistryRefresh";
 import { Roles, type RoleView } from "./agents/Roles";
 import { roleDirectory } from "../catalog/essentialRoles";
@@ -23,10 +24,11 @@ import { identityFor } from "../registry/identity";
 import { catalog as bundledCatalog } from "../catalog";
 import { agentStatuses, type IdentityStatus } from "../registry/agentStatus";
 
-type Sub = "directory" | "portfolio" | "goals" | "manage";
+type Sub = "directory" | "portfolio" | "review" | "goals" | "manage";
 const SUBS: { id: Sub; label: string }[] = [
   { id: "directory", label: "Directory" },
   { id: "portfolio", label: "Portfolio" },
+  { id: "review", label: "Review" },
   { id: "goals", label: "Goals & performance" },
   { id: "manage", label: "Manage automations" },
 ];
@@ -55,7 +57,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
     // A saved filter from the former mixed directory must not hide the newly separated list.
     const types = kind === "agents" ? ["A", "F"] : ["B", "C", "D", "E"];
     // Manage moved from Agents to Automations (2026-11-18): the managed GitHub workflows are automations.
-    const sub = saved.sub === "manage" && kind === "agents" ? "directory" : saved.sub;
+    const sub = (saved.sub === "manage" && kind === "agents") || (saved.sub === "review" && kind === "automations") ? "directory" : saved.sub;
     return { ...saved, sub, classification: types.includes(saved.classification) ? saved.classification : "" };
   });
   const set = (p: Partial<Prefs>) => setPrefs((x) => ({ ...x, ...p }));
@@ -121,7 +123,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
           {kind === "agents" && <RegistryRefresh />}
         </div>
         <div className="seg" role="tablist" aria-label="Registry views">
-          {SUBS.filter((s) => s.id !== "manage" || kind === "automations").map((s) => (
+          {SUBS.filter((s) => (s.id !== "manage" || kind === "automations") && (s.id !== "review" || kind === "agents")).map((s) => (
             <button key={s.id} role="tab" aria-selected={prefs.sub === s.id} className={prefs.sub === s.id ? "on" : ""} onClick={() => set({ sub: s.id })}>
               {s.label}
             </button>
@@ -130,6 +132,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
       </div>
 
       {prefs.sub === "portfolio" && <Portfolio entries={entries} summary={summary} open={open} />}
+      {prefs.sub === "review" && kind === "agents" && <PortfolioReview catalog={allCatalog} entries={allEntries} open={open} />}
       {prefs.sub === "goals" && <Goals entries={rows} open={open} />}
       {prefs.sub === "manage" && kind === "automations" && <Manage open={open} />}
 
