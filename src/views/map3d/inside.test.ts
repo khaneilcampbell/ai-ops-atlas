@@ -8,7 +8,7 @@ vi.stubGlobal("localStorage", {
   clear: () => data.clear(),
 });
 
-const { insideLimits, loadInside, officeScale, pickInside, saveInside, sameTiers, stepCut } = await import("./inside");
+const { insideLimits, keepsExterior, loadInside, officeScale, pickInside, saveInside, sameTiers, stepCut } = await import("./inside");
 const { CUT_MAX } = await import("./materials");
 
 describe("Inside toggle state", () => {
@@ -105,5 +105,12 @@ describe("officeScale and stepCut", () => {
   });
   it("jumps straight there with reduced motion", () => {
     expect(stepCut(10, 1, 9, 1 / 60, true)).toBe(1);
+  });
+});
+
+describe("keepsExterior", () => {
+  it("keeps the wave tower's curved glass with Inside on, and opens the others", () => {
+    expect(keepsExterior("commerce-pipeline")).toBe(true);
+    expect(keepsExterior("ai-ops-atlas")).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 import type { PowerMode } from "../../lib/power";
 import { load, save } from "../../lib/storage";
+import { isCommerceTower } from "./commerceTowerPlan";
 
 /**
  * The map's Inside view: headquarters open up as cutaways so their offices show without
@@ -21,6 +22,16 @@ export function loadInside(): boolean {
 }
 export function saveInside(on: boolean) {
   save(INSIDE_KEY, on);
+}
+
+/**
+ * Buildings that keep their exterior with Inside on. The wave tower keeps its curved glass
+ * (Khaneil, 2026-11-24: "it should look like the exterior design"): its square office plan
+ * doesn't fit the teardrop, so a cutaway showed a box inside a hollow shell. Enter building
+ * still opens its full interior.
+ */
+export function keepsExterior(projectId: string) {
+  return isCommerceTower(projectId);
 }
 
 export interface InsideLimits {
