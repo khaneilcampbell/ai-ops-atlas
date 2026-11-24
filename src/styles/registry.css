@@ -173,3 +173,22 @@
 .role-card .reg-step .grow, .role-plain .reg-step .grow { white-space: normal; }
 .role-plain { list-style: none; margin: 0; padding: 4px; }
 .role-meta { display: block; }
+/* Skills that run inside an agent (Leila's Product Lab steps): shown in her overview, not as roster rows. */
+.ess-skills { margin-top: 10px; background: var(--sage-100); border: 1px solid var(--sage-200); border-radius: var(--radius-sm); padding: 12px 14px; }
+.ess-skills .reg-list li { margin-bottom: 4px; }
+p.ess-skills { background: none; border: 0; padding: 0; }
+.ess-skills .linklike { all: unset; cursor: pointer; color: var(--ink); text-decoration: underline; text-decoration-color: var(--sage-300); text-underline-offset: 2px; }
+.ess-skills .linklike:hover, .ess-skills .linklike:focus-visible { text-decoration-color: currentColor; }
+
+/* The inspector sizes its sections to its own width, not the window's: beside the roster it is a
+   narrow panel, so the four essentials go two by two (one by one on very narrow panels) instead of
+   squeezing into four thin columns. */
+.reg-inspector { container: inspector / inline-size; min-width: 0; }
+@container inspector (max-width: 900px) {
+  .essentials { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .reg-cols { grid-template-columns: minmax(0, 1fr); }
+}
+@container inspector (max-width: 440px) { .essentials { grid-template-columns: minmax(0, 1fr); } }
+.reg-inspector .tabs { overflow-x: auto; scrollbar-width: thin; }
+.reg-inspector .tabs button { flex: 0 0 auto; white-space: nowrap; }
+.ess .section-title { overflow-wrap: anywhere; }

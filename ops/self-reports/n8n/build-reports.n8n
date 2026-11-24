@@ -1,0 +1,42 @@
+// ==== Build Reports (n8n Code node, after the engine). No AI, no writes: turns the read-only answers
+// into one cycle. A scheduled run reports the agents due now; a hand run and the last slot of the day
+// report every agent and build the PDF and workbook from the whole cycle.
+const L = $('Load Agents').first().json;
+const pairs = (plan, res) => { const p = $(plan).all().map((i) => i.json), r = $(res).all().map((i) => i.json); if (p.length !== r.length) throw new Error(res + ' answers came back out of order'); return p.map((x, i) => ({ ...x, res: r[i] })); };
+const why = (res) => (res && res.statusCode ? 'HTTP ' + res.statusCode : 'no answer');
+const wf = new Map(), execs = new Map(), n8nErr = new Map(), ghRuns = new Map(), ghTotal = new Map(), ghCron = new Map(), ghErr = new Map();
+for (const c of pairs('Plan n8n Reads', 'Read n8n (read only)')) {
+  if (c.kind === 'none') continue;
+  if (!(c.res.statusCode === 200 && c.res.body)) { n8nErr.set(c.id, why(c.res)); continue; }
+  if (c.kind === 'workflow') wf.set(c.id, c.res.body); else execs.set(c.id, (c.res.body.data || []).map((e) => ({ startedAt: e.startedAt, stoppedAt: e.stoppedAt, status: e.status, mode: e.mode })));
+}
+for (const c of pairs('Plan GitHub Reads', 'Read GitHub (read only)')) {
+  if (c.kind === 'none') continue;
+  if (!(c.res.statusCode === 200 && c.res.body)) { if (c.kind === 'runs') ghErr.set(c.key, why(c.res)); continue; }
+  if (c.kind === 'runs') ghTotal.set(c.key, Number(c.res.body.total_count) || 0);
+  if (c.kind === 'runs') ghRuns.set(c.key, (c.res.body.workflow_runs || []).map((r) => ({ run_started_at: r.run_started_at, created_at: r.created_at, updated_at: r.updated_at, status: r.status, conclusion: r.conclusion, event: r.event })));
+  else { const txt = Buffer.from(String(c.res.body.content || ''), 'base64').toString('utf8'); ghCron.set(c.key, [...txt.matchAll(/cron:\s*['"]([^'"]+)['"]/g)].map((m) => m[1])); }
+}
+const atlasRes = $('Read Atlas Records').first().json || {};
+const atlasOk = atlasRes.statusCode === 200 && atlasRes.body && Array.isArray(atlasRes.body.agents);
+const atlas = { connected: atlasOk, windowDays: atlasOk ? atlasRes.body.windowDays || 30 : null,
+  note: atlasOk ? 'Connected' : 'Not connected yet (' + why(atlasRes) + '): the self-reports data key is not set up',
+  by: new Map(atlasOk ? atlasRes.body.agents.map((a) => [a.catalogId, a]) : []) };
+let oldest = null; for (const list of execs.values()) for (const e of list) if (e.startedAt && (!oldest || e.startedAt < oldest)) oldest = e.startedAt;
+const nowMs = Date.now();
+const ctx = { nowMs, tz: DEFAULT_TZ, wf, execs, n8nErr, ghRuns, ghTotal, ghCron, ghErr, atlas, n8nFrom: oldest };
+const due = new Set(L.due);
+const inCycle = L.agents.filter((a) => L.fullRebuild || due.has(a.id));
+const cycle = buildCycle(inCycle, ctx, { pick: L.isManual, mode: L.isManual ? 'Run by hand (every agent)' : 'Scheduled', scheduleState: 'Draft: the n8n workflow is unpublished, so nothing runs on its own yet',
+  slotSource: L.slotSource, sheetUrl: $('Sheet Ready').first().json.sheetUrl });
+const nowIso = new Date(nowMs).toISOString();
+// Files (hand run and last slot only): PDF and Excel workbook, each built on its own so one failing
+// never stops the other; the failure is logged in Run Log with a retry note.
+const attempt = (label, make) => { try { const b = make(); return { ok: true, bytes: b.length, base64: b.toString('base64') }; } catch (e) { return { ok: false, error: label + ' not built: ' + String((e && e.message) || e).slice(0, 200) }; } };
+let pages = 0;
+const files = L.fullRebuild ? { pdf: attempt('PDF', () => { const p = buildPdf(cycle); pages = p.pages; return p.bytes; }), workbook: attempt('Workbook', () => buildXlsx(workbookSheets(cycle))), agents: agentFiles(cycle), meta: FILES } : null;
+if (files) files.pdf.pages = pages;
+const rows = cycle.agents.filter((r) => due.has(r.agent_id)).map((r) => ({ ...r, last_reported_at: nowIso, execution: String($execution.id) }));
+return [{ json: { now: nowIso, nowLocal: cycle.stamp + ' New York', isManual: L.isManual, fullRebuild: L.fullRebuild, slotSource: L.slotSource, atlasNote: atlas.note,
+  feedErrors: [...[...n8nErr].map(([id, e]) => 'n8n ' + id + ': ' + e), ...[...ghErr].map(([k, e]) => 'GitHub ' + k + ': ' + e)],
+  rows, dueIds: [...due], recRows: cycle.recs.filter((r) => due.has(r.agent_id)), schedule: cycle.schedule, sources: cycle.sources, conflicts: cycle.conflicts, cycle, files } }];

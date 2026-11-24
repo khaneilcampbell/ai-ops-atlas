@@ -1,0 +1,17 @@
+// ==== Run Log Row (n8n Code node). What this run did, which files reached the Library and which
+// did not, and how to retry. Nothing is applied from the recommendations.
+const B = $('Build Reports').first().json, k = B.cycle.counts;
+// Fingerprint of the Build Reports code, to check it matches the repo (node ops/self-reports/build-n8n.mjs --fingerprint).
+const fp = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return s.length + '-' + h.toString(16); };
+let engine = 'unknown'; try { engine = fp(String($('Build Reports').params.jsCode || '')); } catch (e) { /* params not readable */ }
+const retry = 'Retry: open https://khancam15.app.n8n.cloud/workflow/' + $workflow.id + ' and press Execute workflow (Run by Hand)';
+let lib = 'Not sent (scheduled run: files are rebuilt after the last report of the day)', problems = [];
+if ($('Library Entry').isExecuted) {
+  const sent = $('Library Entry').all().map((i) => i.json), res = $('Add to Atlas Library').all().map((i) => i.json || {});
+  problems = [...(sent[0] && sent[0].buildFailures) || []];
+  lib = sent.map((s, i) => { const r = res[i] || {}; const x = ((r.body && r.body.results) || [])[0] || {};
+    if (r.statusCode === 202 && !x.message) return s.file + ' ' + (x.duplicate ? 'duplicate' : 'added') + (x.outputId ? ' ' + x.outputId : '');
+    const msg = s.file + ' failed (' + (r.statusCode || 'no answer') + (x.message || (r.body && r.body.message) ? ': ' + String(x.message || r.body.message).slice(0, 120) : '') + ')'; problems.push(msg); return msg; }).join('; ');
+}
+return [{ json: { run_at: B.now, execution: $execution.id, mode: $execution.mode, agents_reported: B.rows.map((r) => r.agent).join(', '), runs_seen: k.runs, failed: k.failed, recommendations: k.recs,
+  sources: B.sources.map((s) => s.source + ': ' + s.availability).join('; '), library: lib, engine, problems: problems.join('; ') || 'None', retry: problems.length ? retry : '' } }];

@@ -20,6 +20,7 @@ agents:
     purpose: Runs frontend and Rust tests and dependency audits on every pull request and push. Validated pushes to main build the macOS app; Khaneil approves protected signing before a separate job publishes the update.
     framework: GitHub Actions
     owned_by: atlas-release-manager            # owning agent, added at Khaneil's request 2026-11-13
+    feeds: [github-merge-flow]   # verified 2026-11-24: Merge Lanes runs when a pull request's Atlas CI finishes
     runtime: GitHub-hosted runner
     status: active
     trigger: Push, pull request or manual; the dependency audit also runs daily on main
@@ -508,6 +509,7 @@ agents:
     model: Claude Code with sonnet for routine fixes and opus for test failures and repairs (aliases, set by ATLAS_ENGINEERING_MODELS)
     framework: Atlas Executive engine + GitHub Actions runner (Claude Code headless) + n8n dispatch
     owned_by: agent-operations-lead            # same owner as Atlas Executive, its supervisor
+    feeds: [atlas-qa]   # verified 2026-11-24: QA checks every change Engineering makes before a pull request exists
     runtime: GitHub Actions (.github/workflows/atlas-engineer.yml), started by n8n for Atlas
     status: paused
     trigger: 'CI failure on main picked up by Atlas, once switched on; Atlas · Engineering Dispatch is a draft, ATLAS_ENGINEERING_ENABLED is off and migration 0004 is not applied'
@@ -1025,8 +1027,531 @@ agents:
           - Save successful runs, or report each run to the Atlas feed, so Atlas can show its last success
         last_review: 2026-11-17
 
+  - id: agent-self-reports
+    name: Agent Self-Reports
+    purpose: >-
+      Every named agent reports data about itself to the Data Intelligence Center once a day, at a
+      time picked from its own run history so it never clashes with its work. Each report counts its
+      runs, failures, run times, busiest hours, schedules, stale states, budget and Atlas memory, and
+      turns them into plain recommendations to improve its workflow. Reports go to the Atlas Agent
+      Self-Reports Google Sheet and a PDF, both kept in the Output Library. No AI step.
+    framework: n8n (plain code, no model)
+    owned_by: atlas-health-monitor
+    model: None (plain code, no AI step)
+    runtime: n8n Cloud
+    status: active
+    trigger: 'Published n8n workflow: daily at each agent''s report time (17 times from 8:30am to 8:30pm New York, catalog/workspace/self-reports.yaml), or run by hand'
+    source: catalog/workspace/self-reports.yaml
+    last_run: 2026-11-23T04:10:40Z
+    history:
+      - at: 2026-11-22
+        event: 'Built at Khaneil''s request as an unpublished n8n draft. Hand runs 902 and 903 reported all 17 agents (818 runs seen, 11 failed, 18 recommendations), filled the Sheet and added the PDF and spreadsheet to the Output Library (run 903 added version 2 of each, no duplicates)'
+      - at: 2026-11-24
+        event: 'Khaneil published the n8n workflow, with the per-agent PDF and Excel work reports filed in the Knowledge & Research Center library'
+    links:
+      - label: 'n8n workflow: Data Intelligence · Agent Self-Reports'
+        url: https://khancam15.app.n8n.cloud/workflow/SBtrX3tY3OKT8qzn
+      - label: Self-reports sheet
+        url: https://docs.google.com/spreadsheets/d/1IJPNjdqPJ2OLhHZ_HI-pgai2dtPplq9oCx1Qw3DlR4s/edit
+    permissions:
+      - 'n8n API: reads executions of the workflows the agents run (read only)'
+      - 'GitHub: reads Actions runs of the agents'' workflows (read only)'
+      - 'Google Sheets: creates and rewrites the Atlas Agent Self-Reports sheet only'
+      - 'Atlas Output Library hook (Atlas reports key): adds versions of its own two outputs'
+      - 'Atlas data API key "self-reports" (ATLAS_DATA_KEYS, once added): reads run, cost and memory counts per agent, never their content'
+    registry:
+      title: "Data Intelligence · Agent Self-Reports"
+      category: data
+      automation_category: monitoring
+      subcategory: Agent reporting
+      classification:
+        type: D
+        confidence: verified
+        evidence: n8n workflow SBtrX3tY3OKT8qzn (unpublished draft) runs 902 and 903 on 2026-11-22 wrote the Sheet, a 6-page PDF and two Output Library items with plain code and no AI model
+      mission:
+        problem: Agents had no regular look at their own runs, failures and costs, so slow steps, unsaved runs and stale drafts went unnoticed.
+        outcomes:
+          - Each agent has a daily report on itself with clear recommendations
+          - The PDF and spreadsheet are in the Output Library, one item each with versions
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks:
+          - Read the catalog, the report times and each agent's n8n and GitHub runs
+          - Count runs, failures, run times, busiest hours and stale states per agent
+          - Write the Summary, Agents, Report Schedule, Recommendations and Run Log tabs
+          - Build the PDF and add both outputs to the Output Library
+        tools:
+          - Scheduled workflow
+          - Google Sheets
+        inputs:
+          - Atlas catalog and catalog/workspace/self-reports.yaml on main
+          - n8n executions (about 7 days kept) and GitHub Actions runs (30 days)
+          - Atlas data API agent report counts (once the self-reports key is added)
+        outputs:
+          - Atlas Agent Self-Reports Google Sheet
+          - Agent self-reports PDF and spreadsheet in the Output Library
+          - One work report per agent in the Output Library at the Knowledge & Research Center (a PDF and an Excel workbook each)
+        dependencies:
+          - atlas-data-inventory
+        limitations:
+          - Unpublished draft; no scheduled report or map walk until Khaneil publishes it
+          - n8n keeps about 7 days of executions, so n8n figures cover only that window
+          - Atlas memory counts read "Not connected yet" until the self-reports data key is added
+      goals:
+        objective: Give every agent one honest daily report on itself.
+        review_frequency: Monthly
+        kpis:
+          - name: Run success rate
+            kind: reliability
+            target: At least 95% of runs succeed
+            target_value: 95
+            direction: min
+            basis: A failed run leaves yesterday's report in the Sheet
+      execution:
+        trigger_type: scheduled
+        environment: n8n
+      governance:
+        autonomy: 1
+        autonomy_note: Reads and reports only.
+        risk: low
+        credential_owner: Khaneil (n8n Google Sheets, GitHub and n8n API credentials; Atlas reports key)
+      cost:
+        budget: No model calls. Once published, 17 n8n runs a day.
+      docs:
+        runbook: docs/agent-self-reports.md
+        known_issues:
+          - The Atlas data API route for agent report counts ships with this change and needs the self-reports key
+        last_review: 2026-11-22
+
   # Owning agent (2026-11-13, Khaneil asked that every automation have one). It has no model or
   # runtime of its own: its automations, which name it in owned_by, are the steps it runs.
+  - id: investment-operations
+    name: Portfolio Sync
+    purpose: >-
+      Read-only operations assistant for the Investment Operations Center. In the Mac app it reads one snapshot file that Claude Code writes on Khaneil's "sync my investments" (Robinhood connector with every trading tool denied), checks it against a fixed allowlist (account label, kind, last four characters, cash, symbol, asset class, value, time), refuses anything that looks like a full account number, credential or order, and shows each account with plain-words data checks. Disconnect deletes the file. The website shows only invented preview data. Operational summaries, not investment advice; it never places, changes or cancels orders and never moves money.
+    framework: Atlas web app (fixed rules, no model)
+    owned_by: atlas-health-monitor            # reports data health, like the other automations it owns
+    model: None
+    runtime: In the Atlas Mac app, when the building is opened or Refresh is pressed
+    status: paused
+    trigger: 'Manual: Khaneil asks Claude on the Mac to sync; Mac app only, synthetic preview on the website'
+    source: src/finance/investments.ts
+    last_run: null
+    permissions:
+      - Reads one local snapshot file; Disconnect deletes it. No brokerage access of its own
+    history:
+      - at: 2026-11-23
+        event: Built as a connector boundary with a synthetic preview. Robinhood's only agent connection also allows trading and shares account numbers, so nothing is connected
+      - at: 2026-11-23
+        event: Per-account read-only view in the Mac app from a local snapshot synced by Claude Code with Robinhood trading tools denied; account numbers kept to the last four; Disconnect deletes the file
+      - at: 2026-11-24
+        event: Renamed Portfolio Sync as one of the six trading team seats in Robin Exchange
+    registry:
+      title: Portfolio Sync
+      tier: specialized
+      category: business
+      subcategory: Investment operations
+      automation_category: monitoring
+      classification:
+        type: B
+        confidence: verified
+        evidence: Fixed allowlist, data checks and summary in src/finance/investments.ts, local file read/delete in src-tauri/src/investments.rs, tests in investments.test.ts and investmentsLocal.test.ts. No model call of its own.
+      mission:
+        problem: Brokerage data would reach Atlas without a check on what it carries, and nobody would see when it is stale or wrong.
+        outcomes:
+          - Only the allowlisted, minimized shape reaches Atlas
+          - Changes and data problems described in plain words
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks: [Check snapshots against the allowlist, Summarize what changed, Flag stale or inconsistent data]
+        tools: [Atlas finance data]
+        outputs: [Connection status, Change summary, Data checks in the Investment Operations Center]
+        inputs:
+          - A local snapshot file written by Claude Code on the Mac (Robinhood, read tools only)
+        dependencies:
+          - The Robinhood connector in Claude on the Mac, with its trading tools denied in ~/.claude/settings.json
+        limitations:
+          - Never recommends buying, selling or holding anything
+          - Never places, changes or cancels orders or transfers
+          - Keeps one summary file on the Mac, replaced each sync; no history, nothing in git or on the website
+      goals:
+        objective: Show what the authorized account data says, safely and plainly.
+        review_frequency: Monthly
+        kpis:
+          - name: Refused payloads logged without figures
+            kind: quality
+            target: Every rejection names fields, never values
+            basis: Checked by investments.test.ts
+      execution:
+        trigger_type: manual
+        environment: Atlas web app and Mac app
+      governance:
+        autonomy: 0
+        autonomy_note: Reads and describes only. Connecting a source needs Khaneil's action and a supported read-only method.
+        risk: low
+        credential_owner: Not documented; no credential exists
+      cost:
+        budget: No model calls.
+      docs:
+        technical: docs/benjaire-finance.md#investment-operations-center
+        runbook: docs/runbooks/ai-ops-atlas.md#investment-operations
+        last_review: 2026-11-23
+  # Trading team (2026-11-24, Khaneil approved the six seats). Trade Desk and Market Research
+  # are AI agents with desks in Atlas HQ; the three automations show at Robin Exchange. Only the
+  # Trade Desk may ever send an order, and only in the Agentic account; Atlas itself never trades.
+  - id: trade-desk
+    name: Trade Desk
+    purpose: >-
+      The only trading seat: Claude Code run by Khaneil on the Mac. Places orders Khaneil directs, Agentic account only, within $80 a week.
+    framework: Claude Code on Khaneil's Mac
+    model: Claude, in Khaneil's Claude Code session
+    runtime: On Khaneil's Mac, only while Khaneil runs it
+    status: paused
+    trigger: 'Manual: Khaneil runs Claude Code on the Mac; off while the Robinhood order tools are denied in ~/.claude/settings.json'
+    source: src/finance/tradingDesk.ts
+    last_run: null
+    permissions:
+      - Robinhood order tools for the Agentic account only, once Khaneil removes the deny rules; none today
+      - Writes the trade journal file in Atlas's app data folder on the Mac
+    history:
+      - at: 2026-11-24
+        event: Added as the trading team's only trading seat, with Khaneil's limit of $80 of agent trades a week; off until Khaneil switches trading on
+    registry:
+      identity:
+        display_name: Marcus Reid
+        accent: "#92400E"
+        intro: "I'm the only seat on the trading team that can send an order, and only one you name yourself, in the Agentic account. I check it against your $80 a week limit, show it to you first, and write it to the journal. I never pick trades or give advice."
+        voice: "Short and exact: the order, the check, and what's left this week."
+        appearance: "Man in his late 40s, medium brown skin, short salt-and-pepper hair, trimmed beard, charcoal quarter-zip over a light blue collared shirt"
+        portrait:
+          path: agents/trade-desk.webp
+          model: gpt_image_2_6
+          job_id: b6d81f1b-778c-44c1-bdfe-11134e22e56e
+          prompt_version: 2
+          generated_at: 2026-11-24
+      title: Trade Desk
+      tier: specialized
+      category: business
+      subcategory: Investment operations
+      classification:
+        type: A
+        confidence: verified
+        evidence: An AI agent, a Claude Code session Khaneil runs (Khaneil asked for a full profile on 2026-11-24); the limit check and journal shape it must follow are in src/finance/tradingDesk.ts. No order has been placed.
+      mission:
+        problem: Agent trades need one accountable seat, held to fixed limits and recorded every time.
+        outcomes:
+          - Orders only in the Agentic account, within the weekly limit
+          - Every order checked and journaled
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks: [Place orders Khaneil directs in the Agentic account, Run the Risk and Limits check before each order, Write each order to the trade journal]
+        tools: [Atlas finance data]
+        outputs: [Trade journal entries]
+        inputs:
+          - Khaneil's instructions in Claude Code
+          - The latest account snapshot
+        dependencies:
+          - trading-risk-limits
+          - trade-journal
+        limitations:
+          - Never trades outside the Agentic account
+          - Never exceeds $80 of agent trades in 7 days, stocks and ETFs only
+          - Never recommends what to buy, sell or hold, and never moves money
+      execution:
+        trigger_type: manual
+        environment: Claude Code on Khaneil's Mac
+      governance:
+        autonomy: 1
+        autonomy_note: Acts only on Khaneil's instruction in a session Khaneil runs; Robinhood trade approvals should be on for the Agentic account.
+        risk: high
+        credential_owner: Khaneil (Robinhood sign-in in Claude on the Mac)
+        kill_switch: 'Keep the Robinhood order tools in the deny list in ~/.claude/settings.json on the Mac (they are denied today); turning Robinhood trade approvals on makes every order wait for Khaneil in the Robinhood app.'
+      cost:
+        budget: Claude Code usage only while Khaneil runs it.
+      goals:
+        objective: Place only the orders Khaneil directs, inside the limits, and record each one.
+        review_frequency: Monthly
+        kpis:
+          - name: Orders inside the limits
+            kind: quality
+            target: Every sent order passed Risk and Limits
+            basis: Checked against the trade journal
+      docs:
+        technical: docs/benjaire-finance.md#trading-desk
+        runbook: docs/runbooks/ai-ops-atlas.md#trading-desk
+        last_review: 2026-11-24
+  - id: trading-risk-limits
+    name: Risk and Limits
+    purpose: >-
+      Checks each proposed agent trade against Khaneil's limits. Can block an order, never place one.
+    framework: Atlas web app (fixed rules, no model)
+    owned_by: atlas-health-monitor
+    model: None
+    runtime: In the Atlas Mac app and in the Trade Desk's check before each order
+    status: paused
+    trigger: 'Manual: before each Trade Desk order; off while trading is off'
+    source: src/finance/tradingDesk.ts
+    last_run: null
+    permissions:
+      - None; reads the snapshot and journal and returns passed or blocked
+    history:
+      - at: 2026-11-24
+        event: Added with Khaneil's limit of $80 of agent trades a week, stocks and ETFs only, Agentic account only
+    registry:
+      title: Risk and Limits
+      tier: specialized
+      category: business
+      subcategory: Investment operations
+      automation_category: monitoring
+      classification:
+        type: C
+        confidence: verified
+        evidence: checkTrade, tradedThisWeek and deskAlerts in src/finance/tradingDesk.ts, tested in tradingDesk.test.ts.
+      mission:
+        problem: Without a separate check, the seat placing orders would be checking its own work.
+        outcomes:
+          - No agent order outside the limits
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks: [Check each proposed order against the limits, Show the weekly limit used, Flag blocked and rejected orders]
+        tools: [Atlas finance data]
+        outputs: [Passed or blocked with reasons, Trading desk alerts]
+        inputs:
+          - The proposed order
+          - The trade journal and latest snapshot
+        dependencies:
+          - trade-journal
+          - investment-operations
+        limitations:
+          - Can block, never place
+          - Never comments on whether a trade is a good idea
+      execution:
+        trigger_type: manual
+        environment: Atlas Mac app and Claude Code on the Mac
+      governance:
+        autonomy: 0
+        risk: low
+        credential_owner: Not documented; no credential exists
+      cost:
+        budget: No model calls.
+      goals:
+        objective: Stop any agent order that breaks the limits.
+        review_frequency: Monthly
+        kpis:
+          - name: Orders sent over the limits
+            kind: quality
+            target: None
+            basis: checkTrade in tradingDesk.test.ts
+      docs:
+        technical: docs/benjaire-finance.md#trading-desk
+        runbook: docs/runbooks/ai-ops-atlas.md#trading-desk
+        last_review: 2026-11-24
+  - id: trade-journal
+    name: Trade Journal
+    purpose: >-
+      Records every agent order and its check and result, shown in the Trading desk. Mac only.
+    framework: Atlas web app (fixed rules, no model)
+    owned_by: atlas-health-monitor
+    model: None
+    runtime: In the Atlas Mac app, when the building is opened or Refresh is pressed
+    status: paused
+    trigger: 'Manual: reads the journal when the Trading desk opens; empty while trading is off'
+    source: src/finance/tradingDesk.ts
+    last_run: null
+    permissions:
+      - Reads one local journal file; Disconnect deletes it
+    history:
+      - at: 2026-11-24
+        event: Added; reads investments/journal.json in the Mac app through an allowlist, website shows invented entries only
+    registry:
+      title: Trade Journal
+      tier: specialized
+      category: business
+      subcategory: Investment operations
+      automation_category: monitoring
+      classification:
+        type: C
+        confidence: verified
+        evidence: sanitizeJournal in src/finance/tradingDesk.ts, parseLocalJournal in investmentsLocal.ts, file read in src-tauri/src/investments.rs, with tests.
+      mission:
+        problem: Agent orders would happen with no record of who placed them or why.
+        outcomes:
+          - Every agent order recorded with its check and result
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks: [Read and check the trade journal, Show the agent trade log]
+        tools: [Atlas finance data]
+        outputs: [Agent trade log in the Trading desk]
+        inputs:
+          - The journal file the Trade Desk writes on the Mac
+        dependencies:
+          - The journal file the Trade Desk writes on the Mac
+        limitations:
+          - Stays on the Mac; nothing in git or on the website
+          - Keeps at most 500 entries
+      execution:
+        trigger_type: manual
+        environment: Atlas Mac app
+      governance:
+        autonomy: 0
+        risk: low
+        credential_owner: Not documented; no credential exists
+      cost:
+        budget: No model calls.
+      goals:
+        objective: Keep a complete, minimal record of agent orders.
+        review_frequency: Monthly
+        kpis:
+          - name: Agent orders recorded
+            kind: quality
+            target: Every agent order has a journal entry
+            basis: Compared with Robinhood order history by Khaneil
+      docs:
+        technical: docs/benjaire-finance.md#trading-desk
+        runbook: docs/runbooks/ai-ops-atlas.md#trading-desk
+        last_review: 2026-11-24
+  - id: trading-reporting
+    name: Trading Reporting
+    purpose: >-
+      Totals the last 7 days of agent trades from the journal.
+    framework: Atlas web app (fixed rules, no model)
+    owned_by: atlas-health-monitor
+    model: None
+    runtime: In the Atlas Mac app, when the Trading desk opens
+    status: paused
+    trigger: 'Manual: when the Trading desk opens; nothing to report while trading is off'
+    source: src/finance/tradingDesk.ts
+    last_run: null
+    permissions:
+      - None; reads the journal
+    history:
+      - at: 2026-11-24
+        event: Added with the weekly totals in the Trading desk; PDF and sheet not built
+    registry:
+      title: Trading Reporting
+      tier: specialized
+      category: business
+      subcategory: Investment operations
+      automation_category: monitoring
+      classification:
+        type: C
+        confidence: verified
+        evidence: weeklyReport in src/finance/tradingDesk.ts, tested in tradingDesk.test.ts.
+      mission:
+        problem: Khaneil needs the week's agent trading at a glance.
+        outcomes:
+          - Weekly totals of agent trades
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks: [Total the last 7 days of agent trades]
+        tools: [Atlas finance data]
+        outputs: [Weekly totals in the Trading desk]
+        inputs:
+          - The trade journal
+        dependencies:
+          - trade-journal
+        limitations:
+          - Totals only; no performance claims or advice
+          - PDF and sheet output not built
+      execution:
+        trigger_type: manual
+        environment: Atlas Mac app
+      governance:
+        autonomy: 0
+        risk: low
+        credential_owner: Not documented; no credential exists
+      cost:
+        budget: No model calls.
+      goals:
+        objective: Show the week of agent trading at a glance.
+        review_frequency: Monthly
+        kpis:
+          - name: Weekly totals shown
+            kind: quality
+            target: Totals match the journal
+            basis: weeklyReport in tradingDesk.test.ts
+      docs:
+        technical: docs/benjaire-finance.md#trading-desk
+        runbook: docs/runbooks/ai-ops-atlas.md#trading-desk
+        last_review: 2026-11-24
+  - id: market-research
+    name: Market Research
+    purpose: >-
+      Planned daily facts brief for the Trade Desk: quotes, earnings dates, news. No picks.
+    framework: Planned
+    model: Planned to use Claude in Claude Code on the Mac
+    runtime: Not built
+    status: paused
+    trigger: 'Planned: not built yet'
+    last_run: null
+    permissions:
+      - None yet; planned to use Robinhood read tools only
+    history:
+      - at: 2026-11-24
+        event: Planned as part of the trading team; not built
+    registry:
+      identity:
+        display_name: Nadia Ferreira
+        accent: "#4338CA"
+        intro: "Once I'm built, I put the facts in one place before you decide: watchlist quotes, earnings dates and the news, read-only from Robinhood. I never say what to buy, sell or hold."
+        voice: "Plain facts with their source and time, no opinions."
+        appearance: "Woman in her early 30s, light tan skin, shoulder-length dark wavy hair, round glasses, mustard cardigan over a white top"
+        portrait:
+          path: agents/market-research.webp
+          model: gpt_image_2_6
+          job_id: d6961f33-a0a1-41d1-aa98-ad4c5b5046fc
+          prompt_version: 2
+          generated_at: 2026-11-24
+      title: Market Research
+      tier: specialized
+      category: business
+      subcategory: Investment operations
+      classification:
+        type: A
+        confidence: verified
+        evidence: Designed on 2026-11-24 as an AI agent brief (Claude reads Robinhood's read tools on Khaneil's Mac); no code, skill or workflow exists yet.
+      mission:
+        problem: The Trade Desk needs the facts in one place before Khaneil decides.
+        outcomes:
+          - A daily brief of facts, no advice
+        beneficiaries:
+          - Khaneil
+      responsibilities:
+        tasks: [Collect watchlist quotes, List earnings dates, Summarize news]
+        tools: [Atlas finance data]
+        outputs: [Daily brief]
+        inputs:
+          - Robinhood quotes, earnings and news through read tools in Claude on the Mac
+        dependencies:
+          - The Robinhood connector in Claude on the Mac (read tools only)
+        limitations:
+          - Facts only; never recommends buying, selling or holding
+          - Can never place orders
+      governance:
+        autonomy: 0
+        risk: low
+        credential_owner: Not documented
+      execution:
+        trigger_type: manual
+        environment: Claude Code on Khaneil's Mac (planned)
+      goals:
+        objective: Give the Trade Desk the facts, never advice.
+        review_frequency: Monthly
+        kpis:
+          - name: Briefs with a recommendation
+            kind: quality
+            target: None
+            basis: Not built; to check once built
+      docs:
+        technical: docs/benjaire-finance.md#trading-desk
+        runbook: docs/runbooks/ai-ops-atlas.md#trading-desk
+        last_review: 2026-11-24
   - id: atlas-release-manager
     name: Atlas Release Manager
     purpose: >-
@@ -1132,6 +1657,10 @@ agents:
         event: Supervises autonomous operations (Phase 9) in Mission Control. Turns verified events into incidents with fixed rules, and runs only approved read-only recovery playbooks, automatically only under a policy Khaneil enabled at autonomy level 3
       - at: 2026-11-18
         event: Signal Watch deleted at Khaneil's request; it now owns Dataset Census and Atlas Data Inventory
+      - at: 2026-11-23
+        event: Also owns Investment Operations (paused, synthetic preview only) for the Investment Operations Center's data checks
+      - at: 2026-11-24
+        event: Also owns the trading team's Risk and Limits, Trade Journal and Trading Reporting automations (all paused while trading is off); Investment Operations renamed Portfolio Sync
     permissions:
       - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
@@ -1172,6 +1701,10 @@ agents:
         dependencies:
           - dataset-census
           - atlas-data-inventory
+          - investment-operations
+          - trading-risk-limits
+          - trade-journal
+          - trading-reporting
         limitations:
           - Acts only through the automations it owns; it has no model, schedule or credentials of its own
           - Reports health; it does not repair anything

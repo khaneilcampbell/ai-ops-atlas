@@ -48,6 +48,72 @@ The data sets are holdings (read only), a log of every agent trade with who appr
 trading limits agents must stay inside. Atlas places no orders. Connecting the account follows the
 Oct 31 safety plan (read only first, then paper trading, then live with approval).
 
+### Read-only connector boundary (Nov 23)
+
+The building panel shows an **Investment operations** section: connection status, last sync, what
+is stored, each account's value, cash and largest positions, and data checks. The
+`investment-operations` automation (paused, manual, owned by Atlas Health Monitor) is the code in
+`src/finance/investments.ts`, `src/finance/investmentsLocal.ts` and `src-tauri/src/investments.rs`.
+
+**How data gets there (Mac app only).** Robinhood's only supported route for an outside agent is
+the Robinhood Trading MCP. It reads every account and can trade in the Agentic account, with no
+read-only scope. So Atlas never connects to it. Instead, Khaneil asks Claude Code on the Mac to
+"sync my investments". That Claude uses the Robinhood connector with all 34 write tools (orders,
+cancels, option exercise, watchlist and alert changes) denied in `~/.claude/settings.json`, reads
+the accounts, and writes one file: `<app data>/investments/snapshot.json`
+(`~/Library/Application Support/com.khaneilcampbell.ai-ops-atlas/investments/snapshot.json`).
+The Mac app reads it on open and Refresh; **Disconnect** deletes it. The website never has the
+data and shows only the synthetic preview.
+
+- `sanitizeSnapshot` keeps only `source`, `as_of` and `portfolios[]` of `label`, `kind`, `last4`,
+  `agent_tradable`, `cash` and `positions[]` of `symbol`, `asset_class`, `market_value`. Account
+  numbers appear only as their last four characters. It refuses the whole file when any key looks
+  like an account number, credential, order, transfer or bank detail, or when more than one account
+  is marked agent-tradable. Errors name fields, never values.
+- `connectionState` is never greener than the data: synthetic data always reads Not connected,
+  and a real snapshot turns Stale after 26 hours.
+- `summarizeChange` and `dataQualityIssues` describe totals and what looks wrong. They never
+  recommend buying, selling or holding. Operational summaries, not investment advice.
+- Retention: one summary file on the Mac, replaced on each sync, no history. Nothing in git, CI,
+  screenshots or the website; tests and screenshots use `SYNTHETIC_SNAPSHOTS`.
+
+### Trading desk (Nov 24)
+
+The panel has two tabs: **Accounts** (above) and **Trading desk**. The desk shows the agent trading
+account, Khaneil's limits, alerts, the six-seat trading team, the agent trade log, weekly totals and
+the other accounts as view only. It has no buy, sell or cancel controls. Code:
+`src/finance/tradingDesk.ts`, `src/components/TradingDesk.tsx`.
+
+**Limits (Khaneil, 2026-11-24):** at most $80 of agent trades in any 7 days, counting sent orders
+(buys and sells), stocks and ETFs only, Agentic account only. They live in `TRADING_LIMITS`, so
+changing them is a reviewed pull request.
+
+**The team.** Only the Trade Desk may ever send an order. Trade Desk (Marcus Reid) and Market
+Research (Nadia Ferreira) are AI agents with a full profile, illustrated avatar and a desk in Atlas
+HQ. The three automations have no persona: they show on Atlas Health Monitor's profile and at
+Robin Exchange.
+
+| Seat | Catalog id | What it does | AI |
+| --- | --- | --- | --- |
+| Trade Desk | `trade-desk` | A Claude Code session Khaneil runs; places orders Khaneil directs, Agentic only | Yes |
+| Portfolio Sync | `investment-operations` | The account snapshot above | No |
+| Risk and Limits | `trading-risk-limits` | `checkTrade`: blocks anything outside the limits, never places | No |
+| Trade Journal | `trade-journal` | Reads and checks the journal file | No |
+| Trading Reporting | `trading-reporting` | `weeklyReport`: last 7 days of sent orders | No |
+| Market Research | `market-research` | Planned daily facts brief; not built | Yes |
+
+**Journal file.** Before each order the Trade Desk runs the same check as `checkTrade` and appends
+the outcome to `<app data>/investments/journal.json`:
+`{ "entries": [{ "at", "seat", "side", "symbol", "asset_class", "amount", "check", "status", "note" }] }`.
+`sanitizeJournal` refuses the whole file if any key looks like an account number, credential,
+transfer, bank or card detail, if a note holds a run of six or more digits, if a blocked check was
+sent, or if any seat other than the Trade Desk sent an order. At most 500 entries. Disconnect
+deletes the journal with the snapshot. The website shows only `SYNTHETIC_JOURNAL`.
+
+**Trading stays off** while the Robinhood order tools are denied in `~/.claude/settings.json` on
+the Mac. Switching it on is Khaneil's step: turn on Robinhood trade approvals for the Agentic
+account first, then remove the deny rules.
+
 ## Status: never greener than the data
 
 | Status | When |

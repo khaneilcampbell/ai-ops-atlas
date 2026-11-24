@@ -1,0 +1,25 @@
+// ==== Library Entry (n8n Code node). One upload per file, so one failing never
+// stops the others. The three cycle files are Priya Raman's (atlas-health-monitor); each agent also gets its
+// own work report under its own id. All are filed in the Knowledge & Research Center, where the Library
+// lives. Each agent's work report comes as a PDF and an Excel workbook. Output keys are fixed, so each run adds a version to the same items.
+const B = $('Build Reports').first().json, sheet = $('Sheet Ready').first().json, c = B.cycle, k = c.counts;
+const built = B.files || {}, pdf = built.pdf || {}, wb = built.workbook || {}, FILES = built.meta;
+const esc = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+const cols = ['agent', 'role', 'reports_at_et', 'catalog_status', 'live_state', 'data_state', 'window', 'runs_total', 'succeeded', 'failed', 'success_rate', 'median_duration', 'last_run', 'last_failure', 'stale_flags', 'recommendations'];
+const csv = [cols.join(','), ...c.agents.map((r) => cols.map((x) => esc(r[x])).join(','))].join('\n') + '\n';
+const summary = (k.agents + ' agents reported to the Data Intelligence Center. Run data read for ' + k.read + ', ' + k.noData + ' with no workflow linked, ' + k.notConnected + ' not connected. ' + k.runs + ' runs seen, ' + k.failed + ' failed'
+  + (k.successRate == null ? '' : ' (' + k.successRate + '% of finished runs succeeded)') + '. ' + k.recs + ' suggestions (' + k.high + ' high), none applied. Draft until published.').slice(0, 2000);
+const runUrl = 'https://khancam15.app.n8n.cloud/workflow/' + $workflow.id + '/executions/' + $execution.id;
+const source = (id) => ({ agent: 'atlas-health-monitor', execution: 'n8n-' + $execution.id + '-' + id, workflow: 'agent-self-reports', runUrl, project: 'ai-ops-atlas', building: 'service:financial:financial-planning', producedAt: B.now, via: 'n8n' });
+const items = [], failures = [];
+if (pdf.ok) items.push({ file: 'pdf', body: { source: source('pdf'), artifacts: [{ id: FILES.pdf.fileName, outputKey: FILES.pdf.outputKey, title: 'Atlas Agent Self-Reports', mime: FILES.pdf.mime, summary, base64: pdf.base64, sourceUrl: sheet.sheetUrl }] } });
+else failures.push(pdf.error || 'PDF not built');
+if (wb.ok) items.push({ file: 'workbook', body: { source: source('workbook'), artifacts: [{ id: FILES.workbook.fileName, outputKey: FILES.workbook.outputKey, title: 'Atlas Agent Self-Reports (Excel workbook)', mime: FILES.workbook.mime, summary: ('Excel workbook: Overview, Agent Reports (one row per agent), Workflow Recommendations (suggestions with evidence, not applied) and Sources (windows and retention). ' + summary).slice(0, 2000), base64: wb.base64, sourceUrl: sheet.sheetUrl }] } });
+else failures.push(wb.error || 'Workbook not built');
+items.push({ file: 'csv', body: { source: source('csv'), artifacts: [{ id: FILES.csv.fileName, outputKey: FILES.csv.outputKey, title: 'Atlas Agent Self-Reports (Google Sheet)', mime: FILES.csv.mime, summary: ('Table: one row per agent. Live Google Sheet: ' + sheet.sheetUrl).slice(0, 2000), text: csv, sourceUrl: sheet.sheetUrl }] } });
+// Each agent's work report as a PDF and an Excel workbook, each uploaded on its own.
+for (const f of built.agents || []) {
+  if (!f.ok) { failures.push(f.error); continue; }
+  items.push({ file: 'agent:' + f.agentId + ':' + f.format, body: { source: { ...source('agent-' + f.agentId + '-' + f.format), agent: f.agentId, task: 'work-report' }, artifacts: [{ id: f.fileName, outputKey: f.outputKey, title: f.title, mime: f.mime, summary: f.summary.slice(0, 2000), base64: f.base64 }] } });
+}
+return items.map((x) => ({ json: { ...x, buildFailures: failures } }));

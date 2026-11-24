@@ -848,6 +848,12 @@
             "type": "string",
             "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
             "description": "Automations only: id of the AI agent (type A or F) that runs this automation as one of its fixed steps. Leave out when no agent owns it."
+          },
+          "feeds": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+            "uniqueItems": true,
+            "description": "Automations only: ids of the automations this one hands its output to (a webhook it calls, a result the next one reads). Record only links verified in code or n8n; the Automations Flows tab draws them."
           }
         }
       }

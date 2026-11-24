@@ -19,6 +19,8 @@ import { marinaSite } from "./marinaPlan";
 import { COMMONS_BENCH } from "./commonsPlan";
 import { boardingRoute } from "./yachtPlan";
 import { CAFE_NAME, type CafePlan } from "./cafePlan";
+import { buildingDisplayName } from "../../modules/names";
+import { SELF_REPORTS, type SelfReportPlan } from "../../selfReports/selfReports";
 
 /**
  * The city's side of the agents' routine (routine/routine.ts): every place an agent can go, as a
@@ -102,6 +104,8 @@ export interface CityPlaces {
   jet?: Pick<AirportPlan, "x" | "z" | "west">;
   /** Community Pavilion & Café: its counter, seats and the walk in (cafePlan.ts; seats handed out in cafeVisits.ts). */
   cafe?: CafePlan;
+  /** Where agents go for their daily self-report (selfReports.ts): the report building's own door. Never a free-time pick. */
+  report?: LeisureOption;
 }
 
 const street = (p: [number, number] | Pt3): Pt3 => (p.length === 2 ? [p[0], STREET_Y, p[1]] : [p[0], STREET_Y, p[2]]);
@@ -241,7 +245,24 @@ export function planCityPlaces(scene: Scene3D, named: readonly NamedAgent[], job
     const [gx, gz] = stadiumGate(st);
     opt({ id: "arena", kind: "arena", label: "At the arena", spot: "arena", exit: "arena", stay: [420, 900] }, { id: "arena", label: "Team Events Arena", path: [street([gx, gz])], yaw: 0, inside: true });
   }
+  out.report = reportPlace(scene, add) ?? undefined;
   return out;
+}
+
+/**
+ * The self-report building's door (catalog/workspace/self-reports.yaml): up its own approach from the
+ * sidewalk and inside for a few minutes. Only Financial District buildings have a walk-up approach;
+ * any other building leaves the report walk off the map.
+ */
+export function reportPlace(scene: Scene3D, add: (s: CitySpot) => CitySpot, plan: SelfReportPlan = SELF_REPORTS): LeisureOption | null {
+  const m = /^service:financial:([a-z0-9-]+)$/.exec(plan.building);
+  const b = m && scene.financial?.buildings.find((x) => x.id === m[1] && x.approach.length > 0);
+  if (!b) return null;
+  const name = buildingDisplayName(plan.building, b.name);
+  const id = `report:${b.id}`;
+  add({ id, label: name, path: [...b.approach].reverse().map((p) => street(p)), yaw: 0, inside: true, spread: 0.2 });
+  const stay = plan.stayMinutes * 60;
+  return { id, kind: "district", label: `Reporting at the ${name}`, spot: id, exit: id, stay: [stay, stay] };
 }
 
 // ------------------------------------------------------------------------------------- walking

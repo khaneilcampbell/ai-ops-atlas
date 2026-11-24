@@ -9,22 +9,32 @@ import { buildRegistry, filterEntries, GROUP_LABEL, groupEntries, runtimeOf, SOR
 import { OPERATIONAL_LABEL } from "../registry/telemetry";
 import { CATEGORIES, CATEGORY_LABEL, CLASSIFICATION_INFO, CLASSIFICATIONS, type Operational } from "../registry/types";
 import { useAtlas } from "../state";
+import { Board } from "./agents/Board";
 import { Goals } from "./agents/Goals";
+import { Live } from "./agents/Live";
+import { Flows } from "./agents/Flows";
 import { Inspector } from "./agents/Inspector";
 import { Manage } from "./agents/Manage";
 import { CLASS_COLOR, ClassBadge, OperationalPill, RiskPill } from "./agents/parts";
 import { Portfolio } from "./agents/Portfolio";
+import { Team } from "./agents/Team";
+import { Roster, type RosterPrefs } from "./agents/Roster";
 import { RegistryRefresh } from "./agents/RegistryRefresh";
 import { Roles, type RoleView } from "./agents/Roles";
-import { roleDirectory } from "../catalog/essentialRoles";
+import { roleDirectory, SKILL_OF } from "../catalog/essentialRoles";
 import "../styles/registry.css";
 import { AgentIdentityLine } from "../components/AgentIdentity";
 import { identityFor } from "../registry/identity";
 import { catalog as bundledCatalog } from "../catalog";
 import { agentStatuses, type IdentityStatus } from "../registry/agentStatus";
 
-type Sub = "directory" | "portfolio" | "goals" | "manage";
+type Sub = "board" | "live" | "flows" | "team" | "roster" | "directory" | "portfolio" | "goals" | "manage";
 const SUBS: { id: Sub; label: string }[] = [
+  { id: "board", label: "Board" },
+  { id: "live", label: "Live" },
+  { id: "flows", label: "Flows" },
+  { id: "team", label: "Team" },
+  { id: "roster", label: "Roster" },
   { id: "directory", label: "Directory" },
   { id: "portfolio", label: "Portfolio" },
   { id: "goals", label: "Goals & performance" },
@@ -41,8 +51,12 @@ interface Prefs {
   runtime: string;
   /** Agents tab only: essential roles (default), Inactive, Archived, or the flat list of all agents. */
   view: RoleView | "all";
+  /** Set once Automations has opened on the Board, so a tab picked later is kept. */
+  board?: boolean;
+  /** Agents > Roster filter and sort. */
+  roster: RosterPrefs;
 }
-const DEFAULT_PREFS: Prefs = { view: "roles", sub: "directory", group: "none", sort: "title", category: "", classification: "", operational: "", runtime: "" };
+const DEFAULT_PREFS: Prefs = { view: "roles", sub: "directory", group: "none", sort: "title", category: "", classification: "", operational: "", runtime: "", roster: { filter: "all", sort: "name", desc: false } };
 
 /** Agent Registry: every registered agent, automation and pipeline, classified and documented. Read-only. */
 export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations" }) {
@@ -55,8 +69,11 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
     // A saved filter from the former mixed directory must not hide the newly separated list.
     const types = kind === "agents" ? ["A", "F"] : ["B", "C", "D", "E"];
     // Manage moved from Agents to Automations (2026-11-18): the managed GitHub workflows are automations.
-    const sub = saved.sub === "manage" && kind === "agents" ? "directory" : saved.sub;
-    return { ...saved, sub, classification: types.includes(saved.classification) ? saved.classification : "" };
+    // The Board (2026-11-24) is Automations only, and where Automations opens. Team and Roster (2026-11-24) are Agents views only.
+    const AUTO_ONLY = ["manage", "board", "live", "flows"];
+    const AGENT_ONLY = ["team", "roster"];
+    const sub = kind === "agents" ? (AUTO_ONLY.includes(saved.sub) ? "directory" : saved.sub) : saved.board ? (AGENT_ONLY.includes(saved.sub) ? "directory" : saved.sub) : "board";
+    return { ...saved, sub, board: kind === "automations" || saved.board, classification: types.includes(saved.classification) ? saved.classification : "" };
   });
   const set = (p: Partial<Prefs>) => setPrefs((x) => ({ ...x, ...p }));
   useEffect(() => save(`registry-prefs-${kind}`, prefs), [prefs, kind]);
@@ -76,6 +93,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
   const statuses = useMemo(() => agentStatuses(allCatalog.agents, new Map(allEntries.map((e) => [e.profile.id, e.telemetry]))), [allCatalog, allEntries]);
   const orphanIds = useMemo(() => new Set(owns.orphans.map((a) => a.id)), [owns]);
   const summary = useMemo(() => summarize(entries), [entries]);
+  const skillCount = useMemo(() => entries.filter((e) => SKILL_OF.has(e.profile.id)).length, [entries]);
   const rows = useMemo(
     () => sortEntries(filterEntries(entries, { query: filters.query, project: filters.project, category: prefs.category, classification: prefs.classification, operational: prefs.operational, runtime: prefs.runtime }), prefs.sort),
     [entries, filters.query, filters.project, prefs],
@@ -85,6 +103,8 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
   const roleView = kind === "agents" && prefs.view !== "all";
   const counts = useMemo(() => roleDirectory(allCatalog.agents).counts, [allCatalog]);
   const current = roleView ? (selection?.kind === "agent" ? byId.get(selection.id) : undefined) : (selection?.kind === "agent" && entries.find((e) => e.profile.id === selection.id)) || flat[0];
+
+  const rosterCurrent = selection?.kind === "agent" ? byId.get(selection.id) : undefined;
 
   const open = (id: string) => {
     select({ kind: "agent", id });
@@ -110,7 +130,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
           <div className="eyebrow">{title} registry{prefs.sub === "manage" ? "" : " · read-only"}</div>
           <h1>{title}</h1>
           <p className="lede">
-            {summary.total} {kind === "automations" ? "automations, AI-assisted workflows, pipelines, and integrations" : "AI agents and planned agents"} supporting your projects. {summary.operational.verified} verified running from live data.
+            {kind === "automations" ? `${summary.total} automations, AI-assisted workflows, pipelines, and integrations` : `${summary.total - skillCount} AI agents and planned agents${skillCount ? ` (plus ${skillCount} skills that run inside them)` : ""}`} supporting your projects. {summary.operational.verified} verified running from live data.
           </p>
           {kind === "automations" && owns.orphans.length > 0 && (
             <p className="orphan-note" role="note">
@@ -121,7 +141,7 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
           {kind === "agents" && <RegistryRefresh />}
         </div>
         <div className="seg" role="tablist" aria-label="Registry views">
-          {SUBS.filter((s) => s.id !== "manage" || kind === "automations").map((s) => (
+          {SUBS.filter((s) => (!["manage", "board", "live", "flows"].includes(s.id) || kind === "automations") && (!["team", "roster"].includes(s.id) || kind === "agents")).map((s) => (
             <button key={s.id} role="tab" aria-selected={prefs.sub === s.id} className={prefs.sub === s.id ? "on" : ""} onClick={() => set({ sub: s.id })}>
               {s.label}
             </button>
@@ -129,6 +149,26 @@ export function AgentsView({ kind = "agents" }: { kind?: "agents" | "automations
         </div>
       </div>
 
+      {prefs.sub === "board" && kind === "automations" && <Board entries={entries} agents={allCatalog.agents} owns={owns} open={open} />}
+      {prefs.sub === "live" && kind === "automations" && <Live entries={entries} agents={allCatalog.agents} open={open} />}
+      {prefs.sub === "flows" && kind === "automations" && <Flows entries={entries} agents={allCatalog.agents} owns={owns} open={open} />}
+      {prefs.sub === "team" && kind === "agents" && (
+        <Team agents={allCatalog.agents} projects={allCatalog.projects} entries={allEntries} statuses={statuses} verified={summary.operational.verified} open={open} openRoles={() => set({ sub: "directory", view: "roles" })} />
+      )}
+      {prefs.sub === "roster" && kind === "agents" && (
+        <Roster
+          agents={allCatalog.agents}
+          entries={allEntries}
+          statuses={statuses}
+          query={filters.query}
+          setQuery={(query) => setFilters({ query })}
+          prefs={prefs.roster}
+          setPrefs={(p) => set({ roster: { ...prefs.roster, ...p } })}
+          current={selection?.kind === "agent" ? selection.id : undefined}
+          pick={(id) => select({ kind: "agent", id })}
+          detail={rosterCurrent ? <Inspector key={rosterCurrent.profile.id} entry={rosterCurrent} status={statuses.get(rosterCurrent.profile.id)} /> : <div className="card empty">Pick an agent to see its details.</div>}
+        />
+      )}
       {prefs.sub === "portfolio" && <Portfolio entries={entries} summary={summary} open={open} />}
       {prefs.sub === "goals" && <Goals entries={rows} open={open} />}
       {prefs.sub === "manage" && kind === "automations" && <Manage open={open} />}
@@ -303,3 +343,6 @@ function Select({ label, value, onChange, options, all = true }: { label: string
     </label>
   );
 }
+
+/** The page tabs, read by the guide (Intel → Overview) so it lists the same tabs. */
+export { SUBS as PAGE_TABS };
