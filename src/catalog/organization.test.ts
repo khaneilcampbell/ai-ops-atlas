@@ -76,7 +76,7 @@ describe("automation categories", () => {
     for (const ids of Object.values(by)) ids.sort();
     expect(by).toEqual({
       ci: ["atlas-ci", "atlas-data-inventory", "atlas-merge-pr", "atlas-release-manager", "atlas-rerun-failed", "benjaire-site-ci", "commerce-tests", "dataset-census", "github-merge-flow", "hub-ci", "site-ci", "soc-lab-ci"],
-      security: ["bruteforce-detection", "security-check", "soc-case-notes", "soc-detection-lead"],
+      security: ["bruteforce-detection", "connor-security-sheet", "security-check", "soc-case-notes", "soc-detection-lead"],
       business: [
         "atlas-sales-feed",
         "benjaire-contact-worker",

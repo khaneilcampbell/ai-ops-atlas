@@ -946,7 +946,7 @@ agents:
   - id: trade-desk
     name: Trade Desk
     purpose: >-
-      The only trading seat: a Claude Code session Khaneil runs on the Mac. Places orders Khaneil directs in the Agentic account, within $80 a week. No advice.
+      The only trading seat: Claude Code run by Khaneil on the Mac. Places orders Khaneil directs, Agentic account only, within $80 a week.
     framework: Claude Code on Khaneil's Mac
     owned_by: atlas-health-monitor
     model: Claude, in Khaneil's Claude Code session
@@ -1017,7 +1017,7 @@ agents:
   - id: trading-risk-limits
     name: Risk and Limits
     purpose: >-
-      Checks each proposed agent trade against Khaneil's limits before it is sent. Can block an order, never place one.
+      Checks each proposed agent trade against Khaneil's limits. Can block an order, never place one.
     framework: Atlas web app (fixed rules, no model)
     owned_by: atlas-health-monitor
     model: None
@@ -1084,7 +1084,7 @@ agents:
   - id: trade-journal
     name: Trade Journal
     purpose: >-
-      Records every agent order (seat, side, symbol, amount, check, result, note) and shows it in the Trading desk. Mac only.
+      Records every agent order and its check and result, shown in the Trading desk. Mac only.
     framework: Atlas web app (fixed rules, no model)
     owned_by: atlas-health-monitor
     model: None
@@ -1149,7 +1149,7 @@ agents:
   - id: trading-reporting
     name: Trading Reporting
     purpose: >-
-      Totals the last 7 days of agent trades from the journal in the Trading desk. PDF and sheet not built.
+      Totals the last 7 days of agent trades from the journal.
     framework: Atlas web app (fixed rules, no model)
     owned_by: atlas-health-monitor
     model: None
@@ -1214,8 +1214,8 @@ agents:
   - id: market-research
     name: Market Research
     purpose: >-
-      Planned daily facts brief for the Trade Desk: quotes, earnings dates, news. No picks. Not built.
-    framework: Not built
+      Planned daily facts brief for the Trade Desk: quotes, earnings dates, news. No picks.
+    framework: Planned
     owned_by: atlas-health-monitor
     model: Planned to use Claude in Claude Code on the Mac
     runtime: Not built
