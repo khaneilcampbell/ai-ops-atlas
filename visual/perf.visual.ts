@@ -16,10 +16,8 @@ const PERF = !!process.env.PERF;
  * programs and 2 MB of geometry; the open map drafts add at most a few percent each. #148 showed
  * what happens past this: software WebGL (CI, and a Mac that falls back to it) stopped finishing
  * frames and the map went blank. Raise a number only with a measured reason in the pull request.
- * 2026-11-24 (#492): draws 800 -> 820 on Khaneil's call. Main measured 782 locally (SwiftShader),
- * and the Community Pavilion & Café with its visiting agents adds about 9.
  */
-export const BUDGET = { drawsPerFrame: 820, trianglesPerFrame: 1_200_000, programs: 80, geometryMB: 8, contextsAlive: 1 } as const;
+export const BUDGET = { drawsPerFrame: 800, trianglesPerFrame: 1_200_000, programs: 80, geometryMB: 8, contextsAlive: 1 } as const;
 // Share of a budget above which the CI job leaves a warning (it still passes).
 const HEADROOM_WARN = 0.9;
 
