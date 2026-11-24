@@ -72,7 +72,7 @@ export function Roster({ agents, entries, statuses, query, setQuery, prefs, setP
         </label>
         <div className="roster-chips" role="group" aria-label="Roster filters">
           {FILTERS.map((f) => (
-            <button key={f.id} className={`roster-chip ${prefs.filter === f.id ? "on" : ""}`} aria-pressed={prefs.filter === f.id} onClick={() => setPrefs({ filter: f.id })}>
+            <button key={f.id} title={f.id === "needs" ? `${counts.needs} item${counts.needs === 1 ? "" : "s"} waiting on you, across ${filterRoster(all, "needs").length} agent${filterRoster(all, "needs").length === 1 ? "" : "s"} (same as Team's Waiting on you)` : undefined} className={`roster-chip ${prefs.filter === f.id ? "on" : ""}`} aria-pressed={prefs.filter === f.id} onClick={() => setPrefs({ filter: f.id })}>
               {f.label} {counts[f.id]}
             </button>
           ))}

@@ -3,6 +3,7 @@ import { catalog } from "../../catalog";
 import { roleDirectory } from "../../catalog/essentialRoles";
 import { buildRegistry } from "../../registry/registry";
 import { buildRoster, filterRoster, rosterCounts, sortRoster } from "./rosterModel";
+import { buildTeam } from "./teamModel";
 
 const entries = new Map(buildRegistry(catalog, {}, null).map((e) => [e.profile.id, e]));
 const rows = buildRoster(catalog.agents, entries);
@@ -33,10 +34,12 @@ describe("Agents > Roster", () => {
     for (const by of ["name", "role", "health", "automations", "verified"] as const) expect(sortRoster(rows, by)).toHaveLength(rows.length);
   });
 
-  it("filters add up and Needs you means failing, paused automations or inactive", () => {
+  it("filters add up and Needs you counts exactly what Team's Waiting on you counts", () => {
     const c = rosterCounts(rows);
     expect(c.verified + c.unverified).toBe(c.all);
-    for (const r of filterRoster(rows, "needs")) expect(r.operational === "failing" || r.automations.paused > 0 || r.inactive).toBe(true);
+    const team = buildTeam(catalog.agents, catalog.projects, new Map([...entries].map(([id, e]) => [id, { operational: e.operational, lastVerifiedAt: null }])));
+    expect(c.needs).toBe(team.needs.length);
+    expect(filterRoster(rows, "needs").map((r) => r.id).sort()).toEqual([...new Set(team.needs.map((n) => n.agent))].sort());
     expect(filterRoster(rows, "all", "yusuf").map((r) => r.id)).toEqual(["agent-operations-lead"]);
   });
 });

@@ -1,4 +1,4 @@
-import { ESSENTIAL_ROLES, isArchived, isInactive, placement, roleActivity, roleDirectory, isSkill, type Activity } from "../../catalog/essentialRoles";
+import { ESSENTIAL_ROLES, isArchived, isInactive, placement, roleActivity, roleDirectory, isSkill, SKILL_OF, type Activity } from "../../catalog/essentialRoles";
 import { isAiAgent } from "../../catalog/roles";
 import type { Agent, Project } from "../../catalog/types";
 import type { Operational } from "../../registry/types";
@@ -52,6 +52,22 @@ export function roleHealth(a: Activity): TeamRole["health"] {
 const isDraft = (a: Pick<Agent, "status" | "trigger">) => a.status === "paused" && /\bdraft\b/i.test(a.trigger ?? "");
 const n8nLink = (a: Pick<Agent, "links">) => a.links?.find((l) => /n8n/i.test(l.label)) ?? null;
 
+/** What is waiting on Khaneil: failing entries, drafts to publish and inactive AI agents. The one
+ *  definition behind Team's "Waiting on you" and the Roster's "Needs you", so both show the same
+ *  number. `agent` is the AI agent each item belongs to (an automation's owner, a skill's agent). */
+export function needsYou(agents: Agent[], operationalOf: (id: string) => Operational | undefined): NeedsYou[] {
+  const needs: NeedsYou[] = [];
+  for (const a of agents) {
+    if (isArchived(a)) continue;
+    const agent = isAiAgent(a) ? (SKILL_OF.get(a.id) ?? a.id) : (a.ownedBy ?? a.id);
+    if (operationalOf(a.id) === "failing") needs.push({ kind: "failing", id: a.id, agent, title: `${a.name} is failing`, detail: "Last run failed", link: n8nLink(a) });
+    else if (isDraft(a)) needs.push({ kind: "draft", id: a.id, agent, title: `Publish ${a.name}`, detail: "Draft in n8n, paused until you publish it", link: n8nLink(a) });
+    else if (isAiAgent(a) && isInactive(a)) needs.push({ kind: "inactive", id: a.id, agent, title: `${a.name} is inactive`, detail: "Reactivate or archive it", link: null });
+  }
+  const order = { failing: 0, draft: 1, inactive: 2 };
+  return needs.sort((x, y) => order[x.kind] - order[y.kind]);
+}
+
 export function buildTeam(agents: Agent[], projects: Pick<Project, "id" | "name" | "module">[], entries: ReadonlyMap<string, Entry>, now = Date.now()): Team {
   const dir = roleDirectory(agents);
   const byId = new Map(agents.map((a) => [a.id, a]));
@@ -74,16 +90,7 @@ export function buildTeam(agents: Agent[], projects: Pick<Project, "id" | "name"
     };
   });
 
-  const needs: NeedsYou[] = [];
-  for (const a of agents) {
-    if (isArchived(a)) continue;
-    const agent = isAiAgent(a) ? a.id : (a.ownedBy ?? a.id);
-    if (entries.get(a.id)?.operational === "failing") needs.push({ kind: "failing", id: a.id, agent, title: `${a.name} is failing`, detail: "Last run failed", link: n8nLink(a) });
-    else if (isDraft(a)) needs.push({ kind: "draft", id: a.id, agent, title: `Publish ${a.name}`, detail: "Draft in n8n, paused until you publish it", link: n8nLink(a) });
-    else if (isAiAgent(a) && isInactive(a)) needs.push({ kind: "inactive", id: a.id, agent, title: `${a.name} is inactive`, detail: "Reactivate or archive it", link: null });
-  }
-  const order = { failing: 0, draft: 1, inactive: 2 };
-  needs.sort((x, y) => order[x.kind] - order[y.kind]);
+  const needs = needsYou(agents, (id) => entries.get(id)?.operational);
 
   const ai = agents.filter((a) => isAiAgent(a) && !isSkill(a));
   return {

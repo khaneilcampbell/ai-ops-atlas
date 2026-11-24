@@ -3,6 +3,7 @@ import { ownership } from "../../catalog/ownership";
 import { isAiAgent } from "../../catalog/roles";
 import type { Agent } from "../../catalog/types";
 import { identityFor } from "../../registry/identity";
+import { needsYou } from "./teamModel";
 import type { RegistryEntry } from "../../registry/registry";
 import type { AutonomyLevel, Operational } from "../../registry/types";
 
@@ -27,7 +28,8 @@ export interface RosterRow {
   lastVerifiedAt: string | null;
   autonomy: AutonomyLevel | null;
   spendUsd: number | null;
-  needs: boolean;
+  /** Items waiting on Khaneil for this agent (needsYou: failing, drafts to publish, inactive). */
+  needs: number;
 }
 
 const HEALTH_ORDER: Operational[] = ["failing", "unknown", "configured", "planned", "verified"];
@@ -38,6 +40,8 @@ export function buildRoster(agents: Agent[], entries: ReadonlyMap<string, Regist
   const roleName = new Map(ESSENTIAL_ROLES.map((r) => [r.id, r.name]));
   const parentOf = SKILL_OF;
   const owned = ownership({ agents }).owned;
+  const waiting = new Map<string, number>();
+  for (const n of needsYou(agents, (id) => entries.get(id)?.operational)) waiting.set(n.agent, (waiting.get(n.agent) ?? 0) + 1);
   const current = agents.filter((a) => isAiAgent(a) && !isArchived(a));
   const ids = new Set(current.map((a) => a.id));
   const skillsOf = new Map<string, string[]>();
@@ -69,7 +73,7 @@ export function buildRoster(agents: Agent[], entries: ReadonlyMap<string, Regist
         lastVerifiedAt: e?.telemetry.lastVerifiedRun?.at ?? null,
         autonomy: e?.profile.governance.autonomy ?? null,
         spendUsd: e?.telemetry.monthSpendUsd ?? null,
-        needs: operational === "failing" || automations.paused > 0 || inactive,
+        needs: waiting.get(a.id) ?? 0,
       };
     });
 }
@@ -78,7 +82,7 @@ export function filterRoster(rows: RosterRow[], f: RosterFilter, query = ""): Ro
   const q = query.trim().toLowerCase();
   return rows.filter((r) => {
     if (q && !`${r.person} ${r.name} ${r.role} ${r.id} ${r.skills.join(" ")}`.toLowerCase().includes(q)) return false;
-    if (f === "needs") return r.needs;
+    if (f === "needs") return r.needs > 0;
     if (f === "verified") return r.operational === "verified";
     if (f === "unverified") return r.operational !== "verified";
     if (f === "inactive") return r.inactive;
@@ -87,7 +91,7 @@ export function filterRoster(rows: RosterRow[], f: RosterFilter, query = ""): Ro
 }
 
 export function rosterCounts(rows: RosterRow[]): Record<RosterFilter, number> {
-  return { all: rows.length, needs: filterRoster(rows, "needs").length, verified: filterRoster(rows, "verified").length, unverified: filterRoster(rows, "unverified").length, inactive: filterRoster(rows, "inactive").length };
+  return { all: rows.length, needs: rows.reduce((n, r) => n + r.needs, 0), verified: filterRoster(rows, "verified").length, unverified: filterRoster(rows, "unverified").length, inactive: filterRoster(rows, "inactive").length };
 }
 
 const total = (r: RosterRow) => r.automations.live + r.automations.paused + r.automations.manual;
