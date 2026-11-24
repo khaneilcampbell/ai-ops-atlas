@@ -184,7 +184,7 @@ describe("district grouping", () => {
   const layout = layoutMap(catalog, [], "district");
 
   it("places the five districts in their fixed order without overlaps", () => {
-    expect(layout.neighborhoods.map((n) => n.label)).toEqual(["AI Operations", "Business Operations", "AI Engineering", "Security & Infrastructure", "Career & Portfolio"]);
+    expect(layout.neighborhoods.map((n) => n.label)).toEqual(["AI Operations", "Business Operations", "AI Engineering", "Transport & Infrastructure", "Career & Commerce"]);
     expect(overlaps(layout, GAP - 0.01)).toEqual([]);
   });
 

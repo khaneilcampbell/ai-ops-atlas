@@ -9,8 +9,10 @@ Atlas organizes the catalog in three ways. Each value is either **declared** in 
 | AI Operations | Atlas |
 | Business Operations | Benjaire.com, Benjaire Ops Dashboard, Multi-Agent Commerce Pipeline |
 | AI Engineering | Project Intelligence Hub |
-| Security & Infrastructure | SOC Brute Force Detection Lab |
-| Career & Portfolio | khaneilcampbell.com, Profile Tower |
+| Transport & Infrastructure | SOC Brute Force Detection Lab |
+| Career & Commerce | khaneilcampbell.com, Profile Tower |
+
+Each district also belongs to one side of the compass map (Khaneil, 2026-11-24): AI Operations and AI Engineering in the north (AI Operations District), Transport & Infrastructure in the west, Business Operations in the east (Business District), Career & Commerce in the south. Atlas itself is the Command Center in the middle. The zones live in `src/catalog/taxonomy.ts` (`DISTRICT_ZONE`, `PROJECT_ZONE`) and show as "Zone" in a building's details; the map layout does not use them yet.
 
 Each manifest declares `project.district`. Without it, the rules look at the tags and at the most common registry category among the project's items (CI pipelines don't count): career or portfolio, then security or infrastructure, then business, and AI Engineering otherwise. Atlas itself is always AI Operations. A test checks that the rules reproduce every declared district, so a new manifest without the field still lands in the right place.
 
