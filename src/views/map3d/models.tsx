@@ -6,7 +6,8 @@ export {STREET_LINE};
 import { doorOpenness, entranceOccupied } from "./doorTraffic";
 import { useReducedMotion } from "../../lib/motion";
 import { TOOL_OFFICE_HEIGHT, toolBrand, toolSignTexture } from "./toolBrand";
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { poolable, useInstancePool, type InstancePoolStore } from "./instancePool";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import type { Health } from "../../lib/derive";
@@ -54,7 +55,30 @@ export interface Pick {
 const noRaycast = () => null;
 
 /** One instanced mesh. Bases sit at p.y because the shared geometries are lifted to y=0. */
-export function Instanced({ items, geometry, material, pick, shadow = true }: { items: Inst[]; geometry: THREE.BufferGeometry; material: THREE.Material | THREE.Material[]; pick?: Pick; shadow?: boolean }) {
+export function Instanced(props: { items: Inst[]; geometry: THREE.BufferGeometry; material: THREE.Material | THREE.Material[]; pick?: Pick; shadow?: boolean }) {
+  const pool = useInstancePool();
+  // Leaves the pool for good once its group moves (see instancePool.tsx).
+  const [own, setOwn] = useState(false);
+  const pooled = !!pool && !own && !farDetailOf(props.geometry) && poolable(props.material, !!props.pick);
+  return pooled ? <PooledParts {...props} pool={pool} leave={() => setOwn(true)} /> : <OwnInstanced {...props} />;
+}
+
+/** Hands its parts to the city's shared pool and draws nothing itself. */
+function PooledParts({ items, geometry, material, shadow = true, pool, leave }: { items: Inst[]; geometry: THREE.BufferGeometry; material: THREE.Material | THREE.Material[]; shadow?: boolean; pool: InstancePoolStore; leave: () => void }) {
+  const anchor = useRef<THREE.Group>(null);
+  const leaveRef = useRef(leave);
+  leaveRef.current = leave;
+  useLayoutEffect(() => {
+    const a = anchor.current;
+    if (!a || !items.length) return;
+    const entry = { items, anchor: a, geometry, material: material as THREE.Material, shadow, leave: () => leaveRef.current() };
+    pool.add(entry);
+    return () => pool.remove(entry);
+  }, [pool, items, geometry, material, shadow]);
+  return <group ref={anchor} />;
+}
+
+function OwnInstanced({ items, geometry, material, pick, shadow = true }: { items: Inst[]; geometry: THREE.BufferGeometry; material: THREE.Material | THREE.Material[]; pick?: Pick; shadow?: boolean }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   useLayoutEffect(() => {
     const m = ref.current;
