@@ -33,9 +33,9 @@ for (const width of [1512, 390])
     await page.getByRole("tab", { name: /^Archived/ }).click();
     await expect(page.getByRole("list", { name: "Archived entries" }).getByRole("button")).toHaveCount(11);
     await page.screenshot({ path: `${out}/archived-${width}.png` });
-    // Inactive: the Atlas Task Writer (n8n draft, #506) and the Atlas Executive (paused until its
-    // n8n workflows are published, #508).
-    await page.getByRole("tab", { name: /^Inactive 2/ }).click();
+    // Inactive: the Atlas Task Writer (n8n draft, #506), the Atlas Executive (paused until its
+    // n8n workflows are published, #508) and Connor Walsh's Atlas Security Sheet (n8n draft, #510).
+    await page.getByRole("tab", { name: /^Inactive 3/ }).click();
     await expect(page.getByRole("list", { name: "Inactive entries" }).locator('[data-id="atlas-executive"]')).toHaveCount(1);
     await page.getByRole("tab", { name: "All entries" }).click();
     await expect(page.locator(".reg-row").first()).toBeVisible();
