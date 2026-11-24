@@ -9,13 +9,14 @@ import {AIOPS,PODIUM_H,crownAt,podiumRing,podiumTop,ribbonSpan,towerNormal,tower
 /** Atlas AI Operations Center geometry: a handful of merged meshes, built once. See aiOpsCenterPlan. */
 
 const quad=(o:number[],a:Pt3,b:Pt3,c:Pt3,d:Pt3)=>o.push(...a,...b,...c,...a,...c,...d);
+/** Flat-shaded triangles, then welded and indexed; untextured parts carry no UVs (map geometry budget). */
 function mesh(pos:number[],uv?:number[]){
  const g=new THREE.BufferGeometry();
  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
- g.setAttribute('uv',new THREE.Float32BufferAttribute(uv??new Array(pos.length/3*2).fill(0),2));
- g.computeVertexNormals();return g;
+ if(uv)g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+ g.computeVertexNormals();return compactGeometry(g);
 }
-const merge=(gs:THREE.BufferGeometry[])=>{const m=gs.length?mergeGeometries(gs.map(g=>g.index?g.toNonIndexed():g)):mesh([]);if(!m)throw new Error('AI Operations Center: parts could not be merged');return compactGeometry(m);};
+const merge=(gs:THREE.BufferGeometry[])=>{const m=gs.length?mergeGeometries(gs.map(g=>g.index?g.toNonIndexed():g)):mesh([],[]);if(!m)throw new Error('AI Operations Center: parts could not be merged');return compactGeometry(m);};
 
 /**
  * A wall through closed outlines (same point count, counter-clockwise from above). UVs run one
@@ -48,14 +49,14 @@ function fan(pts:Pt3[],pos:number[]){const n=pts.length,c:Pt3=[0,0,0];for(const 
 
 export function aiOpsGeometry(height:number){
  const T=AIOPS.tower,n=T.ring,P=AIOPS.palette;void P;
- // Tower levels: one per floor from the ground (hidden by the podium) to just under the crown, then the crown itself.
- const ys:number[]=[];for(let y=0;y<height-AIOPS.crownSlope-.15;y+=T.floor)ys.push(y);
+ // Tower levels: one per floor from just under the podium roof to just under the crown, then the crown itself.
+ const ys:number[]=[];for(let y=Math.floor((PODIUM_H-.1)/T.floor)*T.floor;y<height-AIOPS.crownSlope-.15;y+=T.floor)ys.push(y);
  const crown=Array.from({length:n},(_,i)=>{const phi=towerPhi(i);const y=crownAt(phi,height);const [x,z]=towerPoint(phi,y,height);return [x,y,z] as Pt3;});
  const levels=[...ys.map(y=>at(towerRing(y,height),y)),crown];
  const glass=wall(levels,T.floor,T.floor);
- // Mullion fins every other ring point and a floor ledge every second floor.
+ // Mullion fins every other ring point (one face, drawn double-sided) and a floor ledge every second floor.
  const fin:number[]=[];
- for(let i=0;i<n;i+=2){const nrm=towerNormal(towerPhi(i)),d=.035;for(let l=0;l<levels.length-1;l++){const p=levels[l][i],q=levels[l+1][i];if(q[1]<PODIUM_H)continue;const po:Pt3=[p[0]+nrm[0]*d,p[1],p[2]+nrm[1]*d],qo:Pt3=[q[0]+nrm[0]*d,q[1],q[2]+nrm[1]*d];quad(fin,p,po,qo,q);quad(fin,po,p,q,qo);}}
+ for(let i=0;i<n;i+=2){const nrm=towerNormal(towerPhi(i)),d=.035;for(let l=0;l<levels.length-1;l++){const p=levels[l][i],q=levels[l+1][i];if(q[1]<PODIUM_H)continue;const po:Pt3=[p[0]+nrm[0]*d,p[1],p[2]+nrm[1]*d],qo:Pt3=[q[0]+nrm[0]*d,q[1],q[2]+nrm[1]*d];quad(fin,p,po,qo,q);}}
  const ledges:number[]=[];
  for(const y of ys.filter((y,k)=>k%2===0&&y>PODIUM_H+.3))band(towerRing(y,height),towerRing(y,height,1.022),y,.03,ledges);
  // Crown: a white rim standing proud of the glass, a pale roof inside it, and plant room boxes.
