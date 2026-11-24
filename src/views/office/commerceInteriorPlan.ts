@@ -1,5 +1,5 @@
 import type {Pt} from '../map3d/roads';
-import {COMMERCE,isCommerceTower,ribbonWindow,teardrop} from '../map3d/commerceTowerPlan';
+import {COMMERCE,commerceScale,isCommerceTower,ribbonWindow,teardrop} from '../map3d/commerceTowerPlan';
 
 /**
  * The wave tower inside (Khaneil, 2026-11-24: "build the interior fully now use the screenshot
@@ -54,6 +54,22 @@ export function commerceOutline(w:number,d:number):Pt[]{
   }
  }
  return best!;
+}
+
+/**
+ * How the interior sits in the city drawn round it (Khaneil, 2026-11-24: "fix building in the
+ * road"). The teardrop is far bigger than the w x d floor and sits off-centre, so the city is
+ * scaled until the whole outline, with a little margin, fits inside the map tower's plinth, and
+ * centred so the outline's middle lands on the tower: the streets then run round the glass, not
+ * through it. `scale` is interior units per map unit; `anchor` is the map point under the
+ * interior's origin.
+ */
+export function commerceCityFit(w:number,d:number,tower:{x:number;z:number;size:number}){
+ const o=commerceOutline(w,d),xs=o.map(p=>p[0]),zs=o.map(p=>p[1]);
+ const cx=(Math.max(...xs)+Math.min(...xs))/2,cz=(Math.max(...zs)+Math.min(...zs))/2;
+ const span=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...zs)-Math.min(...zs));
+ const scale=span*1.06/(2*COMMERCE.plinth*commerceScale(tower.size));
+ return {span,scale,anchor:{x:tower.x-cx/scale,z:tower.z-cz/scale}};
 }
 
 /** Outline index i, mapped back to the tower's own numbering (point first), for the ribbon. */

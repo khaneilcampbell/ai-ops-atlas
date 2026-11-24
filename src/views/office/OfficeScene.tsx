@@ -16,7 +16,7 @@ import CityOutside from "./CityOutside";
 import AtlasHqShell from "./AtlasHqShell";
 import { hqClearSpan, isAtlasHq, shellAxes } from "./atlasHqInteriorPlan";
 import CommerceShell from "./CommerceShell";
-import { commerceOutline, fixtures, frontZ, isCommerceInterior } from "./commerceInteriorPlan";
+import { commerceCityFit, commerceOutline, fixtures, frontZ, isCommerceInterior } from "./commerceInteriorPlan";
 import { hash } from "../mapLayout";
 import type { OfficePlan, Runtime, ToolIcon, Workstation } from "./model";
 import type { CityFigure } from "../../registry/cityFigures";
@@ -75,7 +75,9 @@ export default function OfficeScene(props: Props) {
     <Canvas style={{position:"absolute",inset:0,zIndex:0}} shadows="percentage" dpr={[1, power.maxDpr]} frameloop={visible ? "demand" : "never"} camera={{ fov: 32, near: 0.3, far: 200 }} gl={{ antialias: true, alpha: true }}>
       <FramePacer profile={power} running={!reduced} />
       <OfficeCamera allFloors={props.floor===-1} plan={props.plan} reduced={reduced} api={props.api} focus={props.selected ? props.desks.find((d) => d.ws.agentId === props.selected)?.ws : undefined} />
-      <CityOutside allFloors={props.floor===-1} projectId={props.plan.projectId} span={Math.max(props.plan.w,props.plan.d)} clearSpan={isAtlasHq(props.plan.projectId)?hqClearSpan(props.plan.w,props.plan.d):undefined} elevation={Math.max(0,props.floor??0)*3.4}/>
+      {isCommerceInterior(props.plan.projectId)
+        ?<CommerceCity plan={props.plan} allFloors={props.floor===-1} elevation={Math.max(0,props.floor??0)*3.4}/>
+        :<CityOutside allFloors={props.floor===-1} projectId={props.plan.projectId} span={Math.max(props.plan.w,props.plan.d)} clearSpan={isAtlasHq(props.plan.projectId)?hqClearSpan(props.plan.w,props.plan.d):undefined} elevation={Math.max(0,props.floor??0)*3.4}/>}
       {props.floor===-1&&<group position={[0,0,props.plan.d/2+1.1]} scale={[props.plan.w/16,0.85,1]}><MovingLift reduced={reduced}/></group>}
       {(props.floor===-1?[0,1,2,3,4]:[props.floor??4]).map(level=><group key={level} position={[0,props.floor===-1?level*3.4:0,0]}>
         <FloorLabel level={level} width={props.plan.w} depth={props.plan.d+2}/>
@@ -113,6 +115,13 @@ function SharedFloor({plan,floor}:{plan:OfficePlan;floor:number}) {
 
 type Pose = { target: THREE.Vector3; r: number; phi: number; theta: number };
 const AZ = Math.PI / 4;
+
+/** The city round the wave tower, scaled and centred so its streets run round the teardrop (commerceCityFit). */
+function CommerceCity({plan,allFloors,elevation}:{plan:OfficePlan;allFloors:boolean;elevation:number}){
+  const fit=(s:{towers:{projectId:string;x:number;z:number;size:number}[]})=>{const t=s.towers.find(t=>t.projectId===plan.projectId);return t&&commerceCityFit(plan.w,plan.d,t);};
+  const span=commerceCityFit(plan.w,plan.d,{x:0,z:0,size:1}).span;
+  return <CityOutside allFloors={allFloors} projectId={plan.projectId} span={span} clearSpan={span} elevation={elevation} scaleOverride={s=>fit(s)?.scale} anchorAt={s=>fit(s)?.anchor}/>;
+}
 
 function OfficeCamera({ plan, reduced, api, focus, allFloors }: { allFloors:boolean; plan: OfficePlan; reduced: boolean; api: Props["api"]; focus?: Workstation }) {
   const { camera, gl, invalidate, size } = useThree();

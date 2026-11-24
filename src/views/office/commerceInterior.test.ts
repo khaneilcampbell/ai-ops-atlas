@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest';
-import {COMMERCE} from '../map3d/commerceTowerPlan';
-import {columns,commerceOutline,cores,fixtures,goldAt,groundFloor,inside,type Item} from './commerceInteriorPlan';
+import {COMMERCE,commerceScale} from '../map3d/commerceTowerPlan';
+import {columns,commerceCityFit,commerceOutline,cores,fixtures,goldAt,groundFloor,inside,type Item} from './commerceInteriorPlan';
 
 // The wave tower inside, from the reference bank-headquarters plan (Khaneil, 2026-11-24).
 describe('Commerce wave tower interior',()=>{
@@ -41,5 +41,14 @@ describe('Commerce wave tower interior',()=>{
    for(const p of [f.rack,...f.plants]){expect(inside([p.x,p.z],pts)).toBe(true);
     for(const c of cores(w,d))expect(Math.abs(p.x-c.x)>c.w/2+.25||Math.abs(p.z-c.z)>c.d/2+.25).toBe(true);
     for(const i of items)expect(Math.abs(p.x-i.x)>i.w/2+.3||Math.abs(p.z-i.z)>i.d/2+.3,`${i.kind}`).toBe(true);}}
+ });
+ for(const size of [2.6,COMMERCE.refSize,3.4])it(`keeps the city's streets off the glass in the all-floors view (tower size ${size})`,()=>{
+  // Khaneil, 2026-11-24: the teardrop stood in the road. Every point of the glass, mapped into
+  // the city, must stay inside the map tower's plinth, which the streets run round.
+  const tower={x:12.5,z:-7,size},fit=commerceCityFit(16,10,tower),half=COMMERCE.plinth*commerceScale(size);
+  for(const [x,z] of commerceOutline(16,10)){
+   const mx=fit.anchor.x+x/fit.scale,mz=fit.anchor.z+z/fit.scale;
+   expect(Math.abs(mx-tower.x)).toBeLessThanOrEqual(half);expect(Math.abs(mz-tower.z)).toBeLessThanOrEqual(half);
+  }
  });
 });
