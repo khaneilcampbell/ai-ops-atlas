@@ -94,7 +94,8 @@ export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
    rail:focusable(new THREE.MeshStandardMaterial({color:'#cfe3ec',roughness:.1,metalness:.2,transparent:true,opacity:.45,depthWrite:false})),
    canopy:focusable(new THREE.MeshStandardMaterial({color:'#f6f7f6',roughness:.3,metalness:.35,emissive:'#ffe2a8',emissiveIntensity:0})),
    // The lobby's clear glass: you see the stone floor, desk and lit core through it.
-   clear:focusable(new THREE.MeshStandardMaterial({color:'#dfeee9',roughness:.05,metalness:.3,envMap:env,envMapIntensity:.7,transparent:true,opacity:.28,depthWrite:false})),
+   // Double-sided like the fins, so both share one shader program (the map's budget is 80).
+   clear:focusable(new THREE.MeshStandardMaterial({color:'#dfeee9',roughness:.05,metalness:.3,envMap:env,envMapIntensity:.7,transparent:true,opacity:.28,depthWrite:false,side:THREE.DoubleSide})),
    interior:focusable(new THREE.MeshStandardMaterial({vertexColors:true,roughness:.55,metalness:.05,emissive:'#ffd59a',emissiveIntensity:0})),
    site:focusable(new THREE.MeshStandardMaterial({vertexColors:true,roughness:.85,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-1})),
    pool:focusable(new THREE.MeshStandardMaterial({color:'#5fb3cc',roughness:.1,metalness:.1,emissive:'#3b84a0',emissiveIntensity:0})),
