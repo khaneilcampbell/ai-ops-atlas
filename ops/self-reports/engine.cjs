@@ -301,17 +301,18 @@ function buildPdf(c) {
   const heading = (s) => { need(30); y -= 10; para(s, 13, true, '#0F3D2E'); y -= 4; };
   newPage();
   rect(0, H - 120, W, 120, '#0F3D2E');
-  text(X0, H - 62, 'Atlas Agent Self-Reports', 24, true, '#FFFFFF');
-  text(X0, H - 84, 'Operational review of every agent, reported to the Data Intelligence Center', 11, false, '#D1FAE5');
+  text(X0, H - 62, c.title || 'Atlas Agent Self-Reports', 24, true, '#FFFFFF');
+  text(X0, H - 84, c.subtitle || 'Operational review of every agent, reported to the Data Intelligence Center', 11, false, '#D1FAE5');
   text(X0, H - 102, 'Collected ' + c.stamp + ' (' + (tz === DEFAULT_TZ ? 'New York' : tz) + ') · ' + c.mode + ' · ' + c.scheduleState, 8, false, '#A7F3D0');
   y = H - 150;
   const k = c.counts;
   const tiles = [['Agents', k.agents], ['With run data', k.read], ['Runs seen', k.runs], ['Failed', k.failed], ['Suggestions', k.recs]];
   const tw = (X1 - X0 - 4 * 8) / 5;
-  tiles.forEach(([label, v], i) => { const x = X0 + i * (tw + 8); rect(x, y - 46, tw, 52, '#ECFDF5'); text(x + 10, y - 14, String(v), 18, true, '#0F3D2E'); text(x + 10, y - 34, label, 8, false, '#4B5563'); });
+  tiles.forEach(([label, v], i) => { const x = X0 + i * (tw + 8); rect(x, y - 46, tw, 52, '#ECFDF5'); text(x + 10, y - 14, c.note && (label === 'Runs seen' || label === 'Failed') ? 'No data' : String(v), 18, true, '#0F3D2E'); text(x + 10, y - 34, label, 8, false, '#4B5563'); });
   y -= 72;
   heading('Executive summary');
-  para(k.agents + ' agents in the catalog. Run data was read for ' + k.read + '; ' + k.noData + ' have no workflow linked (no data, not zero runs)' + (k.notConnected ? ' and ' + k.notConnected + ' could not be read (not connected)' : '') + '. ' + k.runs + ' runs seen, ' + k.failed + ' failed' + (k.successRate == null ? '' : ' (' + k.successRate + '% of finished runs succeeded)') + '. Windows differ by source: see Sources at the end.', 9);
+  if (c.note) para(c.note, 9.5, true, '#B45309');
+  para((c.title ? plural(k.agents, 'agent') + ' in this report' : k.agents + ' agents in the catalog') + '. Run data was read for ' + k.read + '; ' + k.noData + ' have no workflow linked (no data, not zero runs)' + (k.notConnected ? ' and ' + k.notConnected + ' could not be read (not connected)' : '') + '. ' + k.runs + ' runs seen, ' + k.failed + ' failed' + (k.successRate == null ? '' : ' (' + k.successRate + '% of finished runs succeeded)') + '. Windows differ by source: see Sources at the end.', 9);
   para(k.recs + ' suggestions (' + k.high + ' high, ' + k.medium + ' medium, ' + k.low + ' low) for ' + new Set(c.recs.map((r) => r.agent_id)).size + ' agents. ' + k.stale + ' agents carry stale-data warnings. Atlas memory service: ' + c.memory + '.', 9);
   if (c.failures && c.failures.length) para('Not completed this cycle: ' + c.failures.join('; ') + '. Retry by running the workflow by hand.', 8.5, true, '#B91C1C');
   if (c.sheetUrl) para('Live sheet: ' + c.sheetUrl, 8, false, '#0F766E');
@@ -367,7 +368,7 @@ function buildPdf(c) {
     objs[pid] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + cid + ' 0 R >>';
     objs[cid] = '<< /Length ' + Buffer.byteLength(p, 'latin1') + ' >>\nstream\n' + p + '\nendstream'; });
   objs[2] = '<< /Type /Pages /Kids [' + kids.join(' ') + '] /Count ' + pages.length + ' >>';
-  objs[objs.length] = '<< /Title (Atlas Agent Self-Reports) /Producer (Atlas Data Intelligence Center) >>';
+  objs[objs.length] = '<< /Title (' + esc(c.title || 'Atlas Agent Self-Reports') + ') /Producer (Atlas Data Intelligence Center) >>';
   const infoId = objs.length - 1;
   let out = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n'; const offs = [];
   for (let i = 1; i < objs.length; i++) { offs[i] = Buffer.byteLength(out, 'latin1'); out += i + ' 0 obj\n' + objs[i] + '\nendobj\n'; }
@@ -489,6 +490,37 @@ const FILES = {
   csv: { outputKey: 'atlas-health-monitor:agent-self-reports-sheet', fileName: 'atlas-agent-self-reports.csv', mime: 'text/csv', title: 'Agent self-reports (table)' },
 };
 
+// ---------------------------------------------------------------- one file per agent (Knowledge & Research Center)
+
+/** The Output Library's building on the map (src/library/model.ts LIBRARY_BUILDING). */
+const LIBRARY_BUILDING = 'service:financial:financial-planning';
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+/**
+ * Which file fits an agent's work data. Runs in the window are tabular (counts, timings, triggers), so a
+ * spreadsheet. No runs to tabulate leaves a written review (why there is no data, its suggestions), so a PDF
+ * that says "No data in window". Never invents numbers: both come from the same row.
+ */
+const agentFormat = (row) => (Number(row.runs_total) > 0 ? 'spreadsheet' : 'pdf');
+/** The cycle cut down to one agent, so buildPdf and workbookSheets draw just that agent. */
+function agentCycle(c, row) {
+  const recs = c.recs.filter((r) => r.agent_id === row.agent_id);
+  const noData = agentFormat(row) === 'pdf';
+  return { ...c, agents: [row], recs, schedule: c.schedule.filter((s) => s.agent_id === row.agent_id), conflicts: [], counts: countsOf([row], recs),
+    title: row.agent + ' · work report', subtitle: row.role + ' · filed in the Knowledge & Research Center library',
+    note: noData ? 'No data in window: ' + (row.data_state === 'No data' ? 'no workflow is linked to this agent' : row.data_state === 'Not connected' ? 'its run source could not be read' : 'no runs in ' + row.window) + '.' : '' };
+}
+/** One Output Library file per agent, each built on its own so one failing never stops the rest. */
+function agentFiles(c) {
+  return c.agents.map((row) => {
+    const format = agentFormat(row), sub = agentCycle(c, row), pdf = format === 'pdf';
+    const meta = { agentId: row.agent_id, agent: row.agent, format, outputKey: row.agent_id + ':work-report', fileName: row.agent_id + '-work-report.' + (pdf ? 'pdf' : 'xlsx'),
+      mime: pdf ? 'application/pdf' : XLSX_MIME, title: row.agent + ' work report' + (pdf ? ' (PDF)' : ' (Excel workbook)'), noData: pdf,
+      summary: (pdf ? sub.note + ' ' : row.runs_total + ' runs, ' + row.failed + ' failed, success ' + row.success_rate + ', last run ' + row.last_run + '. ') + plural(row.recommendations, 'suggestion') + ', none applied.' };
+    try { return { ...meta, ok: true, base64: (pdf ? buildPdf(sub).bytes : buildXlsx(workbookSheets(sub))).toString('base64') }; }
+    catch (e) { return { ...meta, ok: false, error: row.agent + ' file not built: ' + String((e && e.message) || e).slice(0, 200) }; }
+  });
+}
+
 // @export-start (left out when pasted into n8n)
-module.exports = { DEFAULT_TZ, NO_DATA, NOT_DOCUMENTED, REVIEW_STATUS, RULES, zonedParts, fmtLocal, fmtDay, fmtStamp, fmtDur, median, hhmm, busyOf, scoreSlot, pickSlots, slotConflicts, cronTimes, n8nSchedules, n8nRun, githubRun, agentReport, sourcesOf, countsOf, recRows, buildPdf, crc32, zipStored, buildXlsx, workbookSheets, buildCycle, FILES };
+module.exports = { DEFAULT_TZ, NO_DATA, NOT_DOCUMENTED, REVIEW_STATUS, RULES, zonedParts, fmtLocal, fmtDay, fmtStamp, fmtDur, median, hhmm, busyOf, scoreSlot, pickSlots, slotConflicts, cronTimes, n8nSchedules, n8nRun, githubRun, agentReport, sourcesOf, countsOf, recRows, buildPdf, crc32, zipStored, buildXlsx, workbookSheets, buildCycle, FILES, LIBRARY_BUILDING, agentFormat, agentCycle, agentFiles };
 // @export-end

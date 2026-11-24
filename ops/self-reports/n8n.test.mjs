@@ -41,16 +41,23 @@ describe("n8n Code nodes", () => {
     for (const src of Object.values(code)) expect(src).not.toMatch(/httpRequest|fetch\(|require\(/);
     expect(Object.keys(code)).toEqual(["Build Reports", "Library Entry", "Run Log Row"]);
   });
-  it("a hand run reports every agent and sends three files, each on its own", () => {
+  it("a hand run reports every agent and sends three cycle files plus one per agent, each on its own", () => {
     const out = runNodes();
     const code = n8nCode();
     const B = out["Build Reports"][0];
     expect(B.rows).toHaveLength(7);
     expect(B.cycle.counts.notConnected).toBe(1);
     expect(B.atlasNote).toMatch(/Not connected yet \(HTTP 404\)/);
-    expect(out["Library Entry"].map((x) => x.file)).toEqual(["pdf", "workbook", "csv"]);
+    const agentIds = B.rows.map((r) => r.agent_id);
+    expect(out["Library Entry"].map((x) => x.file)).toEqual(["pdf", "workbook", "csv", ...agentIds.map((id) => "agent:" + id)]);
     for (const x of out["Library Entry"]) expect(x.body.artifacts).toHaveLength(1);
-    expect(new Set(out["Library Entry"].map((x) => x.body.source.execution)).size).toBe(3);
+    for (const x of out["Library Entry"]) expect(x.body.source.building).toBe("service:financial:financial-planning");
+    expect(new Set(out["Library Entry"].map((x) => x.body.source.execution)).size).toBe(3 + agentIds.length);
+    const perAgent = out["Library Entry"].filter((x) => x.file.startsWith("agent:"));
+    expect(perAgent.map((x) => x.body.source.agent)).toEqual(agentIds);
+    for (const x of perAgent) expect(x.body.artifacts[0]).toMatchObject({ outputKey: x.body.source.agent + ":work-report" });
+    expect(perAgent.find((x) => x.body.source.agent === "on-request").body.artifacts[0].mime).toBe("application/pdf");
+    expect(perAgent.find((x) => x.body.source.agent === "flaky-builder").body.artifacts[0].mime).toMatch(/spreadsheetml/);
     const wb = out["Library Entry"].find((x) => x.file === "workbook").body.artifacts[0];
     expect(wb).toMatchObject({ id: "atlas-agent-self-reports.xlsx", outputKey: "atlas-health-monitor:agent-self-reports-workbook" });
     expect(strFromU8(unzipSync(new Uint8Array(Buffer.from(wb.base64, "base64")))["xl/workbook.xml"])).toContain('name="Sources"');
@@ -65,7 +72,8 @@ describe("n8n Code nodes", () => {
   });
   it("a PDF that fails to build still sends the workbook and table", () => {
     const out = runNodes({ breakPdf: true });
-    expect(out["Library Entry"].map((x) => x.file)).toEqual(["workbook", "csv"]);
+    expect(out["Library Entry"].map((x) => x.file).slice(0, 2)).toEqual(["workbook", "csv"]);
+    expect(out["Library Entry"]).toHaveLength(2 + 7);
     expect(out["Run Log Row"][0].problems).toMatch(/PDF not built: synthetic break/);
   });
   it("carries no credentials into what it sends", () => {

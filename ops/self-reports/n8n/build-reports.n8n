@@ -34,7 +34,7 @@ const nowIso = new Date(nowMs).toISOString();
 // never stops the other; the failure is logged in Run Log with a retry note.
 const attempt = (label, make) => { try { const b = make(); return { ok: true, bytes: b.length, base64: b.toString('base64') }; } catch (e) { return { ok: false, error: label + ' not built: ' + String((e && e.message) || e).slice(0, 200) }; } };
 let pages = 0;
-const files = L.fullRebuild ? { pdf: attempt('PDF', () => { const p = buildPdf(cycle); pages = p.pages; return p.bytes; }), workbook: attempt('Workbook', () => buildXlsx(workbookSheets(cycle))), meta: FILES } : null;
+const files = L.fullRebuild ? { pdf: attempt('PDF', () => { const p = buildPdf(cycle); pages = p.pages; return p.bytes; }), workbook: attempt('Workbook', () => buildXlsx(workbookSheets(cycle))), agents: agentFiles(cycle), meta: FILES } : null;
 if (files) files.pdf.pages = pages;
 const rows = cycle.agents.filter((r) => due.has(r.agent_id)).map((r) => ({ ...r, last_reported_at: nowIso, execution: String($execution.id) }));
 return [{ json: { now: nowIso, nowLocal: cycle.stamp + ' New York', isManual: L.isManual, fullRebuild: L.fullRebuild, slotSource: L.slotSource, atlasNote: atlas.note,

@@ -12,4 +12,7 @@ const cycle = E.buildCycle(agents, ctx, { mode: 'Synthetic preview (made-up agen
 const pdf = E.buildPdf(cycle), xlsx = E.buildXlsx(E.workbookSheets(cycle));
 writeFileSync(join(out, E.FILES.pdf.fileName), pdf.bytes);
 writeFileSync(join(out, E.FILES.workbook.fileName), xlsx);
+const perAgent = E.agentFiles(cycle);
+for (const f of perAgent) writeFileSync(join(out, f.fileName), Buffer.from(f.base64, 'base64'));
+console.log(`${perAgent.length} agent work reports: ${perAgent.filter((f) => f.format === 'spreadsheet').length} spreadsheets, ${perAgent.filter((f) => f.format === 'pdf').length} "No data in window" PDFs`);
 console.log(`${cycle.counts.agents} agents, ${cycle.counts.runs} runs, ${cycle.counts.recs} suggestions; PDF ${pdf.pages} pages, workbook ${xlsx.length} bytes -> ${out}/`);

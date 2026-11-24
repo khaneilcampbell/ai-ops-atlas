@@ -68,8 +68,14 @@ A hand run and the last slot of the day read every agent and build, each on its 
 - `atlas-agent-self-reports.csv`: the one-row-per-agent table. Output key
   `atlas-health-monitor:agent-self-reports-sheet`.
 
-Each file is uploaded to the Output Library in its own request, linked to the Data Intelligence Center
-(`service:financial:residence`). If one fails to build or upload, the others still go, and the Run Log
+- One work report per agent, filed under that agent's own id (output key `<agent id>:work-report`), so the
+  Library's agent filter finds it. The format follows the data: an agent with runs in the window gets an
+  Excel workbook (its row, suggestions and sources); an agent with no runs gets a short PDF that opens with
+  "No data in window" and says why (no workflow linked, source unreadable, or no runs). Nothing is invented.
+  Built by `agentFiles` in the engine.
+
+Each file is uploaded to the Output Library in its own request, filed in the Knowledge & Research Center
+(`service:financial:financial-planning`), where the Library lives. If one fails to build or upload, the others still go, and the Run Log
 tab records what failed with a retry note (press Execute workflow in n8n).
 
 ### Try it without n8n

@@ -233,3 +233,37 @@ describe("safety", () => {
     expect(new Set(Object.values(E.FILES).map((f) => f.outputKey)).size).toBe(3);
   });
 });
+
+describe("one work report per agent for the Knowledge & Research Center", () => {
+  const c = cycleOf();
+  const files = E.agentFiles(c);
+  it("every agent gets exactly one file under its own id and key", () => {
+    expect(files.map((f) => f.agentId)).toEqual(c.agents.map((r) => r.agent_id));
+    expect(new Set(files.map((f) => f.outputKey)).size).toBe(files.length);
+    for (const f of files) expect(f).toMatchObject({ ok: true, outputKey: `${f.agentId}:work-report` });
+    expect(E.LIBRARY_BUILDING).toBe("service:financial:financial-planning");
+  });
+  it("runs become a spreadsheet; no runs become a 'No data in window' PDF", () => {
+    for (const f of files) {
+      const row = rowOf(c, f.agentId);
+      if (Number(row.runs_total) > 0) {
+        expect(f).toMatchObject({ format: "spreadsheet", noData: false, fileName: `${f.agentId}-work-report.xlsx` });
+        const sheet = strFromU8(unzipSync(new Uint8Array(Buffer.from(f.base64, "base64")))["xl/worksheets/sheet2.xml"]);
+        expect(sheet).toContain(row.agent);
+        expect(sheet.split("<row ").length - 1).toBe(2);
+      } else {
+        expect(f).toMatchObject({ format: "pdf", noData: true, fileName: `${f.agentId}-work-report.pdf` });
+        const pdf = Buffer.from(f.base64, "base64").toString("latin1");
+        expect(pdf.startsWith("%PDF-1.4")).toBe(true);
+        expect(pdf).toContain("No data in window");
+        expect(pdf).toContain(`(${row.agent} · work report)`.replace("·", "\xb7"));
+      }
+    }
+    expect(files.filter((f) => f.format === "pdf").map((f) => f.agentId)).toEqual(expect.arrayContaining(["on-request", "unreachable", "quiet-watcher"]));
+  });
+  it("says why there is no data instead of showing 0", () => {
+    expect(files.find((f) => f.agentId === "on-request").summary).toMatch(/^No data in window: no workflow is linked/);
+    expect(files.find((f) => f.agentId === "unreachable").summary).toMatch(/^No data in window: its run source could not be read/);
+    expect(files.find((f) => f.agentId === "flaky-builder").summary).toMatch(/^4 runs, 2 failed/);
+  });
+});

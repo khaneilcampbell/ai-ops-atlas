@@ -1,0 +1,1 @@
+- 2026-11-24 · Every agent's work now lands in the Output Library at the Knowledge & Research Center: one file per agent, a spreadsheet when it has runs and a short "No data in window" PDF when it has none, plus the combined workbook. You can filter the Library by agent. Made from data Atlas already reads, with no AI cost (#PR)
