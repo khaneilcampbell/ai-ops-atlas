@@ -7,7 +7,7 @@ for(const width of [1512,390]) test(`Separated agents and automations ${width}`,
  await openAtlas(page,{storage:{'registry-prefs-agents':{classification:'B',view:'all'}}});
  await goTo(page,'Agents');
  await expect(page.getByRole('heading',{name:'Agents',exact:true})).toBeVisible();
- await expect(page.locator('.reg-row')).toHaveCount(22);
+ await expect(page.locator('.reg-row')).toHaveCount(24); // 24: Trade Desk and Market Research joined as AI agents (#518)
  await expect(page.locator('.reg-row[data-id="repo-intelligence"]')).toHaveCount(1);
  await expect(page.locator('.reg-row[data-id="github-merge-flow"]')).toHaveCount(0);
  // Owns Merge Flow since 2026-11-14, so it is an agent now.
@@ -18,7 +18,7 @@ for(const width of [1512,390]) test(`Separated agents and automations ${width}`,
  await page.screenshot({path:`docs/agent-organization/agents-${width}.png`});
  await goTo(page,'Automations');
  await expect(page.getByRole('heading',{name:'Automations',exact:true})).toBeVisible();
- await expect(page.locator('.reg-row')).toHaveCount(45); // 45: Investment Operations (paused, #518) joined the 39 of #506/#508, then the trading team's five paused seats (#518)
+ await expect(page.locator('.reg-row')).toHaveCount(44); // 44: Investment Operations (paused, #518) joined the 39 of #506/#508, Connor's security sheet (#510), then the trading team's three paused automations (#518); Trade Desk and Market Research are AI agents
  for(const id of ['github-merge-flow','atlas-ci','benjaire-flow-intake'])await expect(page.locator(`.reg-row[data-id="${id}"]`)).toHaveCount(1);
  await expect(page.locator('.reg-row[data-id="repo-intelligence"]')).toHaveCount(0);
  await page.locator('.reg-row[data-id="github-merge-flow"]').click();await settle(page,1);

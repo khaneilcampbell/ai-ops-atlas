@@ -109,8 +109,8 @@ Paused. Fixed rules in `src/finance/investments.ts`, shown in the Investment Ope
 
 ## Trading desk
 
-Trade Desk, Risk and Limits, Trade Journal, Trading Reporting and Market Research: the trading team in
-Robin Exchange. All paused while trading is off. Details: [docs/benjaire-finance.md](../benjaire-finance.md#trading-desk).
+Trade Desk and Market Research (AI agents, desks in Atlas HQ) and Risk and Limits, Trade Journal and
+Trading Reporting (automations at Robin Exchange, owned by Atlas Health Monitor). All paused while trading is off. Details: [docs/benjaire-finance.md](../benjaire-finance.md#trading-desk).
 
 - **Healthy:** the Trading desk tab reads "Trading is off in Atlas", the weekly limit shows $80, and
   the log is empty or lists only entries that passed the limits.

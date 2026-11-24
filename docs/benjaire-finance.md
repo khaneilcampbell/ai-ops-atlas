@@ -88,7 +88,10 @@ the other accounts as view only. It has no buy, sell or cancel controls. Code:
 (buys and sells), stocks and ETFs only, Agentic account only. They live in `TRADING_LIMITS`, so
 changing them is a reviewed pull request.
 
-**The team.** Only the Trade Desk may ever send an order.
+**The team.** Only the Trade Desk may ever send an order. Trade Desk (Marcus Reid) and Market
+Research (Nadia Ferreira) are AI agents with a full profile, illustrated avatar and a desk in Atlas
+HQ. The three automations have no persona: they show on Atlas Health Monitor's profile and at
+Robin Exchange.
 
 | Seat | Catalog id | What it does | AI |
 | --- | --- | --- | --- |

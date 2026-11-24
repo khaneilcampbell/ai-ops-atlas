@@ -55,7 +55,7 @@ describe("bundled registry", () => {
 
   it("classifies every registered item", () => {
     const s = summarize(entries);
-    expect(s.byClass).toEqual({ A: 28, B: 16, C: 25, D: 9, E: 1, F: 0, unclassified: 0 });
+    expect(s.byClass).toEqual({ A: 30, B: 14, C: 25, D: 9, E: 1, F: 0, unclassified: 0 });
     expect(entries.every((e) => e.profile.category !== "uncategorized")).toBe(true);
   });
 

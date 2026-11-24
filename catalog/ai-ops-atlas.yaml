@@ -941,14 +941,14 @@ agents:
         technical: docs/benjaire-finance.md#investment-operations-center
         runbook: docs/runbooks/ai-ops-atlas.md#investment-operations
         last_review: 2026-11-23
-  # Trading team (2026-11-24, Khaneil approved the six seats). Desks in Robin Exchange. Only the
+  # Trading team (2026-11-24, Khaneil approved the six seats). Trade Desk and Market Research
+  # are AI agents with desks in Atlas HQ; the three automations show at Robin Exchange. Only the
   # Trade Desk may ever send an order, and only in the Agentic account; Atlas itself never trades.
   - id: trade-desk
     name: Trade Desk
     purpose: >-
       The only trading seat: Claude Code run by Khaneil on the Mac. Places orders Khaneil directs, Agentic account only, within $80 a week.
     framework: Claude Code on Khaneil's Mac
-    owned_by: atlas-health-monitor
     model: Claude, in Khaneil's Claude Code session
     runtime: On Khaneil's Mac, only while Khaneil runs it
     status: paused
@@ -962,14 +962,26 @@ agents:
       - at: 2026-11-24
         event: Added as the trading team's only trading seat, with Khaneil's limit of $80 of agent trades a week; off until Khaneil switches trading on
     registry:
+      identity:
+        display_name: Marcus Reid
+        accent: "#92400E"
+        intro: "I'm the only seat on the trading team that can send an order, and only one you name yourself, in the Agentic account. I check it against your $80 a week limit, show it to you first, and write it to the journal. I never pick trades or give advice."
+        voice: "Short and exact: the order, the check, and what's left this week."
+        appearance: "Man in his late 40s, medium brown skin, short salt-and-pepper hair, trimmed beard, charcoal quarter-zip over a light blue collared shirt"
+        portrait:
+          path: agents/trade-desk.webp
+          model: gpt_image_2_6
+          job_id: b6d81f1b-778c-44c1-bdfe-11134e22e56e
+          prompt_version: 2
+          generated_at: 2026-11-24
       title: Trade Desk
       tier: specialized
       category: business
       subcategory: Investment operations
       classification:
-        type: B
+        type: A
         confidence: verified
-        evidence: An AI-assisted workflow, a Claude Code session Khaneil runs that follows fixed rules (catalogued like atlas-engineer as B; a persona waits for Khaneil's OK because a portrait costs image credits); the limit check and journal shape it must follow are in src/finance/tradingDesk.ts. No order has been placed.
+        evidence: An AI agent, a Claude Code session Khaneil runs (Khaneil asked for a full profile on 2026-11-24); the limit check and journal shape it must follow are in src/finance/tradingDesk.ts. No order has been placed.
       mission:
         problem: Agent trades need one accountable seat, held to fixed limits and recorded every time.
         outcomes:
@@ -1216,7 +1228,6 @@ agents:
     purpose: >-
       Planned daily facts brief for the Trade Desk: quotes, earnings dates, news. No picks.
     framework: Planned
-    owned_by: atlas-health-monitor
     model: Planned to use Claude in Claude Code on the Mac
     runtime: Not built
     status: paused
@@ -1228,14 +1239,26 @@ agents:
       - at: 2026-11-24
         event: Planned as part of the trading team; not built
     registry:
+      identity:
+        display_name: Nadia Ferreira
+        accent: "#4338CA"
+        intro: "Once I'm built, I put the facts in one place before you decide: watchlist quotes, earnings dates and the news, read-only from Robinhood. I never say what to buy, sell or hold."
+        voice: "Plain facts with their source and time, no opinions."
+        appearance: "Woman in her early 30s, light tan skin, shoulder-length dark wavy hair, round glasses, mustard cardigan over a white top"
+        portrait:
+          path: agents/market-research.webp
+          model: gpt_image_2_6
+          job_id: d6961f33-a0a1-41d1-aa98-ad4c5b5046fc
+          prompt_version: 2
+          generated_at: 2026-11-24
       title: Market Research
       tier: specialized
       category: business
       subcategory: Investment operations
       classification:
-        type: B
+        type: A
         confidence: verified
-        evidence: Designed on 2026-11-24 as an AI-assisted brief (Claude reads Robinhood's read tools on Khaneil's Mac); no code, skill or workflow exists yet.
+        evidence: Designed on 2026-11-24 as an AI agent brief (Claude reads Robinhood's read tools on Khaneil's Mac); no code, skill or workflow exists yet.
       mission:
         problem: The Trade Desk needs the facts in one place before Khaneil decides.
         outcomes:
@@ -1380,7 +1403,7 @@ agents:
       - at: 2026-11-23
         event: Also owns Investment Operations (paused, synthetic preview only) for the Investment Operations Center's data checks
       - at: 2026-11-24
-        event: Also owns the trading team's Trade Desk, Risk and Limits, Trade Journal, Trading Reporting and Market Research (all paused while trading is off); Investment Operations renamed Portfolio Sync
+        event: Also owns the trading team's Risk and Limits, Trade Journal and Trading Reporting automations (all paused while trading is off); Investment Operations renamed Portfolio Sync
     permissions:
       - None of its own; it acts only through the permissions listed on each automation it owns
     registry:
@@ -1425,8 +1448,6 @@ agents:
           - trading-risk-limits
           - trade-journal
           - trading-reporting
-          - trade-desk
-          - market-research
         limitations:
           - Acts only through the automations it owns; it has no model, schedule or credentials of its own
           - Reports health; it does not repair anything
