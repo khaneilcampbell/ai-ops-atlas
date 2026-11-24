@@ -28,3 +28,7 @@ REVOKE ALL ON SCHEMA public FROM atlas_app;
 -- retired, superseded or expired in place.
 GRANT SELECT, INSERT, UPDATE ON atlas.memory_items TO atlas_app;
 GRANT SELECT, INSERT ON atlas.run_feedback, atlas.memory_events TO atlas_app;
+
+-- After migration 0004 (Engineering Division). Incidents and executions are updated in place; the
+-- audit trail stays in atlas.exec_events, which is append-only.
+GRANT SELECT, INSERT, UPDATE ON atlas.eng_repo_state, atlas.eng_incidents, atlas.eng_executions TO atlas_app;

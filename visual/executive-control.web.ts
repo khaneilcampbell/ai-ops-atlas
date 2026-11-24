@@ -58,7 +58,7 @@ async function open(page: Page, data: unknown) {
   });
   await openAtlas(page);
   await goTo(page, "Mission");
-  const card = page.locator(".exec-ctl");
+  const card = page.locator('section[aria-label="Atlas Executive"]');
   await card.evaluate((e) => e.scrollIntoView({ block: "start" }));
   await settle(page, 1);
   return card;
@@ -90,7 +90,7 @@ for (const width of [1512, 390]) {
     await page.route("**/api/executive/overview", (r) => r.fulfill({ status: 503, json: { message: "The Executive's tables aren't in the database yet: apply db/migrations/0002_executive.sql." } }));
     await openAtlas(page);
     await goTo(page, "Mission");
-    const card = page.locator(".exec-ctl");
+    const card = page.locator('section[aria-label="Atlas Executive"]');
     await expect(card).toContainText("apply db/migrations/0002_executive.sql");
     await card.screenshot({ path: join(OUT, `not-set-up-${width}.png`) });
   });

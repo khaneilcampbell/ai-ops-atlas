@@ -76,7 +76,7 @@ describe("automation categories", () => {
     for (const ids of Object.values(by)) ids.sort();
     expect(by).toEqual({
       ci: ["atlas-ci", "atlas-data-inventory", "atlas-merge-pr", "atlas-release-manager", "atlas-rerun-failed", "benjaire-site-ci", "commerce-tests", "dataset-census", "github-merge-flow", "hub-ci", "site-ci", "soc-lab-ci"],
-      security: ["bruteforce-detection", "security-check", "soc-case-notes", "soc-detection-lead"],
+      security: ["bruteforce-detection", "connor-security-sheet", "security-check", "soc-case-notes", "soc-detection-lead"],
       business: [
         "atlas-sales-feed",
         "benjaire-contact-worker",
@@ -114,8 +114,8 @@ describe("automation categories", () => {
         "shopify-publisher",
           "visual-director",
       ],
-      monitoring: ["agent-self-reports", "atlas-health-monitor", "benjaire-ops-monitor", "health-report"],
-      intelligence: ["agent-operations-lead", "atlas-agent-factory", "atlas-engineering-review", "atlas-executive", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-step-runner", "atlas-task-writer", "development-hub-lead", "github-profile-manager", "repo-intelligence"],
+      monitoring: ["agent-self-reports", "atlas-health-monitor", "atlas-qa", "benjaire-ops-monitor", "health-report"],
+      intelligence: ["agent-operations-lead", "atlas-agent-factory", "atlas-engineer", "atlas-engineering-review", "atlas-executive", "atlas-production-coordinator", "atlas-release-coordinator", "atlas-step-runner", "atlas-task-writer", "development-hub-lead", "github-profile-manager", "repo-intelligence"],
       maintenance: ["agent-registry-sync", "db-backup", "docs-builder", "documentation-lead", "github-design-consistency", "site-audit", "site-builder"],
     });
   });
