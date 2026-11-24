@@ -1,1 +1,1 @@
-- 2026-11-24 · New agents are checked for everything they need (avatar, city figure, team role, a place on the map), and Trade Desk and Market Research now have their own Investment Operations role on the Team tab (#PR)
+- 2026-11-24 · New agents are checked for everything they need (avatar, city figure, team role, a place on the map), and Trade Desk and Market Research now have their own Investment Operations role on the Team tab (#531)
