@@ -1,0 +1,64 @@
+/* Agents > Team (src/views/agents/Team.tsx): the essential roles as an org chart. */
+.team { display: flex; flex-direction: column; gap: 16px; }
+.team .eyebrow { color: var(--ink-3); }
+.team h2 { font-family: var(--serif); font-weight: 400; font-size: 19px; margin: 0; }
+.team-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.team-kpi { padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.team-kpi b { font-family: var(--serif); font-weight: 400; font-size: 30px; line-height: 1; }
+.team-kpi span { font-size: 11.5px; color: var(--ink-3); }
+.team-kpi.gold { border-color: rgba(201, 163, 90, 0.5); background: #fffaf0; }
+.team-kpi.gold b { color: var(--gold-deep); }
+.team-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+.team-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.team-org { padding: 18px 20px 20px; display: flex; flex-direction: column; align-items: center; }
+.team-org-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-bottom: 12px; }
+.team .link { background: none; border: 0; padding: 0; color: var(--gold-deep); cursor: pointer; font: inherit; font-size: 12.5px; }
+.team .link:hover { text-decoration: underline; }
+.team-owner { display: flex; align-items: center; gap: 10px; background: var(--forest-800); color: var(--on-dark); border-radius: 12px; padding: 9px 16px; }
+.team-owner b { display: block; font-size: 13px; }
+.team-owner div span { display: block; font-size: 11px; color: var(--on-dark-2); }
+.team-owner-mark { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: var(--forest-900); font-family: var(--serif); }
+.team-vline { width: 2px; height: 18px; background: var(--sage-300); }
+.team-coord { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: space-between; border: 1.5px solid var(--gold); background: #fffaf0; border-radius: 14px; padding: 12px 18px; width: min(640px, 100%); }
+.team-coord-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right; }
+.team-roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; width: 100%; padding-top: 14px; border-top: 2px solid var(--sage-300); }
+.team-role { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; background: var(--white, #fff); }
+.team-role-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.team-role-head .eyebrow { font-size: 9.5px; }
+.team-lead { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.team-name { background: none; border: 0; padding: 0; font-family: var(--serif); font-size: 16px; color: var(--ink); cursor: pointer; text-align: left; }
+.team-name:hover { color: var(--gold-deep); }
+.team-face { background: none; border: 0; padding: 0; cursor: pointer; border-radius: 50%; line-height: 0; }
+.team-face:focus-visible, .team-name:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.team-members { display: flex; align-items: center; gap: 4px; min-height: 30px; flex-wrap: wrap; }
+.team-purpose { margin: 0; }
+.team-health { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--sage-200); border-radius: 999px; padding: 2px 9px; font-size: 11px; color: var(--ink-2); white-space: nowrap; background: var(--sage-50); }
+.team-health i { width: 7px; height: 7px; border-radius: 50%; background: var(--unknown); }
+.team-health.good i { background: var(--good); }
+.team-health.bad i { background: var(--bad); }
+.team-propose { border: 1.5px dashed var(--sage-300); border-radius: var(--radius); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 4px; padding: 14px; color: var(--ink-3); text-decoration: none; font-size: 12.5px; }
+.team-propose b { font-family: var(--serif); font-weight: 400; font-size: 16px; color: var(--ink); }
+.team-propose:hover { border-color: var(--gold); }
+.team-life { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.team-life > div { padding: 12px 16px; border-left: 1px solid var(--sage-200); display: flex; flex-direction: column; gap: 4px; }
+.team-life > div:first-child { border-left: 0; }
+.team-life b { font-family: var(--serif); font-weight: 400; font-size: 24px; }
+.team-stack { display: flex; flex-wrap: wrap; gap: 4px; }
+.team-needs { padding: 14px 16px; }
+.team-need { display: flex; gap: 10px; padding: 10px 0; border-top: 1px solid var(--sage-200); }
+.team-need:first-of-type { border-top: 0; }
+.team-need b { display: block; font-weight: 600; font-size: 12.5px; }
+.team-need .muted { display: block; }
+.team-acts { display: flex; gap: 6px; margin-top: 6px; }
+.team-acts .btn { padding: 3px 9px; font-size: 11px; text-decoration: none; color: var(--ink); }
+@media (max-width: 1100px) { .team-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .team-grid { grid-template-columns: 1fr; } .team-needs { order: -1; } }
+@media (max-width: 640px) {
+  .team-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .team-roles { grid-template-columns: 1fr; }
+  .team-coord-meta { align-items: flex-start; text-align: left; }
+  .team-life { grid-template-columns: 1fr; }
+  .team-life > div { border-left: 0; border-top: 1px solid var(--sage-200); }
+  .team-life > div:first-child { border-top: 0; }
+}
+/* A lead's own steps (Leila's Product Lab) are one quiet chip, not a row of copies of her face. */
+.team-steps { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 999px; border: 1px dashed var(--sage-400); font-size: 12px; color: var(--ink-3); }
