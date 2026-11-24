@@ -119,10 +119,11 @@
     "soc-case-notes",
     "bruteforce-detection",
     "soc-lab-ci",
+    "connor-security-sheet",
     "soc-detection-lead"
    ],
    "ai_agents": 1,
-   "automations": 3
+   "automations": 4
   },
   {
    "id": "project:portfolio-site",
@@ -1752,6 +1753,20 @@
    "source": ".github/workflows/ci.yml"
   },
   {
+   "id": "connor-security-sheet",
+   "name": "SOC · Security Data Sheet",
+   "kind": "Automation",
+   "status": "paused",
+   "building_id": "project:soc-lab",
+   "building_name": "Security Operations Center",
+   "placement": "Runs from its project building",
+   "owned_by": "soc-detection-lead",
+   "project": "soc-lab",
+   "runtime": "n8n Cloud",
+   "trigger": "Daily 7:00am ET once published; unpublished draft, run by hand",
+   "source": ""
+  },
+  {
    "id": "soc-detection-lead",
    "name": "Security Detection Lead",
    "kind": "AI agent",
@@ -2133,6 +2148,6 @@
   "Trees, benches and paving are scenery and are left out on purpose.",
   "Agents walking to work only appear in the app when live job data is loaded, so they are not counted here."
  ],
- "generated_at": "2026-11-24T03:46:23.294Z",
- "commit": "a0fc514ce3feed633b36ba6be6e8230de4766960"
+ "generated_at": "2026-11-24T03:56:39.783Z",
+ "commit": "7af81f6784727fe1a85f389017f0cd9e853c4648"
 }
