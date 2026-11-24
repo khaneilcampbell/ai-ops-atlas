@@ -529,6 +529,10 @@ export function layoutMap(catalog: Catalog, uncataloged: string[] = [], groupBy:
       cleared.push({ ...soc, project: { ...soc.project, id: reserve }, hq: { ...soc.hq }, lots: [], crew: [], kiosks: [] });
       rects.push({ id: reserve, x: soc.ox, y: soc.oy, w: soc.size, h: soc.size });
       move(soc, business.ox - GAP - soc.size - soc.ox, business.oy + SOC_LAKE_STEP - soc.oy);
+      // Ground under the new parcel, from Business Operations HQ's front to the canal, so no pond or bare pit is left round it.
+      // It stays inside the city's west edge, so the airport and everything planned off that edge keep their place.
+      const west = Math.max(soc.ox - g2, Math.min(...meadows.map(m => m.ox)));
+      meadows.push({ ox: west, oy: business.oy - g2, w: business.ox - g2 - west, h: soc.oy + soc.size + GAP - business.oy });
     }
   }
 

@@ -1,1 +1,1 @@
-- 2026-11-24 · The Security Operations Center now stands on the lake beside Business Operations HQ; its old spot stays open land (#523)
+- 2026-11-24 · The Security Operations Center now stands on the lake beside Business Operations HQ; the leftover pond round it is filled with lawn, and its old spot stays open land (#523)
