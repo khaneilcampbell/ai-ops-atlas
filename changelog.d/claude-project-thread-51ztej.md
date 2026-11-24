@@ -1,0 +1,1 @@
+- 2026-11-23 · The map shows a small "agents inside" marker above any building with agents in it right now (their offices, their homes in Team Residence Towers, the arena and the airport terminal), with their faces and a count; hover or tap to see who and what they are doing, click to look inside. An agent indoors shows only on that marker, not twice (#515)

@@ -18,7 +18,8 @@ import { YACHT_SCALE } from "./yachtPlan";
  * - walking: along its street route, striding;
  * - standing at a spot: at its own place in the row there (no two agents on one point);
  * - inside a building with no cutaway (home, the arena, the terminal, its office with Inside off):
- *   no figure, and the badge waits above the door, so you can still find and pick it;
+ *   no figure, and the badge waits above the door, so you can still find and pick it (in its own
+ *   office with Inside off, the roof's "agents inside" marker stands for it instead: no second badge);
  * - at its desk with the office open in the Inside view: walks in from the door, sits at its own
  *   desk, types while the run is working;
  * - on a ride: seated in its wheel cabin, aboard the yacht's deck, in a train carriage (badge only).
@@ -39,6 +40,8 @@ export interface DrawnPose {
   officeScale: number | null;
   /** Where it is, in words ("Atlas Command Center", "The Ferris wheel"). */
   place: string;
+  /** Its badge is left out because the building's "agents inside" marker shows it (it is still there, for Locate and Follow). */
+  marked?: boolean;
 }
 
 export interface PoseContext {
@@ -55,6 +58,12 @@ export interface PoseContext {
   jet?: { clock: number; circuit?: typeof goldJetLive.circuit };
   /** City figure scale for this agent (FIGURE_SCALE times its height). */
   scale: number;
+  /**
+   * The map shows an "agents inside" marker over the building it is in (occupancy.ts): its office
+   * (with the office closed), the arena, the airport terminal. Then it gets no badge at the door or
+   * on the facade as well: one sign per agent, not two. (At home it is already badge-free.)
+   */
+  roofMarker?: boolean;
 }
 
 const BADGE_LIFT = 0.075;
@@ -124,8 +133,8 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
     const desk = mine.desk;
     const door = mine.office.path[0];
     const hidden = (): DrawnPose => ({ x: door[0], y: door[1], z: door[2], yaw: mine.office.yaw, figure: false, badge: mine.doorBadge, sit: 0, typing: false, walking: false, officeScale: null, place: mine.officeLabel });
-    // Inside with its office closed: its badge shows on the facade at its floor.
-    if (!desk || !c.open.has(desk.towerKey)) return hidden();
+    // Inside with its office closed: the roof marker shows it, or else its badge on the facade at its floor.
+    if (!desk || !c.open.has(desk.towerKey)) return c.roofMarker ? { ...hidden(), badge: null, marked: true } : hidden();
     // One building, one open floor (buildings/insideFloors.ts). Anyone above it would stand in the
     // part of the shell that is cut away, so they wait as a badge; anyone below is behind its walls.
     const open = openFloor(desk.towerKey, desk.defaultFloor);
@@ -172,7 +181,8 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
         return { x: p.x, y, z: p.z, yaw: p.yaw, figure: false, badge: goldJetRide.active ? null : [p.x, y, p.z], sit: 1, typing: false, walking: false, officeScale: null, place: `Aboard the ${GOLD_JET_NAME} · ${goldJetState(clock, circuit).label}` };
       }
       const where = seg.times.seat === GOLD_JET_NAME ? (c.wall < seg.times.board ? `Atlas airport terminal, waiting to board the ${GOLD_JET_NAME}` : `Atlas airport terminal, off the ${GOLD_JET_NAME}`) : spot.label;
-      return { x: stand[0], y: stand[1], z: stand[2], yaw: spot.yaw, figure: false, badge: [stand[0], stand[1] + 0.55, stand[2]], sit: 0, typing: false, walking: false, officeScale: null, place: where };
+      // In the terminal: the airport's "agents inside" marker shows it when the map has one.
+    return { x: stand[0], y: stand[1], z: stand[2], yaw: spot.yaw, figure: false, badge: c.roofMarker ? null : [stand[0], stand[1] + 0.55, stand[2]], ...(c.roofMarker ? { marked: true } : {}), sit: 0, typing: false, walking: false, officeScale: null, place: where };
     }
     const p = riderPoint(c.places, kind, c.personaId, c.wall, c.yacht);
     if (!p) return at(stand[0], stand[1], stand[2], spot.yaw, { place: spot.label });
@@ -191,7 +201,8 @@ export function routinePose(seg: Segment, c: PoseContext): DrawnPose | null {
   // Standing or sitting at a spot.
   if (spot.inside) {
     if (seg.at === mine.home.id) return { x: stand[0], y: stand[1], z: stand[2], yaw: spot.yaw, figure: false, badge: null, sit: 0, typing: false, walking: false, officeScale: null, place: mine.homeLabel };
-    return { x: stand[0], y: stand[1], z: stand[2], yaw: spot.yaw, figure: false, badge: [stand[0], stand[1] + 0.55, stand[2]], sit: 0, typing: false, walking: false, officeScale: null, place: spot.label };
+    // Indoors on an outing (the arena): the building's "agents inside" marker shows it when the map has one.
+    return { x: stand[0], y: stand[1], z: stand[2], yaw: spot.yaw, figure: false, badge: c.roofMarker ? null : [stand[0], stand[1] + 0.55, stand[2]], ...(c.roofMarker ? { marked: true } : {}), sit: 0, typing: false, walking: false, officeScale: null, place: spot.label };
   }
   // Its own place in the row outside its office is already its own: no shuffle, or neighbours land on each other.
   if (seg.at === mine.office.id) return at(stand[0], stand[1], stand[2], spot.yaw, { place: spot.label });
