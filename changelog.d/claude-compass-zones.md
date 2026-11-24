@@ -8,3 +8,4 @@
 - 2026-11-24 · The Security Operations Center is back in its own spot (the Business Operations lake move is undone) and the Financial District towers have their real names again instead of filler names (#528)
 - 2026-11-24 · The Financial District is no longer selected as one block: its towers belong to different core buildings now, so you select each tower or Financial Park on its own (#528)
 - 2026-11-24 · Filler buildings are named after the core building or place they belong with, so the map reads by group and each name ends in its building type: Business Operations Tower and Station, Product & Growth Tower and Arcade, Security & Infrastructure Showroom and Office, AI Engineering Hangar, Atlas Commons Arena and Station, Atlas Airport Terminal and Control Tower. Old names still find them in search (#528)
+- 2026-11-24 · The Security Operations Center stands on the lake beside the Benjaire tower again, with the land round it filled and planted (#528)

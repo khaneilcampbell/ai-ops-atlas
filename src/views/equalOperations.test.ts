@@ -37,7 +37,8 @@ describe('Commerce-sized operations campus',()=>{
   expect(district('portfolio-site')).toMatchObject({ox:17,oy:22,size:7.5});
   expect(district('github-profile')).toMatchObject({ox:9.75,oy:29.25,size:5});
   expect(district('benjaire-site')).toMatchObject({ox:7.25,oy:0,size:7.5});
-  expect(district('soc-lab')).toMatchObject({ox:0,oy:30.75,size:7.5});
+  // Security Operations Center moved onto the lake beside Business Operations HQ (Khaneil, 2026-11-24).
+  expect(district('soc-lab')).toMatchObject({ox:-2.5,oy:2.5,size:7.5});
   for(const id of ['ai-ops-atlas','intelligence-hub','github-profile'])expect(district(id).hq.size).toBeCloseTo(2.55);
   expect(district('commerce-pipeline').hq.size).toBeCloseTo(3.6);
   expect(scene.githubAnnex).toBeDefined();
