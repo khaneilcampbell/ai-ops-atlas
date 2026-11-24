@@ -61,7 +61,7 @@ it("shows site traffic and research briefs in the Product & Growth Studio, loadi
 });
 
 it("shows the model inventory and cost per model in the Model Intelligence Lab", () => {
-  const html = render({ kind: "service", id: "airport-building:cargo" });
+  const html = grouped({ kind: "service", id: "airport-building:cargo" });
   expect(html).toContain("Model Intelligence Lab");
   expect(html).toContain('aria-label="Model inventory"');
   expect(html).toContain('aria-label="Cost per model"');
@@ -91,7 +91,7 @@ it("opens the Agents directory scoped to a project building, and unscoped from a
 });
 
 it("shows connected signals in the Observability Center and the document inventory in the Knowledge Repository", () => {
-  const ops = render({ kind: "service", id: "airport-building:operations" });
+  const ops = grouped({ kind: "service", id: "airport-building:operations" });
   expect(ops).toContain("Observability Center");
   expect(ops).toContain('aria-label="Connected signals"');
   expect(ops).toContain("GitHub");

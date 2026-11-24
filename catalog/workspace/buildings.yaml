@@ -101,13 +101,13 @@ buildings:
     organization: Filler building
     former_names: [Air Traffic Control, Atlas · Air Traffic]
   "service:airport-building:cargo":
-    display_name: Model Intelligence Lab
-    organization: Atlas Airport
-    former_names: [Atlas · Cargo]
+    display_name: Quarry House
+    organization: Filler building
+    former_names: [Atlas · Cargo, Model Intelligence Lab]
   "service:airport-building:operations":
-    display_name: Observability Center
-    organization: Atlas Airport
-    former_names: [Atlas · Operations]
+    display_name: Sparrow Hall
+    organization: Filler building
+    former_names: [Atlas · Operations, Observability Center]
   # Nov 24: buildings that house no module get a neutral filler name, so nobody reads a purpose into them
   # (Khaneil: "make the other buildings not in a module a random building name ... label it as a filler
   # building"). Their earlier names stay in former_names for search.

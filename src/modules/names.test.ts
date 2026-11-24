@@ -43,8 +43,8 @@ describe("workspace building names", () => {
       ["service:stadium-station", "Pinecrest Station", "Filler building"],
       ["service:airport-building:terminal", "Hawthorn Hall", "Filler building"],
       ["service:airport-building:tower", "Rowan Tower", "Filler building"],
-      ["service:airport-building:cargo", "Model Intelligence Lab", "Atlas Airport"],
-      ["service:airport-building:operations", "Observability Center", "Atlas Airport"],
+      ["service:airport-building:cargo", "Quarry House", "Filler building"],
+      ["service:airport-building:operations", "Sparrow Hall", "Filler building"],
       // Nov 24: buildings that house no module carry a neutral filler name, labelled "Filler building".
       ["service:financial-station", "Birch Lane Station", "Filler building"],
     ];

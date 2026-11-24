@@ -78,10 +78,11 @@ landmarks:
 # stays on the map but houses no module; its module shows in the core building's panel, so a core
 # building can hold several. Agents and records are unchanged. Remove a line to give the module back.
 merged:
-  # AI Engineering & Research Center (Development Hub)
+  # AI Engineering & Research Center (Development Hub): knowledge and model intelligence
   "service:financial:financial-planning": "project:github-profile"
+  "service:airport-building:cargo": "project:github-profile"
   # Business Operations HQ (the former Vendor & Supplier Hub, Khaneil 2026-11-24): the Financial District
-  # towers, the former Benjaire HQ tower and Commerce
+  # towers and the former Benjaire HQ tower
   "service:financial-district": "service:atlas-galleria"
   "service:financial:banks": "service:atlas-galleria"
   "service:financial:records": "service:atlas-galleria"
@@ -91,12 +92,13 @@ merged:
   "service:financial:budget": "service:atlas-galleria"
   "service:financial:insurance": "service:atlas-galleria"
   "service:financial:harbor-residence": "service:atlas-galleria"
-  "project:commerce-pipeline": "service:atlas-galleria"
   "project:benjaire-site": "service:atlas-galleria"
-  # Product & Growth Studio (Growth & Marketing Studio)
+  # Product & Growth Studio (Growth & Marketing Studio): marketplace and commerce
   "service:atlas-marketplace": "service:benjaire-marketing"
-  # Security & Infrastructure Center (Security Operations Center)
+  "project:commerce-pipeline": "service:benjaire-marketing"
+  # Security & Infrastructure Center (Security Operations Center): infrastructure and observability
   "service:bmw-dealership": "project:soc-lab"
+  "service:airport-building:operations": "project:soc-lab"
   # Atlas Commons: the shared central area (no modules; grouped for the map's organization)
   "service:automation-plaza": "service:atlas-commons"
   "service:skyline-stadium": "service:atlas-commons"

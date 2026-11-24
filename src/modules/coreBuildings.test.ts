@@ -13,10 +13,10 @@ describe("eight core buildings", () => {
   it("groups every other building with a core building or Atlas Commons, and never a core building itself", () => {
     for (const h of new Set(Object.values(WORKSPACE.merged ?? {}))) expect([...CORE, "service:atlas-commons"]).toContain(h);
     for (const k of [...CORE, "service:atlas-commons", "service:logistics-airport", financialKey("circa")]) expect(hostOf(k), k).toBeUndefined();
-    expect(housedIn("service:atlas-galleria")).toEqual(expect.arrayContaining(["project:commerce-pipeline", "project:benjaire-site", financialKey("banks"), financialKey("insurance"), financialKey("budget")]));
-    expect(housedIn("project:github-profile")).toEqual([financialKey("financial-planning")]);
-    expect(housedIn("service:benjaire-marketing")).toEqual(["service:atlas-marketplace"]);
-    expect(housedIn("project:soc-lab")).toEqual(["service:bmw-dealership"]);
+    expect(housedIn("service:atlas-galleria")).toEqual(expect.arrayContaining(["project:benjaire-site", financialKey("banks"), financialKey("insurance"), financialKey("budget")]));
+    expect(housedIn("project:github-profile")).toEqual([financialKey("financial-planning"), "service:airport-building:cargo"]);
+    expect(housedIn("service:benjaire-marketing")).toEqual(["service:atlas-marketplace", "project:commerce-pipeline"]);
+    expect(housedIn("project:soc-lab")).toEqual(["service:bmw-dealership", "service:airport-building:operations"]);
     expect(onMapKey("project:benjaire-site")).toBe("service:atlas-galleria");
   });
 

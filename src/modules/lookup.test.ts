@@ -26,11 +26,12 @@ it("returns nothing for selections that are not module buildings", () => {
 describe("landmarkModuleStatus", () => {
   it("tells a landmark with real data apart from a planned one, and names what it reads", async () => {
     const { landmarkModuleStatus } = await import("./lookup");
-    const ops = landmarkModuleStatus("airport-building:operations");
-    expect(ops?.name).toBe("Observability Center");
-    expect(ops?.availability).toBe("partial");
-    expect(ops?.connectors).toContain("GitHub");
-    expect(landmarkModuleStatus("airport-building:cargo")?.availability).toBe("partial");
+    const plant = landmarkModuleStatus("atlas-station");
+    expect(plant?.name).toBe("Workflow Automation Hub");
+    expect(plant?.connectors.length).toBeGreaterThan(0);
+    // Grouped with a core building (Khaneil, 2026-11-24): the airport buildings house no module of their own.
+    expect(landmarkModuleStatus("airport-building:operations")).toBeUndefined();
+    expect(landmarkModuleStatus("airport-building:cargo")).toBeUndefined();
     expect(landmarkModuleStatus("airport-building:nope")).toBeUndefined();
   });
 });
