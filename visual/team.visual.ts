@@ -13,7 +13,7 @@ for (const width of [1512, 390])
     await goTo(page, "Agents");
     await page.getByRole("tab", { name: "Team" }).click();
     await expect(page.locator(".team-coord")).toHaveAttribute("data-role", "agent-operations-lead");
-    await expect(page.locator(".team-role")).toHaveCount(7);
+    await expect(page.locator(".team-role")).toHaveCount(8);
     await settle(page, 1);
     await page.screenshot({ path: `${out}/team-${width}.png`, });
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);

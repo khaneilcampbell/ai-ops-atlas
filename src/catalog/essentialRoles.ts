@@ -27,6 +27,7 @@ export const ESSENTIAL_ROLES: EssentialRole[] = [
   { id: "benjaire-product-lab", name: "Product Research Lead", purpose: "Product Lab research, competitors, customer insights, scoring and brief writing.", agents: ["benjaire-product-lab"], skills: ["benjaire-product-lab-research", "benjaire-product-lab-competitors", "benjaire-product-lab-customers", "benjaire-product-lab-scoring", "benjaire-product-lab-brief"] },
   { id: "benjaire-inquiry-manager", name: "Client Operations Lead", purpose: "Inquiries, reply preparation, reminders and digests.", agents: ["benjaire-inquiry-manager"] },
   { id: "commerce-operations-manager", name: "Commerce Operations Lead", purpose: "Product publishing, fulfillment and sales reporting.", agents: ["commerce-operations-manager", "benjaire-shop-manager"] },
+  { id: "trade-desk", name: "Investment Operations Lead", purpose: "Market research, trade checks and the trade journal, within Khaneil's limits.", agents: ["trade-desk", "market-research"] },
   { id: "development-hub-lead", name: "Development & Portfolio Lead", purpose: "Development opportunities and portfolio work.", agents: ["development-hub-lead", "site-builder", "github-profile-manager"] },
   { id: "soc-detection-lead", name: "Security Lab Specialist", purpose: "On-demand detection and lab work.", agents: ["soc-detection-lead"] },
 ];

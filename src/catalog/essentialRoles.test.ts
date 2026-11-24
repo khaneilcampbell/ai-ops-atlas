@@ -79,7 +79,7 @@ describe("essential roles directory", () => {
   });
 
   it("counts roles, automations and archived entries separately", () => {
-    expect(dir.counts.roles).toBe(8);
+    expect(dir.counts.roles).toBe(9);
     expect(dir.counts.aiAgents + dir.counts.skills + dir.counts.automations + dir.counts.archived).toBe(catalog.agents.length);
     expect(dir.counts.skills).toBe(5);
     console.log("role directory counts", dir.counts, Object.fromEntries([...dir.members].map(([k, v]) => [k, v.length])), "inactive", dir.inactive);
