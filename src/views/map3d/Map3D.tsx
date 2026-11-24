@@ -83,8 +83,6 @@ import { isPortfolioSite } from "./portfolioSitePlan";
 import { SocLab } from "./SocLab";
 import { isSocLab } from "./socLabPlan";
 import { FLOOR_BASE, Bridges, Houses, Kiosks, Landscape, Terrain, Towers, towerTop, useGeometries, useMaterials, type Pick, type PickHandlerSet } from "./models";
-import { BUSINESS_HQ_PROJECT, presentScene } from "./consolidate";
-import { isMerged, onMapKey } from "../../modules/workspace";
 import { buildScene, TERRACE_H, WATER_Y, type Scene3D, type Tower } from "./scene";
 import type { AgentJob } from "../../catalog/agentJobs";
 import { planAgentCommutes } from "./agentCommutes";
@@ -256,7 +254,7 @@ const FOLLOW_DIST = 9;
 
 const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
   const { layout, jobs, selKey, selectedDistrict, focus, showAgentLabels, onSelect, tipFor, healthFor, links, linkSel, linkFocus, showLocal } = props;
-  const scene = useMemo(() => presentScene(buildScene(layout)), [layout]);
+  const scene = useMemo(() => buildScene(layout), [layout]);
   const agentCommutes = useMemo(() => (jobs ? planAgentCommutes(scene, jobs) : undefined), [scene, jobs]);
   // The named team, one character per identity at its real workplace (namedAgentPlan.ts).
   const namedAgents = useMemo(() => (jobs ? planNamedAgents(scene, fullCatalog.agents, jobs, agentCommutes) : undefined), [scene, jobs, agentCommutes]);
@@ -346,9 +344,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     locate: (x, y, z) => api.current?.locate(x, y, z),
   }));
 
-  const select = (raw: string) => {
-    // A folded building's key (an old link, a search hit) lands on the core building that houses it.
-    const key = onMapKey(raw);
+  const select = (key: string) => {
     const a = anchors.get(key);
     onSelect(selOf(key), a?.project);
   };
@@ -404,7 +400,7 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       const mark = <b className={`hm hm-${health.kind}${health.stale ? " stale" : ""}`} title={health.label} aria-label={health.label} />;
       // A compact nameplate by default; the full name and details on hover or selection.
       if (state !== "selected") {
-        out.push(buildingPlaque({ id: `hq:${t.projectId}`, key: t.key, select: t.key, name: t.name, x: t.x, roof: roofOf(t), z: t.z, priority: t.projectId === "ai-ops-atlas" ? 1 : t.projectId === BUSINESS_HQ_PROJECT ? 1.5 : t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents), mark: { kind: health.kind, label: health.label, stale: health.stale }, title: `${t.name} · ${health.label}`, selKey, hover, state, dim: !!net.focusSet && !net.focusSet.has(t.projectId), onSelect: select }));
+        out.push(buildingPlaque({ id: `hq:${t.projectId}`, key: t.key, select: t.key, name: t.name, x: t.x, roof: roofOf(t), z: t.z, priority: t.projectId === "ai-ops-atlas" ? 1 : t.projectId === focus ? 2 : 3 + 1 / (1 + t.agents), mark: { kind: health.kind, label: health.label, stale: health.stale }, title: `${t.name} · ${health.label}`, selKey, hover, state, dim: !!net.focusSet && !net.focusSet.has(t.projectId), onSelect: select }));
         continue;
       }
       const lines = wrap(t.name, 13, SANS, 230, 600);
@@ -498,8 +494,6 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
     // gap above its roof, one look, and a status dot (planned places show the dashed one).
     // A landmark whose telemetry answered shows its real status instead of the planned dot.
     const plaque = (p: Omit<Parameters<typeof buildingPlaque>[0], "selKey" | "hover" | "onSelect">) => {
-      // A building folded into a core building (workspace.yaml `merged`) has no nameplate of its own.
-      if (isMerged(p.select)) return;
       const live = props.landmarkMarks?.[p.select];
       out.push(buildingPlaque({ ...p, ...(live ? { mark: live, title: `${p.name} · ${live.label}` } : {}), selKey, hover, onSelect: select }));
     };

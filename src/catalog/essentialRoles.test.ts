@@ -75,7 +75,7 @@ describe("essential roles directory", () => {
       if (!p.module) noModule.add(a.projectId);
     }
     expect([...noModule]).toEqual([]);
-    expect(placement(byId.get("benjaire-product-lab-brief")!, catalog.projects)).toEqual({ building: "Commerce Operations Center", module: "Commerce & Product Marketplace" });
+    expect(placement(byId.get("benjaire-product-lab-brief")!, catalog.projects)).toEqual({ building: "Business Operations HQ", module: "Business Operations HQ" });
   });
 
   it("counts roles, automations and archived entries separately", () => {
