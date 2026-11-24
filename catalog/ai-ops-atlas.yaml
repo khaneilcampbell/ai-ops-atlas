@@ -1037,15 +1037,17 @@ agents:
     owned_by: atlas-health-monitor
     model: None (plain code, no AI step)
     runtime: n8n Cloud
-    status: paused
-    trigger: 'Unpublished n8n draft, run by hand; once published, daily at each agent''s report time (17 times from 8:30am to 8:30pm New York, catalog/workspace/self-reports.yaml)'
+    status: active
+    trigger: 'Published n8n workflow: daily at each agent''s report time (17 times from 8:30am to 8:30pm New York, catalog/workspace/self-reports.yaml), or run by hand'
     source: catalog/workspace/self-reports.yaml
     last_run: 2026-11-23T04:10:40Z
     history:
       - at: 2026-11-22
         event: 'Built at Khaneil''s request as an unpublished n8n draft. Hand runs 902 and 903 reported all 17 agents (818 runs seen, 11 failed, 18 recommendations), filled the Sheet and added the PDF and spreadsheet to the Output Library (run 903 added version 2 of each, no duplicates)'
+      - at: 2026-11-24
+        event: 'Khaneil published the n8n workflow, with the per-agent PDF and Excel work reports filed in the Knowledge & Research Center library'
     links:
-      - label: 'n8n workflow: Data Intelligence · Agent Self-Reports (draft)'
+      - label: 'n8n workflow: Data Intelligence · Agent Self-Reports'
         url: https://khancam15.app.n8n.cloud/workflow/SBtrX3tY3OKT8qzn
       - label: Self-reports sheet
         url: https://docs.google.com/spreadsheets/d/1IJPNjdqPJ2OLhHZ_HI-pgai2dtPplq9oCx1Qw3DlR4s/edit
@@ -1087,6 +1089,7 @@ agents:
         outputs:
           - Atlas Agent Self-Reports Google Sheet
           - Agent self-reports PDF and spreadsheet in the Output Library
+          - One work report per agent in the Output Library at the Knowledge & Research Center (a PDF and an Excel workbook each)
         dependencies:
           - atlas-data-inventory
         limitations:

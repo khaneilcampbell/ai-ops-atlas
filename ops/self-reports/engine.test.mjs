@@ -233,3 +233,64 @@ describe("safety", () => {
     expect(new Set(Object.values(E.FILES).map((f) => f.outputKey)).size).toBe(3);
   });
 });
+
+describe("a PDF and an Excel work report per agent for the Knowledge & Research Center", () => {
+  const c = cycleOf();
+  const files = E.agentFiles(c);
+  it("every agent gets exactly a PDF and a workbook, under its own id and keys", () => {
+    expect(files).toHaveLength(c.agents.length * 2);
+    for (const row of c.agents) {
+      const mine = files.filter((f) => f.agentId === row.agent_id);
+      expect(mine.map((f) => f.format)).toEqual(["pdf", "spreadsheet"]);
+      expect(mine.map((f) => f.outputKey)).toEqual([`${row.agent_id}:work-report-pdf`, `${row.agent_id}:work-report-xlsx`]);
+    }
+    expect(new Set(files.map((f) => f.outputKey)).size).toBe(files.length);
+    for (const f of files) expect(f.ok).toBe(true);
+    expect(E.LIBRARY_BUILDING).toBe("service:financial:financial-planning");
+  });
+  it("both files carry the agent's own data; no runs says 'No data in window' in both", () => {
+    for (const f of files) {
+      const row = rowOf(c, f.agentId);
+      const bytes = Buffer.from(f.base64, "base64");
+      const text = f.format === "pdf" ? bytes.toString("latin1") : Object.values(unzipSync(new Uint8Array(bytes))).map((b) => strFromU8(b)).join("\n");
+      if (f.format === "pdf") {
+        expect(text.startsWith("%PDF-1.4")).toBe(true);
+        expect(text).toContain(`(${row.agent} \xb7 work report)`);
+      } else {
+        const sheet = strFromU8(unzipSync(new Uint8Array(bytes))["xl/worksheets/sheet2.xml"]);
+        expect(sheet).toContain(row.agent);
+        expect(sheet.split("<row ").length - 1).toBe(2);
+      }
+      expect(f.noData).toBe(!(Number(row.runs_total) > 0));
+      if (f.noData) expect(text).toContain("No data in window");
+      else expect(text).not.toContain("No data in window");
+    }
+  });
+  it("says why there is no data instead of showing 0", () => {
+    expect(files.find((f) => f.agentId === "on-request").summary).toMatch(/^No data in window: no workflow is linked/);
+    expect(files.find((f) => f.agentId === "unreachable").summary).toMatch(/^No data in window: its run source could not be read/);
+    expect(files.find((f) => f.agentId === "flaky-builder").summary).toMatch(/^4 runs, 2 failed/);
+  });
+});
+
+describe("workbook styling", () => {
+  it("colours values by what they say, never guessing", () => {
+    expect(E.toneOf("priority", "High")).toBe("bad");
+    expect(E.toneOf("failed", 2)).toBe("bad");
+    expect(E.toneOf("failed", 0)).toBe("good");
+    expect(E.toneOf("success_rate", "98%")).toBe("good");
+    expect(E.toneOf("success_rate", "50%")).toBe("bad");
+    expect(E.toneOf("success_rate", "Not connected")).toBe("none");
+    expect(E.toneOf("failed", "")).toBe(null);
+    expect(E.toneOf("role", "Builder")).toBe(null);
+  });
+  it("has bold coloured headers, borders and tab colours", () => {
+    const zip = unzipSync(new Uint8Array(E.buildXlsx(E.workbookSheets(cycleOf()))));
+    const styles = strFromU8(zip["xl/styles.xml"]);
+    expect(styles).toContain('<b/><sz val="11"/><color rgb="FFFFFFFF"/>');
+    expect(styles).toContain('style="thin"');
+    expect(strFromU8(zip["xl/worksheets/sheet1.xml"])).toContain('<tabColor rgb="FF0F3D2E"/>');
+    const sheet = strFromU8(zip["xl/worksheets/sheet3.xml"]);
+    expect(sheet).toMatch(/<c r="C\d+" t="inlineStr" s="5"><is><t xml:space="preserve">High</);
+  });
+});

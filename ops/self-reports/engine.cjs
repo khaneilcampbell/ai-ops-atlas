@@ -301,17 +301,18 @@ function buildPdf(c) {
   const heading = (s) => { need(30); y -= 10; para(s, 13, true, '#0F3D2E'); y -= 4; };
   newPage();
   rect(0, H - 120, W, 120, '#0F3D2E');
-  text(X0, H - 62, 'Atlas Agent Self-Reports', 24, true, '#FFFFFF');
-  text(X0, H - 84, 'Operational review of every agent, reported to the Data Intelligence Center', 11, false, '#D1FAE5');
+  text(X0, H - 62, c.title || 'Atlas Agent Self-Reports', 24, true, '#FFFFFF');
+  text(X0, H - 84, c.subtitle || 'Operational review of every agent, reported to the Data Intelligence Center', 11, false, '#D1FAE5');
   text(X0, H - 102, 'Collected ' + c.stamp + ' (' + (tz === DEFAULT_TZ ? 'New York' : tz) + ') · ' + c.mode + ' · ' + c.scheduleState, 8, false, '#A7F3D0');
   y = H - 150;
   const k = c.counts;
   const tiles = [['Agents', k.agents], ['With run data', k.read], ['Runs seen', k.runs], ['Failed', k.failed], ['Suggestions', k.recs]];
   const tw = (X1 - X0 - 4 * 8) / 5;
-  tiles.forEach(([label, v], i) => { const x = X0 + i * (tw + 8); rect(x, y - 46, tw, 52, '#ECFDF5'); text(x + 10, y - 14, String(v), 18, true, '#0F3D2E'); text(x + 10, y - 34, label, 8, false, '#4B5563'); });
+  tiles.forEach(([label, v], i) => { const x = X0 + i * (tw + 8); rect(x, y - 46, tw, 52, '#ECFDF5'); text(x + 10, y - 14, c.note && (label === 'Runs seen' || label === 'Failed') ? 'No data' : String(v), 18, true, '#0F3D2E'); text(x + 10, y - 34, label, 8, false, '#4B5563'); });
   y -= 72;
   heading('Executive summary');
-  para(k.agents + ' agents in the catalog. Run data was read for ' + k.read + '; ' + k.noData + ' have no workflow linked (no data, not zero runs)' + (k.notConnected ? ' and ' + k.notConnected + ' could not be read (not connected)' : '') + '. ' + k.runs + ' runs seen, ' + k.failed + ' failed' + (k.successRate == null ? '' : ' (' + k.successRate + '% of finished runs succeeded)') + '. Windows differ by source: see Sources at the end.', 9);
+  if (c.note) para(c.note, 9.5, true, '#B45309');
+  para((c.title ? plural(k.agents, 'agent') + ' in this report' : k.agents + ' agents in the catalog') + '. Run data was read for ' + k.read + '; ' + k.noData + ' have no workflow linked (no data, not zero runs)' + (k.notConnected ? ' and ' + k.notConnected + ' could not be read (not connected)' : '') + '. ' + k.runs + ' runs seen, ' + k.failed + ' failed' + (k.successRate == null ? '' : ' (' + k.successRate + '% of finished runs succeeded)') + '. Windows differ by source: see Sources at the end.', 9);
   para(k.recs + ' suggestions (' + k.high + ' high, ' + k.medium + ' medium, ' + k.low + ' low) for ' + new Set(c.recs.map((r) => r.agent_id)).size + ' agents. ' + k.stale + ' agents carry stale-data warnings. Atlas memory service: ' + c.memory + '.', 9);
   if (c.failures && c.failures.length) para('Not completed this cycle: ' + c.failures.join('; ') + '. Retry by running the workflow by hand.', 8.5, true, '#B91C1C');
   if (c.sheetUrl) para('Live sheet: ' + c.sheetUrl, 8, false, '#0F766E');
@@ -367,7 +368,7 @@ function buildPdf(c) {
     objs[pid] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + cid + ' 0 R >>';
     objs[cid] = '<< /Length ' + Buffer.byteLength(p, 'latin1') + ' >>\nstream\n' + p + '\nendstream'; });
   objs[2] = '<< /Type /Pages /Kids [' + kids.join(' ') + '] /Count ' + pages.length + ' >>';
-  objs[objs.length] = '<< /Title (Atlas Agent Self-Reports) /Producer (Atlas Data Intelligence Center) >>';
+  objs[objs.length] = '<< /Title (' + esc(c.title || 'Atlas Agent Self-Reports') + ') /Producer (Atlas Data Intelligence Center) >>';
   const infoId = objs.length - 1;
   let out = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n'; const offs = [];
   for (let i = 1; i < objs.length; i++) { offs[i] = Buffer.byteLength(out, 'latin1'); out += i + ' 0 obj\n' + objs[i] + '\nendobj\n'; }
@@ -400,15 +401,39 @@ function zipStored(files) {
 // themselves, because the n8n editor API turns \u escapes into characters and the copy must match).
 const xmlText = (s) => String(s).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F￾￿]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const colName = (i) => { let s = ''; i++; while (i) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+// Cell styles (xl/styles.xml cellXfs, by index). Bold green headers, bold first column, thin borders,
+// and colour by meaning: green good, red bad, amber needs a look, blue low priority, grey no data.
+const XF = { header: 1, text: 2, num: 3, good: 4, bad: 5, warn: 6, info: 7, key: 8, none: 9, keyNum: 10 };
+const pct = (v) => { const m = /^(\d+(?:\.\d+)?)%$/.exec(String(v)); return m ? Number(m[1]) : null; };
+/** The colour a value earns in its column, or null for plain. Only judges what the value says; never guesses. */
+function toneOf(key, v) {
+  if (v === '' || v == null) return null;
+  const s = String(v);
+  if (/^(No data|Not connected|Not documented|Unknown)\b/.test(s)) return 'none';
+  switch (key) {
+    case 'priority': return s === 'High' ? 'bad' : s === 'Medium' ? 'warn' : s === 'Low' ? 'info' : null;
+    case 'failed': return typeof v === 'number' ? (v > 0 ? 'bad' : 'good') : null;
+    case 'succeeded': return typeof v === 'number' && v > 0 ? 'good' : null;
+    case 'success_rate': { const n = pct(s); return n == null ? 'warn' : n >= 95 ? 'good' : n >= 80 ? 'warn' : 'bad'; }
+    case 'data_state': return s === 'Read' ? 'good' : s === 'Partly read' ? 'warn' : s === 'Not connected' ? 'bad' : 'none';
+    case 'catalog_status': return s === 'active' ? 'good' : s === 'paused' ? 'warn' : s === 'retired' ? 'none' : null;
+    case 'availability': return s === 'Available' ? 'good' : s === 'Unavailable' ? 'bad' : s === 'Not used' ? 'none' : 'warn';
+    case 'stale_flags': return s === 'None' ? 'good' : 'warn';
+    case 'last_failure': return /^None/.test(s) ? 'good' : 'bad';
+    case 'recommendations': return typeof v === 'number' && v > 0 ? 'warn' : null;
+    default: return null;
+  }
+}
 function sheetXml(sheet) {
   const { columns, rows } = sheet;
-  const cell = (v, r, ci, style) => { const ref = colName(ci) + r; if (v === '' || v == null) return '<c r="' + ref + '"' + (style ? ' s="' + style + '"' : '') + '/>'; if (typeof v === 'number' && Number.isFinite(v)) return '<c r="' + ref + '"' + (style ? ' s="' + style + '"' : '') + '><v>' + v + '</v></c>'; return '<c r="' + ref + '" t="inlineStr" s="' + (style || 2) + '"><is><t xml:space="preserve">' + xmlText(String(v).slice(0, 32000)) + '</t></is></c>'; };
-  const head = '<row r="1">' + columns.map((c, i) => cell(c.title, 1, i, 1)).join('') + '</row>';
-  const body = rows.map((r, ri) => '<row r="' + (ri + 2) + '">' + columns.map((c, i) => cell(r[c.key], ri + 2, i, 0)).join('') + '</row>').join('');
+  const cell = (v, r, ci, style) => { const ref = colName(ci) + r; const st = ' s="' + style + '"'; if (v === '' || v == null) return '<c r="' + ref + '"' + st + '/>'; if (typeof v === 'number' && Number.isFinite(v)) return '<c r="' + ref + '"' + st + '><v>' + v + '</v></c>'; return '<c r="' + ref + '" t="inlineStr"' + st + '><is><t xml:space="preserve">' + xmlText(String(v).slice(0, 32000)) + '</t></is></c>'; };
+  const styleOf = (key, v, ci) => { const t = toneOf(key, v); if (t) return XF[t]; const n = typeof v === 'number'; return ci === 0 ? (n ? XF.keyNum : XF.key) : n ? XF.num : XF.text; };
+  const head = '<row r="1" ht="30" customHeight="1">' + columns.map((c, i) => cell(c.title, 1, i, XF.header)).join('') + '</row>';
+  const body = rows.map((r, ri) => '<row r="' + (ri + 2) + '">' + columns.map((c, i) => cell(r[c.key], ri + 2, i, styleOf(c.key, r[c.key], i))).join('') + '</row>').join('');
   const last = colName(columns.length - 1) + (rows.length + 1);
-  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><tabColor rgb="' + (sheet.tab || 'FF0F766E') + '"/></sheetPr><sheetViews><sheetView workbookViewId="0" zoomScale="110"><pane xSplit="1" ySplit="1" topLeftCell="B2" activePane="bottomRight" state="frozen"/></sheetView></sheetViews>'
     + '<cols>' + columns.map((c, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + (c.width || 18) + '" customWidth="1"/>').join('') + '</cols>'
-    + '<sheetData>' + head + body + '</sheetData><autoFilter ref="A1:' + last + '"/></worksheet>';
+    + '<sheetData>' + head + body + '</sheetData><autoFilter ref="A1:' + last + '"/><pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup orientation="landscape" fitToHeight="0"/></worksheet>';
 }
 /** A workbook from [{ name, columns: [{key,title,width}], rows }]. */
 function buildXlsx(sheets) {
@@ -421,10 +446,19 @@ function buildXlsx(sheets) {
   const wbRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
     + sheets.map((_, i) => '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join('')
     + '<Relationship Id="rId' + (sheets.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
-  const styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>'
-    + '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0F3D2E"/><bgColor indexed="64"/></patternFill></fill></fills>'
-    + '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-    + '<cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  const font = (o) => '<font>' + (o.b ? '<b/>' : '') + '<sz val="' + (o.sz || 11) + '"/><color rgb="' + (o.c || 'FF1F2933') + '"/><name val="Calibri"/></font>';
+  const fill = (rgb) => '<fill><patternFill patternType="solid"><fgColor rgb="' + rgb + '"/><bgColor indexed="64"/></patternFill></fill>';
+  const thin = '<left style="thin"><color rgb="FFD1D5DB"/></left><right style="thin"><color rgb="FFD1D5DB"/></right><top style="thin"><color rgb="FFD1D5DB"/></top><bottom style="thin"><color rgb="FFD1D5DB"/></bottom><diagonal/>';
+  // fonts: 0 body, 1 header white bold, 2 key bold, 3 green bold, 4 red bold, 5 amber bold, 6 blue bold, 7 grey italic-ish
+  const fonts = [{}, { b: 1, c: 'FFFFFFFF' }, { b: 1, c: 'FF0F3D2E' }, { b: 1, c: 'FF166534' }, { b: 1, c: 'FF991B1B' }, { b: 1, c: 'FF92400E' }, { b: 1, c: 'FF1E40AF' }, { c: 'FF6B7280' }];
+  // fills: 0 none, 1 gray125 (required), 2 header green, 3 good, 4 bad, 5 warn, 6 info, 7 no data, 8 key column
+  const fills = ['FF0F3D2E', 'FFDCFCE7', 'FFFEE2E2', 'FFFEF3C7', 'FFDBEAFE', 'FFF3F4F6', 'FFECFDF5'];
+  const xf = (f, fi, h, wrap) => '<xf numFmtId="0" fontId="' + f + '" fillId="' + fi + '" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment ' + (h ? 'horizontal="' + h + '" ' : '') + 'vertical="center"' + (wrap ? ' wrapText="1"' : '') + '/></xf>';
+  const xfs = ['<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>', xf(1, 2, 'center', 1), xf(0, 0, '', 1), xf(0, 0, 'right'), xf(3, 3, 'center', 1), xf(4, 4, 'center', 1), xf(5, 5, 'center', 1), xf(6, 6, 'center', 1), xf(2, 8, '', 1), xf(7, 7, 'center', 1), xf(2, 8, 'right')];
+  const styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="' + fonts.length + '">' + fonts.map(font).join('') + '</fonts>'
+    + '<fills count="' + (fills.length + 2) + '"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' + fills.map(fill).join('') + '</fills>'
+    + '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border>' + thin + '</border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+    + '<cellXfs count="' + xfs.length + '">' + xfs.join('') + '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
   return zipStored([
     { name: '[Content_Types].xml', data: ct }, { name: '_rels/.rels', data: rels }, { name: 'xl/workbook.xml', data: wb }, { name: 'xl/_rels/workbook.xml.rels', data: wbRels }, { name: 'xl/styles.xml', data: styles },
     ...sheets.map((s, i) => ({ name: 'xl/worksheets/sheet' + (i + 1) + '.xml', data: sheetXml(s) })),
@@ -441,17 +475,18 @@ function workbookSheets(c) {
     ['Suggestions', k.recs], ['High / medium / low', k.high + ' / ' + k.medium + ' / ' + k.low], ['Agents with stale-data warnings', k.stale],
     ['Sources available', c.sources.filter((s) => s.availability === 'Available').length + ' of ' + c.sources.length],
     ...c.sources.map((s) => ['Window: ' + s.source, s.coverage + ' (' + s.availability + ')']),
+    ...(c.note ? [['Note', c.note]] : []),
     ...(c.failures && c.failures.length ? [['Not completed this cycle', c.failures.join('; ') + ' (retry: run the workflow by hand)']] : []),
   ].map(([item, value]) => ({ item, value }));
   return [
-    { name: 'Overview', columns: [COL('item', 'Item', 44), COL('value', 'Value', 70)], rows: overview },
-    { name: 'Agent Reports', columns: [COL('agent', 'Agent', 20), COL('role', 'Role', 28), COL('agent_id', 'Agent id', 26), COL('reports_at_et', 'Reports at', 11), COL('catalog_status', 'Catalog status', 13), COL('live_state', 'Live state', 22), COL('data_state', 'Data', 13), COL('window', 'Window', 40),
+    { name: 'Overview', tab: 'FF0F3D2E', columns: [COL('item', 'Item', 44), COL('value', 'Value', 70)], rows: overview },
+    { name: 'Agent Reports', tab: 'FF0F766E', columns: [COL('agent', 'Agent', 20), COL('role', 'Role', 28), COL('agent_id', 'Agent id', 26), COL('reports_at_et', 'Reports at', 11), COL('catalog_status', 'Catalog status', 13), COL('live_state', 'Live state', 22), COL('data_state', 'Data', 13), COL('window', 'Window', 40),
       COL('runs_seen', 'Runs seen', 30), COL('runs_total', 'Runs', 8), COL('succeeded', 'Succeeded', 10), COL('failed', 'Failed', 8), COL('success_rate', 'Success rate', 13), COL('median_duration', 'Median', 10), COL('longest_duration', 'Longest', 10),
       COL('last_run', 'Last run', 40), COL('last_failure', 'Last failure', 40), COL('scheduled_runs', 'Scheduled', 10), COL('event_runs', 'Event', 8), COL('manual_runs', 'Manual', 8), COL('busiest_hours_et', 'Busiest hours', 26),
       COL('schedules_et', 'Schedules', 40), COL('github_workflows', 'GitHub workflows', 26), COL('n8n_published', 'n8n published', 34), COL('n8n_drafts', 'n8n drafts', 30), COL('memory_service', 'Memory service', 30), COL('atlas_runs', 'Atlas runs', 12), COL('atlas_memory_items', 'Memory items', 12),
       COL('budget', 'Budget / limits', 40), COL('stale_flags', 'Stale-data warnings', 50), COL('recommendations', 'Suggestions', 11)], rows: c.agents },
-    { name: 'Workflow Recommendations', columns: [COL('agent', 'Agent', 20), COL('agent_id', 'Agent id', 26), COL('priority', 'Priority', 10), COL('rule', 'Rule', 22), COL('condition', 'Condition', 44), COL('evidence', 'Evidence', 50), COL('suggested_change', 'Suggested change', 60), COL('review_status', 'Review status', 36), COL('last_seen', 'Last seen (UTC)', 24)], rows: c.recs },
-    { name: 'Sources', columns: [COL('source', 'Source', 28), COL('holds', 'What it holds', 44), COL('collected_at', 'Collected at (UTC)', 24), COL('coverage', 'Coverage window', 30), COL('retention', 'Retention', 40), COL('availability', 'Availability', 24), COL('note', 'Note', 50)], rows: c.sources },
+    { name: 'Workflow Recommendations', tab: 'FFB45309', columns: [COL('agent', 'Agent', 20), COL('agent_id', 'Agent id', 26), COL('priority', 'Priority', 10), COL('rule', 'Rule', 22), COL('condition', 'Condition', 44), COL('evidence', 'Evidence', 50), COL('suggested_change', 'Suggested change', 60), COL('review_status', 'Review status', 36), COL('last_seen', 'Last seen (UTC)', 24)], rows: c.recs },
+    { name: 'Sources', tab: 'FF1E40AF', columns: [COL('source', 'Source', 28), COL('holds', 'What it holds', 44), COL('collected_at', 'Collected at (UTC)', 24), COL('coverage', 'Coverage window', 30), COL('retention', 'Retention', 40), COL('availability', 'Availability', 24), COL('note', 'Note', 50)], rows: c.sources },
   ];
 }
 
@@ -489,6 +524,37 @@ const FILES = {
   csv: { outputKey: 'atlas-health-monitor:agent-self-reports-sheet', fileName: 'atlas-agent-self-reports.csv', mime: 'text/csv', title: 'Agent self-reports (table)' },
 };
 
+// ---------------------------------------------------------------- one file per agent (Knowledge & Research Center)
+
+/** The Output Library's building on the map (src/library/model.ts LIBRARY_BUILDING). */
+const LIBRARY_BUILDING = 'service:financial:financial-planning';
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+/** True when the agent has no runs to count in the window; its files then open with "No data in window". */
+const agentNoData = (row) => !(Number(row.runs_total) > 0);
+/** The cycle cut down to one agent, so buildPdf and workbookSheets draw just that agent. */
+function agentCycle(c, row) {
+  const recs = c.recs.filter((r) => r.agent_id === row.agent_id);
+  return { ...c, agents: [row], recs, schedule: c.schedule.filter((s) => s.agent_id === row.agent_id), conflicts: [], counts: countsOf([row], recs),
+    title: row.agent + ' · work report', subtitle: row.role + ' · filed in the Knowledge & Research Center library',
+    note: agentNoData(row) ? 'No data in window: ' + (row.data_state === 'No data' ? 'no workflow is linked to this agent' : row.data_state === 'Not connected' ? 'its run source could not be read' : 'no runs in ' + row.window) + '.' : '' };
+}
+/**
+ * Two Output Library files per agent (Khaneil, 2026-11-24): a PDF to read and an Excel workbook to sort and
+ * filter, from the same row, so they always agree. Each is built on its own so one failing never stops the rest.
+ */
+function agentFiles(c) {
+  return c.agents.flatMap((row) => {
+    const sub = agentCycle(c, row), noData = agentNoData(row);
+    const summary = (noData ? sub.note + ' ' : row.runs_total + ' runs, ' + row.failed + ' failed, success ' + row.success_rate + ', last run ' + row.last_run + '. ') + plural(row.recommendations, 'suggestion') + ', none applied.';
+    return [['pdf', 'application/pdf', 'PDF', () => buildPdf(sub).bytes], ['spreadsheet', XLSX_MIME, 'Excel workbook', () => buildXlsx(workbookSheets(sub))]].map(([format, mime, label, make]) => {
+      const ext = format === 'pdf' ? 'pdf' : 'xlsx';
+      const meta = { agentId: row.agent_id, agent: row.agent, format, noData, outputKey: row.agent_id + ':work-report-' + ext, fileName: row.agent_id + '-work-report.' + ext, mime, title: row.agent + ' work report (' + label + ')', summary };
+      try { return { ...meta, ok: true, base64: make().toString('base64') }; }
+      catch (e) { return { ...meta, ok: false, error: row.agent + ' ' + label + ' not built: ' + String((e && e.message) || e).slice(0, 200) }; }
+    });
+  });
+}
+
 // @export-start (left out when pasted into n8n)
-module.exports = { DEFAULT_TZ, NO_DATA, NOT_DOCUMENTED, REVIEW_STATUS, RULES, zonedParts, fmtLocal, fmtDay, fmtStamp, fmtDur, median, hhmm, busyOf, scoreSlot, pickSlots, slotConflicts, cronTimes, n8nSchedules, n8nRun, githubRun, agentReport, sourcesOf, countsOf, recRows, buildPdf, crc32, zipStored, buildXlsx, workbookSheets, buildCycle, FILES };
+module.exports = { DEFAULT_TZ, NO_DATA, NOT_DOCUMENTED, REVIEW_STATUS, RULES, zonedParts, fmtLocal, fmtDay, fmtStamp, fmtDur, median, hhmm, busyOf, scoreSlot, pickSlots, slotConflicts, cronTimes, n8nSchedules, n8nRun, githubRun, agentReport, sourcesOf, countsOf, recRows, buildPdf, crc32, zipStored, buildXlsx, toneOf, workbookSheets, buildCycle, FILES, LIBRARY_BUILDING, agentNoData, agentCycle, agentFiles };
 // @export-end
