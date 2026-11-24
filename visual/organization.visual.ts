@@ -18,7 +18,7 @@ for(const width of [1512,390]) test(`Separated agents and automations ${width}`,
  await page.screenshot({path:`docs/agent-organization/agents-${width}.png`});
  await goTo(page,'Automations');
  await expect(page.getByRole('heading',{name:'Automations',exact:true})).toBeVisible();
- await expect(page.locator('.reg-row')).toHaveCount(39); // 39: Atlas Task Writer (draft, #506) and Atlas Executive (paused, #508) joined the 37 of 2026-11-19
+ await expect(page.locator('.reg-row')).toHaveCount(42); // 42: Atlas Engineering and Atlas Quality Assurance (paused, #516) and the Atlas Security Sheet (#510) joined the 39 after #506 and #508
  for(const id of ['github-merge-flow','atlas-ci','benjaire-flow-intake'])await expect(page.locator(`.reg-row[data-id="${id}"]`)).toHaveCount(1);
  await expect(page.locator('.reg-row[data-id="repo-intelligence"]')).toHaveCount(0);
  await page.locator('.reg-row[data-id="github-merge-flow"]').click();await settle(page,1);

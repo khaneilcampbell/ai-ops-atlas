@@ -1,0 +1,49 @@
+name: Atlas Engineer validate
+
+# The checks Atlas QA trusts for an Atlas Engineering change. The Atlas Engineer runner's report job
+# starts this with the pushed atlas-eng/<task>-a<attempt> branch as its ref, so the model-written
+# change is installed and run only in that branch's context: nothing here can reach main's Actions
+# cache. No secrets, read-only token, and the step names must match src/engineering/repos.ts (Lint,
+# Typecheck, Unit tests): QA looks them up by name, together with this run's branch and commit.
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: atlas-engineer-validate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Only on an atlas-eng branch
+        if: ${{ !startsWith(github.ref, 'refs/heads/atlas-eng/') }}
+        run: |
+          echo "::error::These checks only run on atlas-eng branches."
+          exit 1
+      # No ref: the run's own branch. No dependency cache, and no credentials left in the checkout.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Install
+        id: install
+        run: npm ci
+      - name: Lint
+        if: always() && steps.install.outcome == 'success'
+        run: npm run lint
+      - name: Typecheck
+        if: always() && steps.install.outcome == 'success'
+        run: npm run typecheck
+      - name: Unit tests
+        if: always() && steps.install.outcome == 'success'
+        run: npm test
