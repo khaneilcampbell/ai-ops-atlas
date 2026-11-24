@@ -4,7 +4,7 @@ import type { RegistryEntry } from "../../registry/registry";
 import type { IdentityStatus } from "../../registry/agentStatus";
 import { identityFor } from "../../registry/identity";
 import { AgentAvatar } from "../../components/AgentIdentity";
-import { buildTeam, type TeamRole } from "./team";
+import { buildTeam, type TeamRole } from "./teamModel";
 import "../../styles/team.css";
 
 const FACTORY = "atlas-agent-factory";

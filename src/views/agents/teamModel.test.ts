@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { catalog } from "../../catalog";
 import { roleDirectory } from "../../catalog/essentialRoles";
 import { isAiAgent } from "../../catalog/roles";
-import { buildTeam, roleHealth } from "./team";
+import { buildTeam, roleHealth } from "./teamModel";
 
 const none = new Map();
 const team = buildTeam(catalog.agents, catalog.projects, none);
