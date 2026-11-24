@@ -6,3 +6,4 @@
 - 2026-11-24 · Each module now lives in the one core building it matches: Observability moves into Security & Infrastructure Center, Model Intelligence Lab into AI Engineering & Research Center, and Commerce into Product & Growth Studio. The two airport buildings become filler buildings (Sparrow Hall, Quarry House) (#528)
 - 2026-11-24 · Back to the organized setup: every building stays on the map, and each module lives in the one core building it matches. The clean start and the Business Operations HQ move are undone (#528)
 - 2026-11-24 · The Security Operations Center is back in its own spot (the Business Operations lake move is undone) and the Financial District towers have their real names again instead of filler names (#528)
+- 2026-11-24 · The Financial District is no longer selected as one block: its towers belong to different core buildings now, so you select each tower or Financial Park on its own (#528)
