@@ -1,1 +1,1 @@
-- 2026-11-24 · New Team tab in Agents: your 8 roles as an org chart under Yusuf Demir, with what needs you and each agent's lifecycle (#PR)
+- 2026-11-24 · New Team tab in Agents: your 8 roles as an org chart under Yusuf Demir, with what needs you and each agent's lifecycle (#526)
