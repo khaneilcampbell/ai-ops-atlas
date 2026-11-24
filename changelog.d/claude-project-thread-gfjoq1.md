@@ -1,0 +1,1 @@
+- 2026-11-24 · Intel opens on a new Overview: a guide to every part of Atlas, what each tab is for, and how your agents are organised (you approve, Yusuf coordinates, one lead per role) (#PR)
