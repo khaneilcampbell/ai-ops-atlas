@@ -68,10 +68,10 @@ A hand run and the last slot of the day read every agent and build, each on its 
 - `atlas-agent-self-reports.csv`: the one-row-per-agent table. Output key
   `atlas-health-monitor:agent-self-reports-sheet`.
 
-- One work report per agent, filed under that agent's own id (output key `<agent id>:work-report`), so the
-  Library's agent filter finds it. The format follows the data: an agent with runs in the window gets an
-  Excel workbook (its row, suggestions and sources); an agent with no runs gets a short PDF that opens with
-  "No data in window" and says why (no workflow linked, source unreadable, or no runs). Nothing is invented.
+- Each agent's work report as both a PDF and an Excel workbook, filed under that agent's own id (output
+  keys `<agent id>:work-report-pdf` and `<agent id>:work-report-xlsx`), so the Library's agent filter finds
+  them. Both come from the same row. An agent with no runs gets "No data in window" in both, with the
+  reason (no workflow linked, source unreadable, or no runs). Nothing is invented.
   Built by `agentFiles` in the engine.
 
 Each file is uploaded to the Output Library in its own request, filed in the Knowledge & Research Center

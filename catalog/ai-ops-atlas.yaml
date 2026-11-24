@@ -929,7 +929,7 @@ agents:
         outputs:
           - Atlas Agent Self-Reports Google Sheet
           - Agent self-reports PDF and spreadsheet in the Output Library
-          - One work report per agent in the Output Library at the Knowledge & Research Center (spreadsheet when it has runs, "No data in window" PDF when not)
+          - One work report per agent in the Output Library at the Knowledge & Research Center (a PDF and an Excel workbook each)
         dependencies:
           - atlas-data-inventory
         limitations:

@@ -442,6 +442,7 @@ function workbookSheets(c) {
     ['Suggestions', k.recs], ['High / medium / low', k.high + ' / ' + k.medium + ' / ' + k.low], ['Agents with stale-data warnings', k.stale],
     ['Sources available', c.sources.filter((s) => s.availability === 'Available').length + ' of ' + c.sources.length],
     ...c.sources.map((s) => ['Window: ' + s.source, s.coverage + ' (' + s.availability + ')']),
+    ...(c.note ? [['Note', c.note]] : []),
     ...(c.failures && c.failures.length ? [['Not completed this cycle', c.failures.join('; ') + ' (retry: run the workflow by hand)']] : []),
   ].map(([item, value]) => ({ item, value }));
   return [
@@ -495,32 +496,32 @@ const FILES = {
 /** The Output Library's building on the map (src/library/model.ts LIBRARY_BUILDING). */
 const LIBRARY_BUILDING = 'service:financial:financial-planning';
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-/**
- * Which file fits an agent's work data. Runs in the window are tabular (counts, timings, triggers), so a
- * spreadsheet. No runs to tabulate leaves a written review (why there is no data, its suggestions), so a PDF
- * that says "No data in window". Never invents numbers: both come from the same row.
- */
-const agentFormat = (row) => (Number(row.runs_total) > 0 ? 'spreadsheet' : 'pdf');
+/** True when the agent has no runs to count in the window; its files then open with "No data in window". */
+const agentNoData = (row) => !(Number(row.runs_total) > 0);
 /** The cycle cut down to one agent, so buildPdf and workbookSheets draw just that agent. */
 function agentCycle(c, row) {
   const recs = c.recs.filter((r) => r.agent_id === row.agent_id);
-  const noData = agentFormat(row) === 'pdf';
   return { ...c, agents: [row], recs, schedule: c.schedule.filter((s) => s.agent_id === row.agent_id), conflicts: [], counts: countsOf([row], recs),
     title: row.agent + ' · work report', subtitle: row.role + ' · filed in the Knowledge & Research Center library',
-    note: noData ? 'No data in window: ' + (row.data_state === 'No data' ? 'no workflow is linked to this agent' : row.data_state === 'Not connected' ? 'its run source could not be read' : 'no runs in ' + row.window) + '.' : '' };
+    note: agentNoData(row) ? 'No data in window: ' + (row.data_state === 'No data' ? 'no workflow is linked to this agent' : row.data_state === 'Not connected' ? 'its run source could not be read' : 'no runs in ' + row.window) + '.' : '' };
 }
-/** One Output Library file per agent, each built on its own so one failing never stops the rest. */
+/**
+ * Two Output Library files per agent (Khaneil, 2026-11-24): a PDF to read and an Excel workbook to sort and
+ * filter, from the same row, so they always agree. Each is built on its own so one failing never stops the rest.
+ */
 function agentFiles(c) {
-  return c.agents.map((row) => {
-    const format = agentFormat(row), sub = agentCycle(c, row), pdf = format === 'pdf';
-    const meta = { agentId: row.agent_id, agent: row.agent, format, outputKey: row.agent_id + ':work-report', fileName: row.agent_id + '-work-report.' + (pdf ? 'pdf' : 'xlsx'),
-      mime: pdf ? 'application/pdf' : XLSX_MIME, title: row.agent + ' work report' + (pdf ? ' (PDF)' : ' (Excel workbook)'), noData: pdf,
-      summary: (pdf ? sub.note + ' ' : row.runs_total + ' runs, ' + row.failed + ' failed, success ' + row.success_rate + ', last run ' + row.last_run + '. ') + plural(row.recommendations, 'suggestion') + ', none applied.' };
-    try { return { ...meta, ok: true, base64: (pdf ? buildPdf(sub).bytes : buildXlsx(workbookSheets(sub))).toString('base64') }; }
-    catch (e) { return { ...meta, ok: false, error: row.agent + ' file not built: ' + String((e && e.message) || e).slice(0, 200) }; }
+  return c.agents.flatMap((row) => {
+    const sub = agentCycle(c, row), noData = agentNoData(row);
+    const summary = (noData ? sub.note + ' ' : row.runs_total + ' runs, ' + row.failed + ' failed, success ' + row.success_rate + ', last run ' + row.last_run + '. ') + plural(row.recommendations, 'suggestion') + ', none applied.';
+    return [['pdf', 'application/pdf', 'PDF', () => buildPdf(sub).bytes], ['spreadsheet', XLSX_MIME, 'Excel workbook', () => buildXlsx(workbookSheets(sub))]].map(([format, mime, label, make]) => {
+      const ext = format === 'pdf' ? 'pdf' : 'xlsx';
+      const meta = { agentId: row.agent_id, agent: row.agent, format, noData, outputKey: row.agent_id + ':work-report-' + ext, fileName: row.agent_id + '-work-report.' + ext, mime, title: row.agent + ' work report (' + label + ')', summary };
+      try { return { ...meta, ok: true, base64: make().toString('base64') }; }
+      catch (e) { return { ...meta, ok: false, error: row.agent + ' ' + label + ' not built: ' + String((e && e.message) || e).slice(0, 200) }; }
+    });
   });
 }
 
 // @export-start (left out when pasted into n8n)
-module.exports = { DEFAULT_TZ, NO_DATA, NOT_DOCUMENTED, REVIEW_STATUS, RULES, zonedParts, fmtLocal, fmtDay, fmtStamp, fmtDur, median, hhmm, busyOf, scoreSlot, pickSlots, slotConflicts, cronTimes, n8nSchedules, n8nRun, githubRun, agentReport, sourcesOf, countsOf, recRows, buildPdf, crc32, zipStored, buildXlsx, workbookSheets, buildCycle, FILES, LIBRARY_BUILDING, agentFormat, agentCycle, agentFiles };
+module.exports = { DEFAULT_TZ, NO_DATA, NOT_DOCUMENTED, REVIEW_STATUS, RULES, zonedParts, fmtLocal, fmtDay, fmtStamp, fmtDur, median, hhmm, busyOf, scoreSlot, pickSlots, slotConflicts, cronTimes, n8nSchedules, n8nRun, githubRun, agentReport, sourcesOf, countsOf, recRows, buildPdf, crc32, zipStored, buildXlsx, workbookSheets, buildCycle, FILES, LIBRARY_BUILDING, agentNoData, agentCycle, agentFiles };
 // @export-end

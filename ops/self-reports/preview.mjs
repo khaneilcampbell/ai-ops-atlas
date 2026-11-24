@@ -14,5 +14,5 @@ writeFileSync(join(out, E.FILES.pdf.fileName), pdf.bytes);
 writeFileSync(join(out, E.FILES.workbook.fileName), xlsx);
 const perAgent = E.agentFiles(cycle);
 for (const f of perAgent) writeFileSync(join(out, f.fileName), Buffer.from(f.base64, 'base64'));
-console.log(`${perAgent.length} agent work reports: ${perAgent.filter((f) => f.format === 'spreadsheet').length} spreadsheets, ${perAgent.filter((f) => f.format === 'pdf').length} "No data in window" PDFs`);
+console.log(`${perAgent.length / 2} agents, each with a PDF and an Excel work report (${perAgent.filter((f) => f.noData).length / 2} say "No data in window")`);
 console.log(`${cycle.counts.agents} agents, ${cycle.counts.runs} runs, ${cycle.counts.recs} suggestions; PDF ${pdf.pages} pages, workbook ${xlsx.length} bytes -> ${out}/`);

@@ -234,32 +234,37 @@ describe("safety", () => {
   });
 });
 
-describe("one work report per agent for the Knowledge & Research Center", () => {
+describe("a PDF and an Excel work report per agent for the Knowledge & Research Center", () => {
   const c = cycleOf();
   const files = E.agentFiles(c);
-  it("every agent gets exactly one file under its own id and key", () => {
-    expect(files.map((f) => f.agentId)).toEqual(c.agents.map((r) => r.agent_id));
+  it("every agent gets exactly a PDF and a workbook, under its own id and keys", () => {
+    expect(files).toHaveLength(c.agents.length * 2);
+    for (const row of c.agents) {
+      const mine = files.filter((f) => f.agentId === row.agent_id);
+      expect(mine.map((f) => f.format)).toEqual(["pdf", "spreadsheet"]);
+      expect(mine.map((f) => f.outputKey)).toEqual([`${row.agent_id}:work-report-pdf`, `${row.agent_id}:work-report-xlsx`]);
+    }
     expect(new Set(files.map((f) => f.outputKey)).size).toBe(files.length);
-    for (const f of files) expect(f).toMatchObject({ ok: true, outputKey: `${f.agentId}:work-report` });
+    for (const f of files) expect(f.ok).toBe(true);
     expect(E.LIBRARY_BUILDING).toBe("service:financial:financial-planning");
   });
-  it("runs become a spreadsheet; no runs become a 'No data in window' PDF", () => {
+  it("both files carry the agent's own data; no runs says 'No data in window' in both", () => {
     for (const f of files) {
       const row = rowOf(c, f.agentId);
-      if (Number(row.runs_total) > 0) {
-        expect(f).toMatchObject({ format: "spreadsheet", noData: false, fileName: `${f.agentId}-work-report.xlsx` });
-        const sheet = strFromU8(unzipSync(new Uint8Array(Buffer.from(f.base64, "base64")))["xl/worksheets/sheet2.xml"]);
+      const bytes = Buffer.from(f.base64, "base64");
+      const text = f.format === "pdf" ? bytes.toString("latin1") : Object.values(unzipSync(new Uint8Array(bytes))).map((b) => strFromU8(b)).join("\n");
+      if (f.format === "pdf") {
+        expect(text.startsWith("%PDF-1.4")).toBe(true);
+        expect(text).toContain(`(${row.agent} \xb7 work report)`);
+      } else {
+        const sheet = strFromU8(unzipSync(new Uint8Array(bytes))["xl/worksheets/sheet2.xml"]);
         expect(sheet).toContain(row.agent);
         expect(sheet.split("<row ").length - 1).toBe(2);
-      } else {
-        expect(f).toMatchObject({ format: "pdf", noData: true, fileName: `${f.agentId}-work-report.pdf` });
-        const pdf = Buffer.from(f.base64, "base64").toString("latin1");
-        expect(pdf.startsWith("%PDF-1.4")).toBe(true);
-        expect(pdf).toContain("No data in window");
-        expect(pdf).toContain(`(${row.agent} \xb7 work report)`);
       }
+      expect(f.noData).toBe(!(Number(row.runs_total) > 0));
+      if (f.noData) expect(text).toContain("No data in window");
+      else expect(text).not.toContain("No data in window");
     }
-    expect(files.filter((f) => f.format === "pdf").map((f) => f.agentId)).toEqual(expect.arrayContaining(["on-request", "unreachable", "quiet-watcher"]));
   });
   it("says why there is no data instead of showing 0", () => {
     expect(files.find((f) => f.agentId === "on-request").summary).toMatch(/^No data in window: no workflow is linked/);
