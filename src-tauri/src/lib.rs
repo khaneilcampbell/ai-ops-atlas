@@ -3,6 +3,7 @@ mod export;
 mod github;
 mod handoff;
 mod intel;
+mod investments;
 mod library;
 mod live;
 mod local_usage;
@@ -98,6 +99,9 @@ pub fn run() {
             export::save_pdf,
             export::save_backup,
             power::power_on_battery,
+            investments::investments_snapshot,
+            investments::investments_journal,
+            investments::investments_disconnect,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Atlas");
