@@ -70,7 +70,7 @@ export function streetLines(scene: Scene3D, opts: { drive?: boolean } = {}): Pt3
     lines.push(flat(scene.financial.street), flat(scene.financial.road));
     if (scene.financial.circa) lines.push(flat(scene.financial.circa.street));
   }
-  for (const c of scene.transportConnections) lines.push(flat(c.road));
+  for (const c of scene.transportConnections) if (!(opts.drive && c.private)) lines.push(flat(c.road));
   for (const b of scene.carBridges) {
     // The centre of the drive, ramps included: the deck is not in the end roads.
     const lane = crossing(b, 0);
