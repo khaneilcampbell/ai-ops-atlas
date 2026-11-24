@@ -26,19 +26,19 @@ describe("workspace building names", () => {
   it("applies Khaneil's operational names, keeping each original organization as metadata", () => {
     const want: [string, string, string][] = [
       [AGENCY_KEY, "Product & Growth Studio", "Benjaire"],
-      [financialKey("residence"), "Data Intelligence Center", "Benjaire"],
-      [financialKey("banks"), "Financial Operations Tower", "Benjaire"],
-      [financialKey("budget"), "Budget & Forecasting Center", "Benjaire"],
-      [financialKey("records"), "Governance & Compliance Center", "Benjaire"],
-      [DEALERSHIP_KEY, "Infrastructure Operations Hub", "Vantor Motors"],
-      [financialKey("investments"), "Investment Operations Center", "Benjaire"],
-      [MALL_KEY, "Product Marketplace", "Atlas"],
+      [financialKey("residence"), "Business Operations Tower 4", "Benjaire"],
+      [financialKey("banks"), "Business Operations Tower 1", "Benjaire"],
+      [financialKey("budget"), "Business Operations Tower 6", "Benjaire"],
+      [financialKey("records"), "Business Operations Tower 2", "Benjaire"],
+      [DEALERSHIP_KEY, "Security & Infrastructure Annex", "Vantor Motors"],
+      [financialKey("investments"), "Business Operations Tower 3", "Benjaire"],
+      [MALL_KEY, "Product & Growth Annex", "Atlas"],
       ["service:atlas-station", "Workflow Automation Hub", "Atlas"],
-      [financialKey("harbor-residence"), "Client Success Center", "Benjaire"],
+      [financialKey("harbor-residence"), "Business Operations Tower 8", "Benjaire"],
       [financialKey("circa"), "Team Residence Towers", "Benjaire"],
-      [financialKey("insurance"), "Risk & Insurance Center", "Benjaire"],
-      [financialKey("business-finance"), "Business Finance Center", "Benjaire"],
-      ["service:atlas-galleria", "Vendor & Supplier Hub", "Atlas"],
+      [financialKey("insurance"), "Business Operations Tower 7", "Benjaire"],
+      [financialKey("business-finance"), "Business Operations Tower 5", "Benjaire"],
+      ["service:atlas-galleria", "Business Operations Pavilion", "Atlas"],
       ["service:skyline-stadium", "Team Events Arena", "Atlas"],
       ["service:stadium-station", "Events Arena Station", "Atlas"],
       ["service:airport-building:terminal", "Passenger Terminal", "Atlas Airport"],
@@ -57,7 +57,7 @@ describe("workspace building names", () => {
       ["ai-ops-atlas", "Atlas Command Center", "Atlas", "Atlas HQ"],
       ["benjaire-site", "Business Operations HQ", "Benjaire", "Benjaire HQ"],
       ["intelligence-hub", "Agent Operations Center", undefined, "Intelligence Hub"],
-      ["commerce-pipeline", "Commerce Operations Center", undefined, "Commerce Pipeline"],
+      ["commerce-pipeline", "Business Operations Annex", undefined, "Commerce Pipeline", "Commerce Operations Center"],
       ["soc-lab", "Security & Infrastructure Center", undefined, "SOC Lab", "Security Operations Center"],
       ["portfolio-site", "Projects & Portfolio Studio", undefined, "Portfolio Site", "Portfolio Web Studio"],
     ];
@@ -71,7 +71,7 @@ describe("workspace building names", () => {
     expect(buildingDisplayName("service:financial-park", "Financial Park")).toBe("Financial Park");
     expect(buildingDisplayName("service:atlas-commons", "Atlas Commons")).toBe("Atlas Commons");
     expect(buildingOrganization("service:financial-park")).toBeUndefined();
-    expect(currentBuildingName("Atlas Marketplace")).toBe("Product Marketplace");
+    expect(currentBuildingName("Atlas Marketplace")).toBe("Product & Growth Annex");
     expect(currentBuildingName("Financial District")).toBe("Financial District");
   });
 
@@ -87,7 +87,7 @@ describe("workspace building names", () => {
     expect(financialBuildingMatches("Financial Operations").map((b) => b.id)).toContain("banks");
     expect(landmarkMatches("Vantor").map((n) => n.key)).toEqual([DEALERSHIP_KEY]);
     expect(landmarkMatches("Central Station").map((n) => n.key)).toEqual(["service:atlas-station"]);
-    expect(buildingAliases(MALL_KEY)).toEqual(["Atlas Marketplace"]);
+    expect(buildingAliases(MALL_KEY)).toEqual(["Atlas Marketplace", "Product Marketplace"]);
   });
 
   it("reports bad entries instead of throwing, and lets another workspace bring its own names", () => {

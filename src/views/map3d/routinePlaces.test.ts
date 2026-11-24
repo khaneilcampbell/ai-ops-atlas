@@ -38,7 +38,7 @@ describe("city places for the routine", () => {
 
   it("puts the daily self-report at the Data Intelligence Center's own door, never in the free-time pool", () => {
     const r = places.report!;
-    expect(r).toMatchObject({ id: "report:residence", kind: "district", label: "Reporting at the Data Intelligence Center", stay: [360, 360] });
+    expect(r).toMatchObject({ id: "report:residence", kind: "district", label: "Reporting at the Business Operations Tower 4", stay: [360, 360] });
     const spot = places.spots.get(r.spot)!;
     const door = scene.financial!.buildings.find((b) => b.id === "residence")!.approach[0];
     expect([spot.path.at(-1)![0], spot.path.at(-1)![2]]).toEqual(door);

@@ -99,19 +99,19 @@ describe("building instances", () => {
     expect(home("atlas-command-center")).toEqual(["Atlas Command Center"]);
     expect(home("business-operations-hq")).toEqual(["Business Operations HQ"]);
     expect(home("agent-operations-center")).toEqual(["Agent Operations Center"]);
-    expect(home("commerce-product-marketplace")).toEqual(["Commerce Operations Center", "Product Marketplace"]);
+    expect(home("commerce-product-marketplace")).toEqual(["Business Operations Annex", "Product & Growth Annex"]);
     expect(home("security-operations-center")).toEqual(["Security & Infrastructure Center"]);
     expect(home("growth-marketing-studio")).toEqual(["Product & Growth Studio"]);
     expect(home("workflow-automation-plant")).toEqual(["Workflow Automation Hub"]);
-    expect(home("data-intelligence-center")).toEqual(["Data Intelligence Center"]);
-    expect(home("finance-analytics-tower")).toEqual(["Financial Operations Tower", "Business Finance Center"]);
-    expect(home("identity-governance-tower")).toEqual(["Governance & Compliance Center"]);
-    expect(home("infrastructure-control-tower")).toEqual(["Infrastructure Operations Hub"]);
-    expect(home("integration-exchange")).toEqual(["Investment Operations Center", "Vendor & Supplier Hub"]);
+    expect(home("data-intelligence-center")).toEqual(["Business Operations Tower 4"]);
+    expect(home("finance-analytics-tower")).toEqual(["Business Operations Tower 1", "Business Operations Tower 5"]);
+    expect(home("identity-governance-tower")).toEqual(["Business Operations Tower 2"]);
+    expect(home("infrastructure-control-tower")).toEqual(["Security & Infrastructure Annex"]);
+    expect(home("integration-exchange")).toEqual(["Business Operations Tower 3", "Business Operations Pavilion"]);
     expect(home("observability-center")).toEqual(["Observability Center"]);
     expect(all.find((i) => i.id === GITHUB_TOWER.projectId)?.moduleType).toBe("development-repository-hub");
     expect(home("model-intelligence-lab")).toEqual(["Model Intelligence Lab"]);
-    expect(home("knowledge-repository")).toEqual(["Knowledge & Research Center"]);
+    expect(home("knowledge-repository")).toEqual(["AI Engineering Annex"]);
     expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(LANDMARK_MODULES.map((l) => l.id));
     // Modules are placed in their buildings and switched on once a capability is built.
     expect(all.find((i) => i.id === "atlas-marketplace")).toMatchObject({ moduleType: "commerce-product-marketplace", enabled: true });

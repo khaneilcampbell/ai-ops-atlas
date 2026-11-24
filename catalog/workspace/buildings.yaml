@@ -10,6 +10,9 @@
 schema: atlas/buildings-v1
 
 buildings:
+  # Nov 24: buildings grouped with one of the eight core buildings (workspace.yaml `merged`) house no
+  # module for now, so they carry a placeholder name after their core building (Khaneil: "rename
+  # buildings that don't have a module, something for now"). Their earlier names stay in former_names.
   "service:benjaire-marketing":
     display_name: Product & Growth Studio
     organization: Benjaire
@@ -18,37 +21,37 @@ buildings:
   # finance and operations buildings; the fictional brands they used to carry stay in former_names
   # so search still finds them. What Benjaire data each building holds: catalog/workspace/finance.yaml.
   "service:financial:residence":
-    display_name: Data Intelligence Center
+    display_name: Business Operations Tower 4
     organization: Benjaire
-    former_names: [Aldren Insights]
+    former_names: [Aldren Insights, Data Intelligence Center]
   "service:financial:banks":
-    display_name: Financial Operations Tower
+    display_name: Business Operations Tower 1
     organization: Benjaire
-    former_names: [Bayvale Bank]
+    former_names: [Bayvale Bank, Financial Operations Tower]
   "service:financial:financial-planning":
-    display_name: Knowledge & Research Center
+    display_name: AI Engineering Annex
     organization: Benjaire
-    former_names: [Ravelle Advisors]
+    former_names: [Ravelle Advisors, Knowledge & Research Center]
   "service:financial:budget":
-    display_name: Budget & Forecasting Center
+    display_name: Business Operations Tower 6
     organization: Benjaire
-    former_names: [Ellery Budget Center]
+    former_names: [Ellery Budget Center, Budget & Forecasting Center]
   "service:financial:records":
-    display_name: Governance & Compliance Center
+    display_name: Business Operations Tower 2
     organization: Benjaire
-    former_names: [Halden Trust]
+    former_names: [Halden Trust, Governance & Compliance Center]
   "service:bmw-dealership":
-    display_name: Infrastructure Operations Hub
+    display_name: Security & Infrastructure Annex
     organization: Vantor Motors
-    former_names: [Vantor Motors]
+    former_names: [Vantor Motors, Infrastructure Operations Hub]
   "service:financial:investments":
-    display_name: Investment Operations Center
+    display_name: Business Operations Tower 3
     organization: Benjaire
-    former_names: [Robin Exchange, Integration Exchange]
+    former_names: [Robin Exchange, Integration Exchange, Investment Operations Center]
   "service:atlas-marketplace":
-    display_name: Product Marketplace
+    display_name: Product & Growth Annex
     organization: Atlas
-    former_names: [Atlas Marketplace]
+    former_names: [Atlas Marketplace, Product Marketplace]
   "service:atlas-station":
     display_name: Workflow Automation Hub
     organization: Atlas
@@ -59,25 +62,25 @@ buildings:
   # doesn't exist yet, so it houses none. Vendor & Supplier Hub houses Integration Exchange
   # (workspace.yaml), whose vendor catalog lists the outside services the manifests name.
   "service:financial:harbor-residence":
-    display_name: Client Success Center
+    display_name: Business Operations Tower 8
     organization: Benjaire
-    former_names: [Camton Hotel]
+    former_names: [Camton Hotel, Client Success Center]
   "service:financial:circa":
     display_name: Team Residence Towers
     organization: Benjaire
     former_names: [Ellipse Residences]
   "service:financial:insurance":
-    display_name: Risk & Insurance Center
+    display_name: Business Operations Tower 7
     organization: Benjaire
-    former_names: [Merrow Credit Union]
+    former_names: [Merrow Credit Union, Risk & Insurance Center]
   "service:financial:business-finance":
-    display_name: Business Finance Center
+    display_name: Business Operations Tower 5
     organization: Benjaire
-    former_names: [Corvane Capital]
+    former_names: [Corvane Capital, Business Finance Center]
   "service:atlas-galleria":
-    display_name: Vendor & Supplier Hub
+    display_name: Business Operations Pavilion
     organization: Atlas
-    former_names: [Atlas Galleria]
+    former_names: [Atlas Galleria, Vendor & Supplier Hub]
   "service:skyline-stadium":
     display_name: Team Events Arena
     organization: Atlas

@@ -47,9 +47,9 @@ it("has no operating agent in the Product Marketplace since Marketplace Steward 
   expect(html).not.toContain("Healthy");
 });
 
-it("shows site traffic and research briefs in the Growth & Marketing Studio, loading until data arrives", () => {
+it("shows site traffic and research briefs in the Product & Growth Studio, loading until data arrives", () => {
   const html = render({ kind: "service", id: "benjaire-marketing" });
-  expect(html).toContain("Growth &amp; Marketing Studio");
+  expect(html).toContain("Product &amp; Growth Studio");
   expect(html).toContain('aria-label="Site traffic"');
   expect(html).toContain("Site traffic · Loading");
   expect(html).toContain('aria-label="Product research briefs"');
