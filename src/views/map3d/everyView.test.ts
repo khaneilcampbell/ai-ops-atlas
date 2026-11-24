@@ -6,6 +6,7 @@ import {anchorsOf} from './Map3D';
 import {buildScene} from './scene';
 import {AGENCY_KEY} from './marketingAgencyPlan';
 import {GALLERIA_KEY} from './galleriaPlan';
+import {CAFE_KEY} from './cafePlan';
 
 // Every building on the map must be on the map, clickable, in every view. The scene is built from
 // the layout alone, so the grouping is the only thing that can drop a building: the view menu
@@ -24,6 +25,10 @@ it('shows the same buildings in every grouping',()=>{
  // The Atlas Galleria stands on the green behind the Marketplace. Only the district layout (the
  // default) leaves that lot; the other layouts butt the Marketplace against other land or put a
  // station stair there, so the Galleria is left out rather than squeezed onto it.
- const rest=all.filter(k=>k!==GALLERIA_KEY);
- for(const g of GROUPINGS.slice(1))expect(buildingsIn(g).filter(k=>k!==GALLERIA_KEY),`missing or extra in ${g} grouping`).toEqual(rest);
+ // The Community Pavilion & Café takes the square the Intelligence Hub left below the Atlas
+ // Automation Plaza, which only the district layout has; the others close that gap up.
+ expect(all).toContain(CAFE_KEY);
+ const only=new Set([GALLERIA_KEY,CAFE_KEY]);
+ const rest=all.filter(k=>!only.has(k));
+ for(const g of GROUPINGS.slice(1))expect(buildingsIn(g).filter(k=>!only.has(k)),`missing or extra in ${g} grouping`).toEqual(rest);
 });

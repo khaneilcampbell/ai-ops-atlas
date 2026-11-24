@@ -40,6 +40,8 @@ export interface ViewOfficeDetail {
   /** "Locate agent": open its floor and keep it in view (buildings/insideFloors.ts). */
   personaId?: string;
   floor?: number;
+  /** A drawn place with a room to look into (the café, "service:community-cafe"): selected and framed close. */
+  service?: string;
 }
 export function viewOffice(detail: ViewOfficeDetail) {
   window.dispatchEvent(new CustomEvent<ViewOfficeDetail>(VIEW_OFFICE_EVENT, { detail }));

@@ -3,6 +3,8 @@ import { AgentMemoryPanel } from "../views/tasks/MemoryPanels";
 import { RoutinePanel } from "../views/agents/RoutinePanel";
 import { BuildingInside } from "./BuildingInside";
 import { AutomationPlazaPanel } from "./AutomationPlazaPanel";
+import { CommunityCafePanel } from "./CommunityCafePanel";
+import { CAFE_KEY, CAFE_NAME } from "../views/map3d/cafePlan";
 import { usePlazaSnapshot } from "../plaza/usePlaza";
 import { signText } from "../plaza/plazaState";
 import {LOOP_STATIONS} from '../views/map3d/perimeterRailPlan';
@@ -150,6 +152,7 @@ function FinancialDirectory(){const {select}=useAtlas();return <section><div cla
 function PlazaChip(){const s=usePlazaSnapshot();const t=signText(s);return <span className={`chip${t.tone==="attention"?" chip-warn":t.tone==="live"&&s.running.length?" chip-good":""}`}>{t.status}</span>;}
 function ServiceDetail({id}:{id:string}) {
  const {select}=useAtlas();
+ if(id===CAFE_KEY.slice("service:".length))return <><Head eyebrow="Public space · Free time for Atlas agents" title={CAFE_NAME} organization="Atlas" building={CAFE_KEY}><span className="chip">Simulated visits</span></Head><div className="panel-body selectable"><CommunityCafePanel/></div></>;
  if(id==="automation-plaza")return <><Head eyebrow="Public space · Live automation status" title="Atlas Automation Plaza" organization="Atlas"><PlazaChip/></Head><div className="panel-body selectable"><AutomationPlazaPanel/></div></>;
  if(id==="atlas-commons")return <><Head eyebrow={`Public space · Beside ${marketplaceName()}`} title="Atlas Commons"><span className="chip">Planned · Static public park</span></Head><div className="panel-body selectable"><ModuleSection/><p>A landscaped neighborhood park between a vacant lot and {marketplaceName()}, with a planted pond, a continuous walking loop, two pedestrian bridges, an open-courtyard glass pavilion and amphitheater seating.</p><dl className="kv"><dt>Access</dt><dd>Existing approach from the vacant lot and Marketplace promenade</dd><dt>Amenities</dt><dd>Pond loop · Two footbridges · Garden pavilion · Amphitheater · Lawn and seating</dd><dt>Activity</dt><dd>Visual public space. No agents, bookings or services activated.</dd></dl><p>Sports courts are deferred to preserve open lawn and clear paths. The pavilion is an exterior landscape feature; no interior is connected.</p></div></>;
  if(id==="financial-park")return <><Head eyebrow="Financial District · Public space" title="Financial Park"><span className="chip">Planned · Static public park</span></Head><div className="panel-body selectable"><ModuleSection/><p>A landscaped center between the original skyline and its airport-side expansion, with a lawn, connected paths, shade trees, seating and a protected reflecting pool.</p><dl className="kv"><dt>Access</dt><dd>Connected to the tower sidewalk, marked crossings and waterfront promenade</dd><dt>Activity</dt><dd>Visual public space · No agents or services activated</dd></dl></div></>;

@@ -1,0 +1,1 @@
+- 2026-11-19 · New Community Pavilion & Café on the empty square below the Atlas Automation Plaza: a green-roofed pavilion with a counter, indoor seats, a pergola terrace and benches, where agents spend free time, each taking a free seat and heading back to work the moment a task comes in. Select it to see who is there, free seats and View inside (#492)

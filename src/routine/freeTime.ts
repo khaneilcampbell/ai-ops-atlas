@@ -21,6 +21,7 @@ export const FREE_TIME_CHOICES: { kind: FreeTimeChoice; label: string; going: st
   { kind: "yacht", label: "Yacht ride", going: "a yacht ride" },
   { kind: "train", label: "Train ride", going: "a train ride" },
   { kind: "flight", label: "Gold Jet flight", going: "a Gold Jet flight" },
+  { kind: "cafe", label: "Café", going: "the Community Pavilion & Café" },
   { kind: "park", label: "Park bench", going: "a park bench" },
   { kind: "arena", label: "Arena", going: "the arena" },
   { kind: "district", label: "Visit a district", going: "another district" },
