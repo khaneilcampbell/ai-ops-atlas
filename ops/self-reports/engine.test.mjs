@@ -272,3 +272,25 @@ describe("a PDF and an Excel work report per agent for the Knowledge & Research 
     expect(files.find((f) => f.agentId === "flaky-builder").summary).toMatch(/^4 runs, 2 failed/);
   });
 });
+
+describe("workbook styling", () => {
+  it("colours values by what they say, never guessing", () => {
+    expect(E.toneOf("priority", "High")).toBe("bad");
+    expect(E.toneOf("failed", 2)).toBe("bad");
+    expect(E.toneOf("failed", 0)).toBe("good");
+    expect(E.toneOf("success_rate", "98%")).toBe("good");
+    expect(E.toneOf("success_rate", "50%")).toBe("bad");
+    expect(E.toneOf("success_rate", "Not connected")).toBe("none");
+    expect(E.toneOf("failed", "")).toBe(null);
+    expect(E.toneOf("role", "Builder")).toBe(null);
+  });
+  it("has bold coloured headers, borders and tab colours", () => {
+    const zip = unzipSync(new Uint8Array(E.buildXlsx(E.workbookSheets(cycleOf()))));
+    const styles = strFromU8(zip["xl/styles.xml"]);
+    expect(styles).toContain('<b/><sz val="11"/><color rgb="FFFFFFFF"/>');
+    expect(styles).toContain('style="thin"');
+    expect(strFromU8(zip["xl/worksheets/sheet1.xml"])).toContain('<tabColor rgb="FF0F3D2E"/>');
+    const sheet = strFromU8(zip["xl/worksheets/sheet3.xml"]);
+    expect(sheet).toMatch(/<c r="C\d+" t="inlineStr" s="5"><is><t xml:space="preserve">High</);
+  });
+});
