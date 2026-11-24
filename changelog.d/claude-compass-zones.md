@@ -14,3 +14,4 @@
 - 2026-11-24 · Projects & Portfolio Studio on the pond gets a full forecourt: a larger concrete plaza with a plaza lane round it that its driveway joins, the pond filled right up to the stadium parcel with no ditch left, and paved paths where boardwalks crossed it (#528)
 - 2026-11-24 · The studio on the pond has a plain concrete forecourt with a light kerb band (no green plaza stone), the same plaza size and lane offset as the other headquarters with the lane drawn only where the driveway enters, a clean T where the driveway meets the street, and street trees along the driveway (#528)
 - 2026-11-24 · Projects & Portfolio Studio's green floor is gone: its forecourt is now warm concrete with a dark wood edge to match the building, with no road wrapped round it, and one straight driveway to the street (#528)
+- 2026-11-24 · Projects & Portfolio Studio's forecourt uses the same tiles as the plazas outside the other buildings (#528)

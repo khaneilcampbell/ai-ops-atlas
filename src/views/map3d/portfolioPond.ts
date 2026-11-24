@@ -40,8 +40,8 @@ export function movePortfolioOntoPond(scene: Scene3D): void {
     const x0 = Math.min(w.x0, w.x1), z0 = Math.min(w.z0, w.z1), along = Math.abs(w.x1 - w.x0) > Math.abs(w.z1 - w.z0);
     scene.paving.push(along ? { x: x0, z: z0 - 0.16, w: Math.abs(w.x1 - w.x0), d: 0.32, y: top, h: 0.03 } : { x: x0 - 0.16, z: z0, w: 0.32, d: Math.abs(w.z1 - w.z0), y: top, h: 0.03 });
   }
-  // The forecourt is the same size as the studio's own plaza back in its district, in the building's own warm
-  // concrete with a dark-wood kerb (streetPavement.ts plainPlaza).
+  // The forecourt is the same size as the studio's own plaza back in its district, paved in the same
+  // tiles as outside the other buildings, with a light kerb (streetPavement.ts plainPlaza).
   const own = scene.paving.filter(q => q.w > tower.size && Math.abs(q.x + q.w / 2 - tower.x) < 1e-6 && Math.abs(q.z + q.d / 2 - tower.z) < 1e-6 && Math.abs(q.w - q.d) < 1e-6).sort((a, b) => a.w - b.w)[0];
   tower.x = cx; tower.z = cz; tower.plainPlaza = true;
   const p = own?.w ?? tower.size * PORTFOLIO_POND.plaza, plaza: Rect = { x: cx - p / 2, z: cz - p / 2, w: p, d: p };
