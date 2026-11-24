@@ -5,6 +5,7 @@ import {anchorsOf} from './Map3D';
 import {buildScene,type Rect} from './scene';
 import {districtRect,unionRect,wholeBuilding} from './buildingExtent';
 import {isGithubTower} from './githubTowerPlan';
+import {PORTFOLIO_POND,portfolioPondArea} from './portfolioPond';
 
 // One building, one district, one selection (Khaneil, 2026-11-09). Every part of a building must sit
 // in its own project's district, and the outline a click draws must cover the whole building.
@@ -28,6 +29,9 @@ describe.each(GROUPINGS)('%s grouping',(g)=>{
   for(const {key,p,r} of parts){
    const own=districtRect(scene,p);
    expect(own,`${key} has no district`).toBeDefined();
+   // Khaneil, 2026-11-24: Projects & Portfolio Studio alone stands on the filled pond, outside its district.
+   const pond=p===PORTFOLIO_POND.projectId&&key.startsWith('project:')?portfolioPondArea(scene):undefined;
+   if(pond&&within(r,pond))continue;
    expect(within(r,own!),`${key} spills out of ${p}`).toBe(true);
   }
  });

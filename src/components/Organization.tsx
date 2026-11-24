@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { categoryLabel, districtLabel, organize, tierLabel, type Decided, type OrgRecord } from "../catalog/organization";
-import { AGENT_TIERS, AUTOMATION_CATEGORIES } from "../catalog/taxonomy";
+import { AGENT_TIERS, AUTOMATION_CATEGORIES, zoneLabel, zoneOf } from "../catalog/taxonomy";
 import type { Agent, Project } from "../catalog/types";
 import type { ActivityItem } from "../lib/derive";
 import { formatDate, relative } from "../lib/time";
@@ -49,6 +49,8 @@ export function ProjectOrganization({ project, agents, latest }: { project: Proj
               {districtLabel(district.value)}
               {district.provenance === "inferred" && <span className="muted small"> · inferred</span>}
             </dd>
+            <dt>Zone</dt>
+            <dd>{zoneLabel(zoneOf(project.id, district.value))}</dd>
           </>
         )}
         <dt>Status</dt>

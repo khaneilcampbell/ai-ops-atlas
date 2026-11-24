@@ -38,11 +38,18 @@ export interface AtlasWorkspace {
   landmarks: readonly LandmarkAssignment[];
   /** Module types this workspace may use, or "all". */
   entitlements: readonly ModuleTypeId[] | "all";
+  /**
+   * Buildings grouped with a core building: grouped building key -> core building key (both map
+   * selection keys, `project:<id>` or `service:<id>`). A grouped building stays on the map but houses
+   * no module for now; its module is listed in the core building, so one building can hold several.
+   */
+  merged?: Readonly<Record<string, string>>;
 }
 
 export const WORKSPACE_SCHEMA = "atlas/workspace-v1";
 const KEY_RE = /^service:[a-z0-9][a-z0-9:-]*$/;
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
+const BUILDING_RE = /^(project|service):[a-z0-9][a-z0-9:-]*$/;
 
 /** A workspace with nothing in it, used when the file cannot be read at all. */
 const EMPTY: AtlasWorkspace = { id: "workspace", name: "Workspace", landmarks: [], entitlements: "all" };
@@ -101,7 +108,21 @@ export function parseWorkspace(file: string, text: string, issues: ManifestIssue
       landmarks.push({ id: key.slice("service:".length), name: mapName, moduleType: o.module, ...(project ? { project } : {}), ...(agents?.length ? { agents: agents as string[] } : {}) });
     }
   }
-  return { id: id ?? EMPTY.id, name: name ?? EMPTY.name, landmarks, entitlements };
+  const merged: Record<string, string> = {};
+  const rawMerged = root.merged;
+  if (rawMerged !== undefined && (!rawMerged || typeof rawMerged !== "object" || Array.isArray(rawMerged))) {
+    fail("merged: expected a mapping of building id to the building that houses it");
+  } else if (rawMerged) {
+    for (const [key, v] of Object.entries(rawMerged as Record<string, unknown>)) {
+      const host = str(v);
+      if (!BUILDING_RE.test(key) || !host || !BUILDING_RE.test(host)) { fail(`merged.${key}: use building ids such as "service:atlas-galleria": "project:benjaire-site"`); continue; }
+      if (host === key) { fail(`merged.${key}: a building can't house itself`); continue; }
+      merged[key] = host;
+    }
+    // A host is a building that stays on the map, never one that is folded itself.
+    for (const [key, host] of Object.entries(merged)) if (merged[host]) { fail(`merged.${key}: "${host}" is folded into another building itself`); delete merged[key]; }
+  }
+  return { id: id ?? EMPTY.id, name: name ?? EMPTY.name, landmarks, entitlements, ...(Object.keys(merged).length ? { merged } : {}) };
 }
 
 const files = import.meta.glob("../../catalog/workspace/workspace.yaml", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
@@ -113,6 +134,26 @@ export const workspaceIssues: readonly ManifestIssue[] = issues;
 
 /** The landmark module assignments of this workspace (kept as a name for the existing callers and tests). */
 export const LANDMARK_MODULES: readonly LandmarkAssignment[] = WORKSPACE.landmarks;
+
+/** The building that houses a folded building, or undefined when it stands on its own. */
+export function hostOf(key: string | null | undefined, workspace: Pick<AtlasWorkspace, "merged"> = WORKSPACE): string | undefined {
+  return key ? workspace.merged?.[key] : undefined;
+}
+
+/** True when a building is grouped with a core building, and so houses no module of its own for now. */
+export function isMerged(key: string | null | undefined, workspace: Pick<AtlasWorkspace, "merged"> = WORKSPACE): boolean {
+  return !!hostOf(key, workspace);
+}
+
+/** The buildings folded into a host, in file order. */
+export function housedIn(host: string, workspace: Pick<AtlasWorkspace, "merged"> = WORKSPACE): string[] {
+  return Object.entries(workspace.merged ?? {}).filter(([, h]) => h === host).map(([k]) => k);
+}
+
+/** The selection key a click or search should land on: the host for a folded building, else the key itself. */
+export function onMapKey(key: string, workspace: Pick<AtlasWorkspace, "merged"> = WORKSPACE): string {
+  return hostOf(key, workspace) ?? key;
+}
 
 export function isEntitled(workspace: Pick<AtlasWorkspace, "entitlements">, type: ModuleTypeId | null | undefined): boolean {
   return !!type && (workspace.entitlements === "all" || workspace.entitlements.includes(type));

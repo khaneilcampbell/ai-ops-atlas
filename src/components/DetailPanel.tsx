@@ -20,6 +20,9 @@ import {GOLD_JET_ID,GOLD_JET_KEY,GOLD_JET_NAME,GOLD_JET_OFFICE_ID,GOLD_JET_PASSE
 import {AGENCY_BUILDING,agencyRoom} from "../views/office/agencyWorkplaces";
 import {AIRPORT_BUILDINGS,airportBuilding} from "../views/map3d/airportBuildings";
 import {landmarkModuleStatus} from "../modules/lookup";
+import {WORKSPACE,hostOf,housedIn} from "../modules/workspace";
+import {moduleType} from "../modules/catalog";
+import type {Catalog} from "../catalog/types";
 import { AgentOutput } from "./AgentOutput";
 import { hasIntelligence, IntelligenceTab } from "../views/agents/IntelligenceTab";
 import { AgentPresence } from "../views/agents/PresenceEditor";
@@ -65,7 +68,8 @@ export function DetailPanel({ docked = false }: { docked?: boolean }) {
   }, [select]);
 
   if (!selection) return null;
-  const body = selection.kind === "agent" ? <AgentDetail key={selection.id} id={selection.id} /> : selection.kind === "service" ? <ServiceDetail key={selection.id} id={selection.id} /> : selection.kind === "project" ? <ProjectDetail key={selection.id} id={selection.id} /> : <RepoDetail key={selection.id} name={selection.id} />;
+  const detail = selection.kind === "agent" ? <AgentDetail key={selection.id} id={selection.id} /> : selection.kind === "service" ? <ServiceDetail key={selection.id} id={selection.id} /> : selection.kind === "project" ? <ProjectDetail key={selection.id} id={selection.id} /> : <RepoDetail key={selection.id} name={selection.id} />;
+  const body = selection.kind === "project" || selection.kind === "service" ? <>{detail}<PartOf building={`${selection.kind}:${selection.id}`}/></> : detail;
   if (docked)
     return (
       <aside className="panel docked" aria-label="Inspector">
@@ -154,7 +158,7 @@ function ServiceDetail({id}:{id:string}) {
  const {select}=useAtlas();
  if(id===CAFE_KEY.slice("service:".length))return <><Head eyebrow="Public space · Free time for Atlas agents" title={CAFE_NAME} organization="Atlas" building={CAFE_KEY}><span className="chip">Simulated visits</span></Head><div className="panel-body selectable"><CommunityCafePanel/></div></>;
  if(id==="automation-plaza")return <><Head eyebrow="Public space · Live automation status" title="Atlas Automation Plaza" organization="Atlas"><PlazaChip/></Head><div className="panel-body selectable"><AutomationPlazaPanel/></div></>;
- if(id==="atlas-commons")return <><Head eyebrow={`Public space · Beside ${marketplaceName()}`} title="Atlas Commons"><span className="chip">Planned · Static public park</span></Head><div className="panel-body selectable"><ModuleSection/><p>A landscaped neighborhood park between a vacant lot and {marketplaceName()}, with a planted pond, a continuous walking loop, two pedestrian bridges, an open-courtyard glass pavilion and amphitheater seating.</p><dl className="kv"><dt>Access</dt><dd>Existing approach from the vacant lot and Marketplace promenade</dd><dt>Amenities</dt><dd>Pond loop · Two footbridges · Garden pavilion · Amphitheater · Lawn and seating</dd><dt>Activity</dt><dd>Visual public space. No agents, bookings or services activated.</dd></dl><p>Sports courts are deferred to preserve open lawn and clear paths. The pavilion is an exterior landscape feature; no interior is connected.</p></div></>;
+ if(id==="atlas-commons")return <><Head eyebrow={`Public space · Beside ${marketplaceName()}`} title="Atlas Commons"><span className="chip">Planned · Static public park</span></Head><div className="panel-body selectable"><ModuleSection/><HousedBuildings host="service:atlas-commons"/><p>A landscaped neighborhood park between a vacant lot and {marketplaceName()}, with a planted pond, a continuous walking loop, two pedestrian bridges, an open-courtyard glass pavilion and amphitheater seating.</p><dl className="kv"><dt>Access</dt><dd>Existing approach from the vacant lot and Marketplace promenade</dd><dt>Amenities</dt><dd>Pond loop · Two footbridges · Garden pavilion · Amphitheater · Lawn and seating</dd><dt>Activity</dt><dd>Visual public space. No agents, bookings or services activated.</dd></dl><p>Sports courts are deferred to preserve open lawn and clear paths. The pavilion is an exterior landscape feature; no interior is connected.</p></div></>;
  if(id==="financial-park")return <><Head eyebrow="Financial District · Public space" title="Financial Park"><span className="chip">Planned · Static public park</span></Head><div className="panel-body selectable"><ModuleSection/><p>A landscaped center between the original skyline and its airport-side expansion, with a lawn, connected paths, shade trees, seating and a protected reflecting pool.</p><dl className="kv"><dt>Access</dt><dd>Connected to the tower sidewalk, marked crossings and waterfront promenade</dd><dt>Activity</dt><dd>Visual public space · No agents or services activated</dd></dl></div></>;
 
  if(id==="financial-district"||id.startsWith("financial:")){
@@ -163,7 +167,7 @@ function ServiceDetail({id}:{id:string}) {
  }
  if(LOOP_STATIONS.some(s=>s.id===`service:${id}`)){const station=LOOP_STATIONS.find(s=>s.id===`service:${id}`)!;return <><Head eyebrow="Planned perimeter railway" title={station.name} building={station.id}><span className="chip">Planned · Visual simulation · Not connected</span></Head><div className="panel-body selectable"><ModuleSection/><p>One simulated train circles the landmass on a ground-level shore track and stops for 15 seconds at each platform. Doors open only while stopped. A short step-free ramp and public paths connect this stop to {currentBuildingName(station.district)}; walks that cross the track use a marked level crossing.{station.id==='service:stadium-station'&&' A second platform on the harbour side, where the train opens its doors on both sides, runs on as a boardwalk to a stair down to the yacht dock. From the station plaza, the Transit Gateway takes people over the track: a glass entrance lobby with a stair and a lift, an enclosed footbridge above the train, and a covered stair down to the boardwalk. No walk crosses the rails here.'}</p><section><div className="section-title">Connected stops</div><ul className="link-list">{LOOP_STATIONS.filter(s=>s.id!==station.id).map(s=><li key={s.id}><button className="text-btn" onClick={()=>select({kind:"service",id:s.id.slice(8)})}>{buildingDisplayName(s.id,s.name)} →</button></li>)}</ul></section><button className="text-btn" onClick={()=>select({kind:"service",id:"atlas-marketplace"})}>Back to {marketplaceName()}</button><p>Unnamed passengers are visual simulation, not live agent execution. Movement follows Traffic, reduced motion, Battery saver and map visibility controls. No external transit service is connected.</p></div></>;}
 
- if(id==="benjaire-marketing")return <><Head eyebrow="Marketing · On the bay below the Financial District" title={AGENCY_NAME} building={AGENCY_KEY}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={`skyline-business:${AGENCY_NAME}`}/></Head><div className="panel-body selectable"><ModuleSection/><p>A four-storey cream monolith cut by a diagonal glazed slot, wrapped in a diamond screen that fades from dense to open, with a copper-framed sweep of glass over the entrance and a reflecting-pool plaza on the water.</p><dl className="kv"><dt>Owning agent</dt><dd>Brand & Campaign Director · Planned, not running</dd><dt>Repository / workflows</dt><dd>khaneilcampbell/benjaire.com (site traffic and research briefs) · Benjaire Product Lab, an n8n agent</dd><dt>Campaigns</dt><dd>None. No ads, email or social accounts are connected.</dd><dt>Model usage</dt><dd>None in Atlas. Product Lab runs once a month in n8n on Claude Sonnet</dd></dl><AgencyAgents/><section><div className="section-title">Inside</div><ul><li>Lobby: reception in the round atrium, café and brand shop on the plaza</li><li>Floor 1: content studio, social desk, strategy and client review rooms</li><li>Floor 2: exhibition gallery, brand archive, insights lab, workshop</li><li>Floor 3: presentation hall for about 120 people, foyer and green room</li></ul><p>A curved stair climbs the atrium to every floor. Rooms with a Product Lab agent show it at a desk; every other room shows the role planned for it.</p></section></div></>;
+ if(id==="benjaire-marketing")return <><Head eyebrow="Marketing · On the bay below the Financial District" title={AGENCY_NAME} building={AGENCY_KEY}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={`skyline-business:${AGENCY_NAME}`}/></Head><div className="panel-body selectable"><ModuleSection/><HousedBuildings host={AGENCY_KEY}/><p>A four-storey cream monolith cut by a diagonal glazed slot, wrapped in a diamond screen that fades from dense to open, with a copper-framed sweep of glass over the entrance and a reflecting-pool plaza on the water.</p><dl className="kv"><dt>Owning agent</dt><dd>Brand & Campaign Director · Planned, not running</dd><dt>Repository / workflows</dt><dd>khaneilcampbell/benjaire.com (site traffic and research briefs) · Benjaire Product Lab, an n8n agent</dd><dt>Campaigns</dt><dd>None. No ads, email or social accounts are connected.</dd><dt>Model usage</dt><dd>None in Atlas. Product Lab runs once a month in n8n on Claude Sonnet</dd></dl><AgencyAgents/><section><div className="section-title">Inside</div><ul><li>Lobby: reception in the round atrium, café and brand shop on the plaza</li><li>Floor 1: content studio, social desk, strategy and client review rooms</li><li>Floor 2: exhibition gallery, brand archive, insights lab, workshop</li><li>Floor 3: presentation hall for about 120 people, foyer and green room</li></ul><p>A curved stair climbs the atrium to every floor. Rooms with a Product Lab agent show it at a desk; every other room shows the role planned for it.</p></section></div></>;
  if(id.startsWith("airport-building:"))return <AirportBuildingDetail id={id.slice(17)}/>;
   if(id === "atlas-marketplace") return <>
     <Head eyebrow="Products · Benjaire and Atlas" title="Atlas Marketplace" building={MALL_KEY}><span className="chip">Planned · Preview</span><EnterBuildingButton id="atlas-marketplace"/></Head>
@@ -174,8 +178,8 @@ function ServiceDetail({id}:{id:string}) {
   </>;
   const galleriaModule=id===GALLERIA_ID?liveLandmarkModule(GALLERIA_ID):undefined;
   if(id === GALLERIA_ID) return <>
-    <Head eyebrow={`Shopping mall · Behind ${marketplaceName()}`} title={GALLERIA_NAME} building={GALLERIA_KEY}><span className="chip">{galleriaModule?`${galleriaModule.name} · ${galleriaModule.availability==="available"?"Available":"Partly available"}`:"Planned · Visual building"}</span><EnterBuildingButton id={GALLERIA_ID}/></Head>
-    <div className="panel-body selectable"><ModuleSection/><p>A three-storey shopping mall over a basement car park. Two curved wings meet at a V-shaped entrance with a fountain forecourt, and a rounded supermarket fills the far side. The floors step in and out under wavy white fins, with rope lights and planted terraces, round a central atrium with a steel funnel column under a polycarbonate canopy.</p>
+    <Head eyebrow={`Business operations · Behind ${marketplaceName()}`} title={GALLERIA_NAME} building={GALLERIA_KEY}><span className="chip">{galleriaModule?`${galleriaModule.name} · ${galleriaModule.availability==="available"?"Available":"Partly available"}`:"Planned · Visual building"}</span><EnterBuildingButton id={GALLERIA_ID}/></Head>
+    <div className="panel-body selectable"><ModuleSection/><BusinessLink/><HousedBuildings host={GALLERIA_KEY}/><p>A three-storey shopping mall over a basement car park. Two curved wings meet at a V-shaped entrance with a fountain forecourt, and a rounded supermarket fills the far side. The floors step in and out under wavy white fins, with rope lights and planted terraces, round a central atrium with a steel funnel column under a polycarbonate canopy.</p>
       <section><div className="section-title">Floors</div><ul>{GALLERIA_FLOORS.map(f=><li key={f.floor}><strong>{f.label}</strong> · {f.summary}</li>)}</ul></section>
       <dl className="kv"><dt>Shops</dt><dd>Labelled by what they sell. None are open, selling or connected to payments.</dd><dt>Assigned workers</dt><dd>None</dd><dt>Model usage</dt><dd>None</dd><dt>Repository / workflow</dt><dd>{galleriaModule?`Reads ${galleriaModule.connectors.join(", ")}`:"Not connected"}</dd></dl>
     </div>
@@ -226,6 +230,45 @@ function ToolDetail({ id }: { id: string }) {
   </>;
 }
 
+/** A building's name from its map key: a catalog project's name, else its configured display name. */
+function buildingName(key: string, catalog: Catalog) {
+  if (key.startsWith("project:")) return catalog.projects.find(p => p.id === key.slice(8))?.name ?? key.slice(8);
+  const id = key.slice(8), lm = WORKSPACE.landmarks.find(l => l.id === id), fin = FINANCIAL_BUILDINGS.find(b => `financial:${b.id}` === id);
+  const fallback = id === "financial-district" ? "Financial District" : id === "automation-plaza" ? "Atlas Automation Plaza" : id === "skyline-stadium" ? "Team Events Arena" : fin?.name ?? lm?.name ?? id;
+  return buildingDisplayName(key, fallback);
+}
+/** The module a building houses, by name, if any. */
+function buildingModule(key: string, catalog: Catalog) {
+  const type = key.startsWith("project:") ? catalog.projects.find(p => p.id === key.slice(8))?.module : WORKSPACE.landmarks.find(l => l.id === key.slice(8))?.moduleType;
+  return moduleType(type)?.name;
+}
+const selectionOf = (key: string) => ({ kind: key.startsWith("project:") ? "project" as const : "service" as const, id: key.slice(8) });
+
+/**
+ * The modules of the buildings grouped with this core building (workspace.yaml `merged`, Khaneil
+ * 2026-11-24). Those buildings stay on the map but house no module for now, so this one holds them.
+ */
+export function HousedBuildings({ host }: { host: string }) {
+  const { catalog, select } = useAtlas();
+  const housed = housedIn(host);
+  if (!housed.length) return null;
+  // A grouped building whose module is the one this building already houses adds nothing new.
+  const own = buildingModule(host, catalog);
+  const withModule = housed.filter(key => { const mod = buildingModule(key, catalog); return mod && mod !== own; });
+  return <>
+    {withModule.map(key => <ModuleSection key={key} of={selectionOf(key)} from={buildingName(key, catalog)}/>)}
+    <section><div className="section-title">Filler buildings grouped here</div><ul className="link-list">{housed.map(key => { const mod = buildingModule(key, catalog); return <li key={key}><button className="text-btn" onClick={() => select(selectionOf(key))}>{buildingName(key, catalog)} →</button><span className="muted small">{!mod ? "Filler building · No module" : mod === own ? `Filler building · Its ${mod} module is this building's` : `Filler building · Its ${mod} module is shown here`}</span></li>; })}</ul></section>
+  </>;
+}
+
+/** On a grouped building's own panel: which core building now holds its module. */
+function PartOf({ building }: { building: string }) {
+  const { catalog, select } = useAtlas();
+  const host = hostOf(building);
+  if (!host) return null;
+  return <div className="panel-body"><section><div className="section-title">Filler building</div><p className="muted small">No module for now. It is grouped with {buildingName(host, catalog)}, which shows this building's module. Its agents and records are unchanged.</p><button className="text-btn" onClick={() => select(selectionOf(host))}>Open {buildingName(host, catalog)} →</button></section></div>;
+}
+
 /** A project owns its building and agents; repositories are linked resources. */
 function ProjectDetail({ id }: { id: string }) {
   const { catalog } = useAtlas();
@@ -242,6 +285,7 @@ function ProjectDetail({ id }: { id: string }) {
       <BuildingInside projectId={project.id}/>
       <BuildingTasks buildingId={project.id}/>
       {project.module === "business-operations-hq" && <BusinessLink/>}
+      <HousedBuildings host={`project:${project.id}`}/>
       <LinkedRepositories project={project}/>
       <ProjectOrganization project={project} agents={catalog.agents.filter(a => a.projectId === project.id)} />
       {project.links.length > 0 && <section><div className="section-title">Project links</div><div className="link-list">{project.links.map(link => <ExternalLink key={link.url} href={link.url}><Icon name="external" size={14} /> {link.label}</ExternalLink>)}</div></section>}

@@ -16,10 +16,10 @@ export const GITHUB_TOWER={
  projectId:'github-profile',
  /**
   * Top of the crown as a share of the Financial District's reference height (headquartersEnvelope),
-  * so the tower stands among the Financial towers and rises with them. The shortest Financial
-  * tower is 1.08 of the reference and Atlas HQ's roof is 1.0 of it, so 0.97 keeps both taller.
+  * so the tower rises with the Financial towers. Khaneil asked for Development Hub to be shorter
+  * (2026-11-24), so its crown stands at about two thirds of the reference, well under Atlas HQ's roof.
   */
- share:.97,
+ share:.65,
  /** Two stepped podium tiers: x0,x1,z0,z1 in footprints, h tall, then a rounded concrete slab. */
  podium:[
   // The lower tier holds the lobby door, so it stands an agent's height plus clearance (agentBody.ts).

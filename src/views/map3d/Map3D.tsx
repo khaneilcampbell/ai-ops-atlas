@@ -27,7 +27,7 @@ import {StreetLights} from './StreetLights';
 import {CommunityRail} from './HillsCommunity';
 import {ATLAS_STATION_KEY,COMMUNITY} from './hillsCommunityPlan';
 import {FinancialDistrict} from "./FinancialDistrict";
-import {FINANCIAL,FINANCIAL_KEY,FINANCIAL_PARK_KEY,financialKey} from "./financialPlan";
+import {FINANCIAL,FINANCIAL_PARK_KEY,financialKey} from "./financialPlan";
 import {financialJunctions} from './junctions';
 import {AIRPORT_BUILDINGS,airportBuildingKey} from "./airportBuildings";
 import {Dealership} from "./Dealership";
@@ -227,7 +227,9 @@ export function anchorsOf(scene: Scene3D, layout: Layout) {
     m.set(gh.key, { ...a, whole: wholeBuilding(a, [...scene.githubAnnex.tiers, scene.githubAnnex.skybridge]) });
   }
   if(scene.airport)for(const b of AIRPORT_BUILDINGS)m.set(airportBuildingKey(b.id),{x:airportPoint(scene.airport,b.x,b.z)[0],z:scene.airport.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.h,w:b.w,d:b.d});
-  if(scene.financial){const f=scene.financial;m.set(FINANCIAL_KEY,{x:f.x+f.w/2,z:f.z+f.d/2,y0:TERRACE_H,y1:TERRACE_H+Math.max(...f.buildings.map(b=>b.height))+1.2,w:f.w,d:f.d});for(const b of f.buildings)m.set(financialKey(b.id),{x:f.x+b.x,z:f.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.height+1.2,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d});m.set(FINANCIAL_PARK_KEY,{x:f.x+f.park.x+f.park.w/2,z:f.z+f.park.z+f.park.d/2,y0:TERRACE_H,y1:TERRACE_H+1.5,w:f.park.w,d:f.park.d});}
+  // The Financial District is no longer one selectable building (Khaneil, 2026-11-24): its towers now belong to different core
+  // buildings, so only each tower and Financial Park can be selected.
+  if(scene.financial){const f=scene.financial;for(const b of f.buildings)m.set(financialKey(b.id),{x:f.x+b.x,z:f.z+b.z,y0:TERRACE_H,y1:TERRACE_H+b.height+1.2,w:financialDimensions(b.id).w,d:financialDimensions(b.id).d});m.set(FINANCIAL_PARK_KEY,{x:f.x+f.park.x+f.park.w/2,z:f.z+f.park.z+f.park.d/2,y0:TERRACE_H,y1:TERRACE_H+1.5,w:f.park.w,d:f.park.d});}
   if(scene.communityRail?.loop)for(const stop of scene.communityRail.loop.stops){const [x,z]=stop.point;m.set(stop.id,{x,z,y0:TERRACE_H,y1:TERRACE_H+COMMUNITY.platformRise+1.5,w:8,d:8});}
   else if(scene.communityRail){for(const [key,[x,z]]of [[ATLAS_STATION_KEY,scene.communityRail.hills],["service:financial-station",scene.communityRail.financial]] as const)m.set(key,{x,z,y0:TERRACE_H,y1:TERRACE_H+COMMUNITY.platformRise+1.5,w:8,d:8});}
   if(scene.airport)m.set(AIRPORT_KEY,{x:airportPoint(scene.airport,AIRPORT_LAYOUT.terminalX,AIRPORT_LAYOUT.terminalZ)[0],z:scene.airport.z+AIRPORT_LAYOUT.terminalZ,y0:TERRACE_H,y1:TERRACE_H+3.4,w:3.8,d:10.5});
@@ -504,10 +506,9 @@ const Map3D = forwardRef<Map3DApi, Props>(function Map3D(props, ref) {
       out.push(buildingPlaque({ ...p, ...(live ? { mark: live, title: `${p.name} · ${live.label}` } : {}), selKey, hover, onSelect: select }));
     };
     if(scene.financial){
-      const f=scene.financial,top=TERRACE_H+Math.max(...f.buildings.map(b=>b.height))+1.2;
-      plaque({id:FINANCIAL_KEY,select:FINANCIAL_KEY,name:"Financial District",x:f.x+f.w/2,roof:top,z:f.z+f.d/2,priority:2,mark:PLANNED,title:"Financial District · Planned waterfront"});
+      const f=scene.financial;
       for(const b of f.buildings)if(mapLabelVisible("building",near,selKey===financialKey(b.id),hover===financialKey(b.id)))plaque({id:financialKey(b.id),select:financialKey(b.id),name:b.name,x:f.x+b.x,roof:TERRACE_H+b.height+1.2,z:f.z+b.z,priority:3,mark:PLANNED,title:`${b.name} · Planned workspace`});
-      if(near==="near"||selKey===FINANCIAL_KEY||selKey===FINANCIAL_PARK_KEY)plaque({id:FINANCIAL_PARK_KEY,select:FINANCIAL_PARK_KEY,name:"Financial Park",x:f.x+f.park.x+f.park.w/2,roof:TERRACE_H+1.2,z:f.z+f.park.z+f.park.d/2,priority:7,mark:PLANNED,title:"Financial Park · Planned public space"});
+      if(near==="near"||selKey===FINANCIAL_PARK_KEY)plaque({id:FINANCIAL_PARK_KEY,select:FINANCIAL_PARK_KEY,name:"Financial Park",x:f.x+f.park.x+f.park.w/2,roof:TERRACE_H+1.2,z:f.z+f.park.z+f.park.d/2,priority:7,mark:PLANNED,title:"Financial Park · Planned public space"});
     }
     if(scene.communityRail?.loop)for(const stop of scene.communityRail.loop.stops)if(near==="near"||selKey===stop.id||stop.id===ATLAS_STATION_KEY){const [x,z]=stop.point;plaque({id:stop.id,select:stop.id,name:stop.name,x,roof:TERRACE_H+COMMUNITY.platformRise+1.2,z,priority:8,mark:PLANNED,title:`${stop.name} · ${currentBuildingName(stop.district)} · Visual simulation`});}
     if(scene.dealership)plaque({id:DEALERSHIP_KEY,select:DEALERSHIP_KEY,name:"Vantor Motors",x:scene.dealership.x+scene.dealership.showroom.cx,roof:TERRACE_H+scene.dealership.showroom.height+.2,z:scene.dealership.z+scene.dealership.showroom.cz,priority:2,mark:PLANNED,title:"Vantor Motors · Planned visual district"});

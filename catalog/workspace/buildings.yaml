@@ -10,10 +10,13 @@
 schema: atlas/buildings-v1
 
 buildings:
+  # Nov 24: buildings grouped with one of the eight core buildings (workspace.yaml `merged`) house no
+  # module for now, so they carry a placeholder name after their core building (Khaneil: "rename
+  # buildings that don't have a module, something for now"). Their earlier names stay in former_names.
   "service:benjaire-marketing":
-    display_name: Growth & Marketing Studio
+    display_name: Product & Growth Studio
     organization: Benjaire
-    former_names: [Benjaire Marketing Agency]
+    former_names: [Benjaire Marketing Agency, Growth & Marketing Studio]
   # Nov 11: every Financial District building belongs to Benjaire. Each is one of Benjaire's
   # finance and operations buildings; the fictional brands they used to carry stay in former_names
   # so search still finds them. What Benjaire data each building holds: catalog/workspace/finance.yaml.
@@ -38,26 +41,25 @@ buildings:
     organization: Benjaire
     former_names: [Halden Trust]
   "service:bmw-dealership":
-    display_name: Infrastructure Operations Hub
-    organization: Vantor Motors
-    former_names: [Vantor Motors]
+    display_name: Security & Infrastructure Showroom
+    organization: Filler building
+    former_names: [Ironwood Hall, Vantor Motors, Infrastructure Operations Hub]
   "service:financial:investments":
     display_name: Investment Operations Center
     organization: Benjaire
     former_names: [Robin Exchange, Integration Exchange]
   "service:atlas-marketplace":
-    display_name: Product Marketplace
-    organization: Atlas
-    former_names: [Atlas Marketplace]
+    display_name: Product & Growth Arcade
+    organization: Filler building
+    former_names: [Seaview Arcade, Atlas Marketplace, Product Marketplace]
   "service:atlas-station":
     display_name: Workflow Automation Hub
     organization: Atlas
     former_names: [Atlas Central Station]
   # Nov 11: the rest of the map on the operational scheme. Buildings that house a module take the
-  # module's name; landmarks without one get a plain name for what they are, never a module.
-  # Client Success Center is named for a planned module (client onboarding and follow-up) that
-  # doesn't exist yet, so it houses none. Vendor & Supplier Hub houses Integration Exchange
-  # (workspace.yaml), whose vendor catalog lists the outside services the manifests name.
+  # module's name. Vendor & Supplier Hub houses Integration Exchange (workspace.yaml), whose vendor
+  # catalog lists the outside services the manifests name. Nov 24: buildings with no module carry a
+  # neutral filler name instead (see the note at the end of this file).
   "service:financial:harbor-residence":
     display_name: Client Success Center
     organization: Benjaire
@@ -75,13 +77,13 @@ buildings:
     organization: Benjaire
     former_names: [Corvane Capital]
   "service:atlas-galleria":
-    display_name: Vendor & Supplier Hub
-    organization: Atlas
-    former_names: [Atlas Galleria]
+    display_name: Business Operations HQ
+    organization: Benjaire
+    former_names: [Atlas Galleria, Vendor & Supplier Hub]
   "service:skyline-stadium":
-    display_name: Team Events Arena
-    organization: Atlas
-    former_names: [Atlas Stadium]
+    display_name: Atlas Commons Arena
+    organization: Filler building
+    former_names: [Oakridge Hall, Team Events Arena, Atlas Stadium]
   # Nov 18: public plaza in front of the Growth & Marketing Studio; its sign shows live automation status.
   "service:automation-plaza":
     display_name: Atlas Automation Plaza
@@ -91,22 +93,31 @@ buildings:
     display_name: Community Pavilion & Café
     organization: Atlas
   "service:stadium-station":
-    display_name: Events Arena Station
-    organization: Atlas
-    former_names: [Stadium Station]
+    display_name: Atlas Commons Station
+    organization: Filler building
+    former_names: [Pinecrest Station, Events Arena Station, Stadium Station]
   "service:airport-building:terminal":
-    display_name: Passenger Terminal
-    organization: Atlas Airport
-    former_names: [Atlas · Terminal]
+    display_name: Atlas Airport Terminal
+    organization: Filler building
+    former_names: [Hawthorn Hall, Passenger Terminal, Atlas · Terminal]
   "service:airport-building:tower":
-    display_name: Air Traffic Control
-    organization: Atlas Airport
-    former_names: [Atlas · Air Traffic]
+    display_name: Atlas Airport Control Tower
+    organization: Filler building
+    former_names: [Rowan Tower, Air Traffic Control, Atlas · Air Traffic]
   "service:airport-building:cargo":
-    display_name: Model Intelligence Lab
-    organization: Atlas Airport
-    former_names: [Atlas · Cargo]
+    display_name: AI Engineering Hangar
+    organization: Filler building
+    former_names: [Quarry House, Atlas · Cargo, Model Intelligence Lab]
   "service:airport-building:operations":
-    display_name: Observability Center
-    organization: Atlas Airport
-    former_names: [Atlas · Operations]
+    display_name: Security & Infrastructure Office
+    organization: Filler building
+    former_names: [Sparrow Hall, Atlas · Operations, Observability Center]
+  # Nov 24: buildings that house no module get a neutral filler name, so nobody reads a purpose into them
+  # (Khaneil: "make the other buildings not in a module a random building name ... label it as a filler
+  # building"). Their earlier names stay in former_names for search.
+  "service:financial-station":
+    display_name: Business Operations Station
+    organization: Filler building
+    former_names: [Birch Lane Station, Financial District Station]
+  # Nov 24: filler buildings are named after the core building or place they are grouped with (workspace.yaml merged),
+  # so the map reads by group: "Security & Infrastructure Showroom", "Product & Growth Arcade", "Atlas Airport Terminal".

@@ -26,6 +26,8 @@ export const plazaSites = (s: Pick<Scene3D, "towers" | "clearedLots">) => [...s.
 export function plazaRings(scene: Pick<Scene3D, "towers" | "clearedLots" | "paving">): Map<string, Ring> {
   return new Map(
     plazaSites(scene).flatMap((t) => {
+      // A plain forecourt (the studio on the pond) is reached by its own drive, with no lane round it.
+      if ("plainPlaza" in t && t.plainPlaza) return [];
       const plaza = scene.paving
         .filter((p) => p.w > t.size && Math.abs(p.x + p.w / 2 - t.x) < 1e-6 && Math.abs(p.z + p.d / 2 - t.z) < 1e-6 && Math.abs(p.w - p.d) < 1e-6)
         .sort((a, b) => a.w - b.w)[0];
@@ -67,7 +69,7 @@ export function streetLines(scene: Scene3D, opts: { drive?: boolean } = {}): Pt3
     lines.push(flat(scene.financial.street), flat(scene.financial.road));
     if (scene.financial.circa) lines.push(flat(scene.financial.circa.street));
   }
-  for (const c of scene.transportConnections) lines.push(flat(c.road));
+  for (const c of scene.transportConnections) if (!(opts.drive && c.private)) lines.push(flat(c.road));
   for (const b of scene.carBridges) {
     // The centre of the drive, ramps included: the deck is not in the end roads.
     const lane = crossing(b, 0);

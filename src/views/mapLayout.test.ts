@@ -184,7 +184,7 @@ describe("district grouping", () => {
   const layout = layoutMap(catalog, [], "district");
 
   it("places the five districts in their fixed order without overlaps", () => {
-    expect(layout.neighborhoods.map((n) => n.label)).toEqual(["AI Operations", "Business Operations", "AI Engineering", "Security & Infrastructure", "Career & Portfolio"]);
+    expect(layout.neighborhoods.map((n) => n.label)).toEqual(["AI Operations", "Business Operations", "AI Engineering", "Transport & Infrastructure", "Career & Commerce"]);
     expect(overlaps(layout, GAP - 0.01)).toEqual([]);
   });
 
@@ -241,6 +241,7 @@ it("leaves the land of removed towers in every grouping",()=>{
     if(group==="district") {
       expected["ai-ops-atlas"]=[35.725,9.75,10];
       expected["intelligence-hub"]=[37.975,22,10];
+      expected["soc-lab"]=[-2.5,2.5,7.5];
     }
     expect(at(layout)).toEqual(expected);
     const lots=layout.parks.filter(p=>p.vacant).map(p=>p.id).sort();

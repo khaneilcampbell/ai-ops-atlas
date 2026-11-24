@@ -109,8 +109,11 @@ export function findShoreLot(city:Rect[],land:Rect[],roads:Pt[][],size:{w:number
  let best:{r:Rect;g:number}|undefined;
  for(let r=0;r+ld<=rows;r+=2)for(let c=0;c+lw<=cols;c+=2){
   if(sum[(r+ld)*W+c+lw]-sum[r*W+c+lw]-sum[(r+ld)*W+c]+sum[r*W+c])continue;
-  const lot={x:x0+c*step,z:z0+r*step,w:lw*step,d:ld*step},g=Math.min(...big.map(b=>gap(lot,b)));
-  if(!best||g<best.g-1e-9)best={r:lot,g};
+  // Nearest big parcel, in a plain loop: this runs for every free cell, so no arrays or spreads.
+  const lx=x0+c*step,lz=z0+r*step,lW=lw*step,lD=ld*step;let g2=Infinity;
+  for(const b of big){const dx=Math.max(0,b.x-lx-lW,lx-b.x-b.w),dz=Math.max(0,b.z-lz-lD,lz-b.z-b.d),d2=dx*dx+dz*dz;if(d2<g2)g2=d2;}
+  const g=Math.sqrt(g2);
+  if(!best||g<best.g-1e-9)best={r:{x:lx,z:lz,w:lW,d:lD},g};
  }
  // Close to the city, or at least on the shore of other land (a green or link strip), never adrift.
  if(!best)return;const lot=best.r;
