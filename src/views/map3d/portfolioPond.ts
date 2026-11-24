@@ -40,20 +40,28 @@ export function movePortfolioOntoPond(scene: Scene3D): void {
     const x0 = Math.min(w.x0, w.x1), z0 = Math.min(w.z0, w.z1), along = Math.abs(w.x1 - w.x0) > Math.abs(w.z1 - w.z0);
     scene.paving.push(along ? { x: x0, z: z0 - 0.16, w: Math.abs(w.x1 - w.x0), d: 0.32, y: top, h: 0.03 } : { x: x0 - 0.16, z: z0, w: 0.32, d: Math.abs(w.z1 - w.z0), y: top, h: 0.03 });
   }
-  tower.x = cx; tower.z = cz;
-  const p = tower.size * PORTFOLIO_POND.plaza, plaza: Rect = { x: cx - p / 2, z: cz - p / 2, w: p, d: p };
+  // The forecourt is the same size as the studio's own plaza back in its district, so its plaza lane sits at the same
+  // offset as every other headquarters'; the lane is drawn only where a street enters it (streetGraph.ts plazaLanes).
+  const own = scene.paving.filter(q => q.w > tower.size && Math.abs(q.x + q.w / 2 - tower.x) < 1e-6 && Math.abs(q.z + q.d / 2 - tower.z) < 1e-6 && Math.abs(q.w - q.d) < 1e-6).sort((a, b) => a.w - b.w)[0];
+  tower.x = cx; tower.z = cz; tower.plainPlaza = true;
+  const p = own?.w ?? tower.size * PORTFOLIO_POND.plaza, plaza: Rect = { x: cx - p / 2, z: cz - p / 2, w: p, d: p };
   scene.paving.push({ ...plaza, y: top, h: 0.03 });
   // One straight driveway from the plaza lane to the nearest street, meeting it square on. It is a real
   // street, so the plaza lane, sidewalks, cars and walking agents all use it like any other link road.
   const ring = towerRing(tower, p), line = ring && driveLine({ x: ring.x0, z: ring.z0, w: ring.x1 - ring.x0, d: ring.z1 - ring.z0 }, scene.transportConnections.map(c => c.road));
   if (line) scene.transportConnections.push({ id: "portfolio-pond-drive", road: line, walk: [] });
-  // The plaza lane round the forecourt, as every headquarters has: the driveway meets it, so cars can go round and pull up.
-  if (ring && line) scene.transportConnections.push({ id: "portfolio-pond-lane", road: [[ring.x0, ring.z0], [ring.x1, ring.z0], [ring.x1, ring.z1], [ring.x0, ring.z1], [ring.x0, ring.z0]], walk: [] });
   const drive = line && { x: Math.min(line[0][0], line[1][0]) - 0.4, z: Math.min(line[0][1], line[1][1]) - 0.4, w: Math.abs(line[1][0] - line[0][0]) + 0.8, d: Math.abs(line[1][1] - line[0][1]) + 0.8 };
-  const lane = ring && { x: ring.x0, z: ring.z0, w: ring.x1 - ring.x0, d: ring.z1 - ring.z0 };
-  const keep = (x: number, z: number) => !inside(lane ?? plaza, x, z, PORTFOLIO_POND.clear + 0.3) && !(drive && inside(drive, x, z, PORTFOLIO_POND.clear));
+  const keep = (x: number, z: number) => !inside(plaza, x, z, PORTFOLIO_POND.clear) && !(drive && inside(drive, x, z, PORTFOLIO_POND.clear));
   scene.trees = scene.trees.filter(t => keep(t.x, t.z));
   scene.bushes = scene.bushes.filter(b => keep(b.x, b.z));
+  // A few street trees in pits along the driveway's sidewalks, set back from the carriageway.
+  if (line) {
+    const [a, b] = line, along = Math.abs(b[0] - a[0]) > Math.abs(b[1] - a[1]), len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    for (let d = 1.1; d < len - 0.9; d += 1.3) for (const side of [-1, 1]) {
+      const x = a[0] + (b[0] - a[0]) * d / len + (along ? 0 : side * 0.95), z = a[1] + (b[1] - a[1]) * d / len + (along ? side * 0.95 : 0);
+      scene.trees.push({ x, z, y: top, s: 0.24, kind: "round" });
+    }
+  }
 }
 
 function inside(r: Rect, x: number, z: number, pad = 0) {
