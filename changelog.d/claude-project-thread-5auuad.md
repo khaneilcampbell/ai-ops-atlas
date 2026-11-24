@@ -1,0 +1,1 @@
+- 2026-11-24 · Test copies of Atlas no longer ask for your Mac password: they keep their own key storage and say "developer preview" in the title, so only the real Atlas uses your fingerprint
