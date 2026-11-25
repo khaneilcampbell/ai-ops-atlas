@@ -21,12 +21,20 @@ interface NodeProps {
   /** In the building picked in the building list or on the map. */
   inBuilding: boolean;
   dimmed: boolean;
+  /** Design mode: replaces the status line (e.g. the step's output, or what it still needs). */
+  note?: CanvasNote;
   onPick: (id: string) => void;
 }
 
-const WfNode = memo(function WfNode({ p, who, where, status, selected, inBuilding, dimmed, onPick }: NodeProps) {
+/** A line shown instead of a node's status, with its own tone (see statusTone). */
+export interface CanvasNote {
+  text: string;
+  tone: string;
+}
+
+const WfNode = memo(function WfNode({ p, who, where, status, selected, inBuilding, dimmed, note, onPick }: NodeProps) {
   const n = p.node;
-  const tone = statusTone(status);
+  const tone = note?.tone ?? statusTone(status);
   const cls = `wf-node kind-${n.kind} tone-${tone}${selected ? " selected" : ""}${inBuilding ? " in-building" : ""}${dimmed ? " dimmed" : ""}${n.unconfigured ? " unconfigured" : ""}`;
   return (
     <g
@@ -35,7 +43,7 @@ const WfNode = memo(function WfNode({ p, who, where, status, selected, inBuildin
       role="button"
       tabIndex={0}
       aria-pressed={selected}
-      aria-label={`${n.title}. ${KIND_LABEL[n.kind]}. ${NODE_STATUS_LABEL[status]}${n.unconfigured ? ". Unconfigured" : ""}`}
+      aria-label={`${n.title}. ${KIND_LABEL[n.kind]}. ${note ? note.text : `${NODE_STATUS_LABEL[status]}${n.unconfigured ? ". Unconfigured" : ""}`}`}
       onClick={() => onPick(n.id)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -58,11 +66,13 @@ const WfNode = memo(function WfNode({ p, who, where, status, selected, inBuildin
       </text>
       <circle className="wf-node-dot" cx={18} cy={63} r={3.5} />
       <text className="wf-node-status" x={27} y={66}>
-        {clip(n.unconfigured && status !== "unconfigured" ? `Unconfigured` : NODE_STATUS_LABEL[status], 17)}
+        {note ? clip(note.text, 26) : clip(n.unconfigured && status !== "unconfigured" ? `Unconfigured` : NODE_STATUS_LABEL[status], 17)}
       </text>
-      <text className="wf-node-where" x={NODE_W - 10} y={66} textAnchor="end">
-        {clip(where, 12)}
-      </text>
+      {!note && (
+        <text className="wf-node-where" x={NODE_W - 10} y={66} textAnchor="end">
+          {clip(where, 12)}
+        </text>
+      )}
     </g>
   );
 });
@@ -76,9 +86,14 @@ export interface CanvasProps {
   selectedNode: string | null;
   selectedBuilding: string | null;
   onPick: (id: string) => void;
+  /** Design mode: per-node lines shown instead of statuses. */
+  notes?: ReadonlyMap<string, CanvasNote>;
+  /** Design mode: arrows can be picked (a handoff), and the picked one is highlighted. */
+  selectedEdge?: string | null;
+  onPickEdge?: (edgeId: string) => void;
 }
 
-export function WorkflowCanvas({ layout, resolved, status, selectedNode, selectedBuilding, onPick }: CanvasProps) {
+export function WorkflowCanvas({ layout, resolved, status, selectedNode, selectedBuilding, onPick, notes, selectedEdge, onPickEdge }: CanvasProps) {
   const svg = useRef<SVGSVGElement>(null);
   const view = useRef<SVGGElement>(null);
   const t = useRef({ x: 0, y: 0, k: 1 });
@@ -148,7 +163,7 @@ export function WorkflowCanvas({ layout, resolved, status, selectedNode, selecte
 
   const drag = useRef<{ id: number; x: number; y: number; moved: boolean } | null>(null);
   const onDown = (e: React.PointerEvent) => {
-    if ((e.target as Element).closest(".wf-node")) return;
+    if ((e.target as Element).closest(".wf-node, .wf-edge.pickable")) return;
     drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
   };
@@ -209,9 +224,26 @@ export function WorkflowCanvas({ layout, resolved, status, selectedNode, selecte
           {layout.edges.map((e) => {
             const skipped = status.get(e.edge.to) === "skipped";
             const live = doneOrLive(e.edge.from) && !skipped;
-            const touches = selectedNode && (e.edge.from === selectedNode || e.edge.to === selectedNode);
+            const touches = (selectedNode && (e.edge.from === selectedNode || e.edge.to === selectedNode)) || selectedEdge === e.edge.id;
+            const pick = onPickEdge;
+            const pickable = pick
+              ? {
+                  role: "button",
+                  tabIndex: 0,
+                  "aria-pressed": selectedEdge === e.edge.id,
+                  "aria-label": `Handoff into ${layout.byId.get(e.edge.to)?.node.title ?? e.edge.to}${e.edge.label ? `: ${e.edge.label}` : ""}`,
+                  onClick: () => pick(e.edge.id),
+                  onKeyDown: (k: React.KeyboardEvent) => {
+                    if (k.key === "Enter" || k.key === " ") {
+                      k.preventDefault();
+                      pick(e.edge.id);
+                    }
+                  },
+                }
+              : {};
             return (
-              <g key={e.edge.id} className={`wf-edge${live ? " live" : ""}${skipped ? " skipped" : ""}${touches ? " touches" : ""}`}>
+              <g key={e.edge.id} className={`wf-edge${live ? " live" : ""}${skipped ? " skipped" : ""}${touches ? " touches" : ""}${pick ? " pickable" : ""}`} {...pickable}>
+                {pick && <path className="wf-edge-hit" d={e.d} />}
                 <path d={e.d} markerEnd={`url(#${live ? "wf-arrow-live" : "wf-arrow"})`} />
                 {e.edge.label && (
                   <text x={e.lx} y={e.ly} textAnchor="middle" className="wf-edge-label">
@@ -234,6 +266,7 @@ export function WorkflowCanvas({ layout, resolved, status, selectedNode, selecte
                 selected={selectedNode === p.node.id}
                 inBuilding={inBuilding}
                 dimmed={!!selectedBuilding && !inBuilding}
+                note={notes?.get(p.node.id)}
                 onPick={onPick}
               />
             );

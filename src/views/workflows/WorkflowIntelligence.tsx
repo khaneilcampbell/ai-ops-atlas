@@ -31,6 +31,7 @@ import { liveOutputs } from "../../outputs/live";
 import { simRunId, simulatedOutputs } from "../../outputs/simulation";
 import { scopeOutputs } from "../../outputs/validate";
 import { OutputStudio, useStableOutputs } from "./OutputStudio";
+import { WorkflowDesigner } from "./WorkflowDesigner";
 import type { HandoffRecord } from "../../execution/types";
 import "../../styles/workflows.css";
 
@@ -62,6 +63,8 @@ export function WorkflowIntelligenceView() {
     return { GOALS: [...SAVED_GOALS, ...x.goals, ...inc.goals], DEFINITIONS: { ...SAVED_DEFINITIONS, ...x.definitions, ...inc.definitions } };
   }, [executive.goals, ops]);
   const [focus] = useState(takeWorkflowRunFocus);
+  // Run: simulate or follow live runs. Design: edit a draft of the goal's workflow (WorkflowDesigner).
+  const [screen, setScreen] = useState<"run" | "design">("run");
   const [goalId, setGoalId] = useState(focus && GOALS.some((g) => g.id === focus.goalId) ? focus.goalId : GOALS[0].id);
   const goal = GOALS.find((g) => g.id === goalId) ?? GOALS[0];
   const incident = incidentOf(ops, goal.id);
@@ -154,6 +157,19 @@ export function WorkflowIntelligenceView() {
     if (sel.nodeId !== id) selectNode(id, resolved.get(id)?.buildingId ?? null);
   };
 
+  const goalPicker = (
+    <label className="field wf-goal-pick">
+      <span className="muted">Goal</span>
+      <select value={goal.id} onChange={(e) => (setGoalId(e.target.value), setStep(0), setRunId(null))}>
+        {GOALS.map((g) => (
+          <option key={g.id} value={g.id}>
+            {g.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+
   return (
     <div className="page wf-page">
       <div className="page-head">
@@ -162,23 +178,26 @@ export function WorkflowIntelligenceView() {
           <h1>Workflow Intelligence</h1>
           <p className="lede">Pick a goal, see who does each step and what it depends on, then preview it or follow a live run from the Task Center.</p>
         </div>
+        <div className="seg-ctl wf-screen" role="tablist" aria-label="Workflow mode">
+          <button role="tab" aria-selected={screen === "run"} className={screen === "run" ? "on" : ""} onClick={() => setScreen("run")}>
+            <Icon name="play" size={13} /> Run
+          </button>
+          <button role="tab" aria-selected={screen === "design"} className={screen === "design" ? "on" : ""} onClick={() => setScreen("design")}>
+            <Icon name="flow" size={13} /> Design
+          </button>
+        </div>
         <button className="ghost-btn dark" onClick={() => setView("overview")}>
           <Icon name="overview" size={16} /> Back to Mission Control
         </button>
       </div>
 
+      {screen === "design" ? (
+        <WorkflowDesigner key={goal.definitionId} goal={goal} template={DEFINITIONS[goal.definitionId]} catalog={catalog} goalPicker={goalPicker} />
+      ) : (
+      <>
       <section className="card wf-goal" aria-label="Goal">
         <div className="wf-goal-main">
-          <label className="field wf-goal-pick">
-            <span className="muted">Goal</span>
-            <select value={goal.id} onChange={(e) => (setGoalId(e.target.value), setStep(0), setRunId(null))}>
-              {GOALS.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          {goalPicker}
           <h2 className="wf-goal-name">{goal.name}</h2>
           <dl className="wf-goal-facts">
             <div>
@@ -409,6 +428,8 @@ export function WorkflowIntelligenceView() {
           </ul>
         </section>
       </div>
+      </>
+      )}
     </div>
   );
 }
