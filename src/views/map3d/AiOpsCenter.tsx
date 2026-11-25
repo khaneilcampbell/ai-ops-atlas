@@ -68,20 +68,21 @@ export function AiOpsCenter({plan,g,m,pick,night=false}:{plan?:AiOpsPlan;g:Retur
  const parts=useMemo(()=>{
   if(!plan)return {trunks:[] as Inst[],crowns:[] as Inst[],shrubs:[] as Inst[],boxes:[] as Inst[]};
   const base=TERRACE_H,trunks:Inst[]=[],crowns:Inst[]=[],shrubs:Inst[]=[],boxes:Inst[]=[];
-  const W=(x:number,y:number,z:number):[number,number,number]=>[plan.x+x,base+y,plan.z+z];
+  const {k,ky}=plan,W=(x:number,y:number,z:number):[number,number,number]=>[plan.x+x*k,base+y*ky,plan.z+z*k];
+  const S=(x:number,y:number,z:number):[number,number,number]=>[x*k,y*ky,z*k];
   // Terrace trees round the podium roof and on the planted step at the tower's foot.
-  terraceTrees(height).forEach(([x,z],i)=>{const s=.85+.25*((i*7)%3)/2;trunks.push({p:W(x,PODIUM_H+.16*s,z),s:[.035,.32*s,.035],c:'#6b5a45'});crowns.push({p:W(x,PODIUM_H+.42*s,z),s:[.26*s,.24*s,.26*s],c:i%3?'#5f8f4a':'#4e7c3e'});});
-  const step=podiumRing(1,48);for(let i=0;i<step.length;i+=3){const [x,z]=step[i];shrubs.push({p:W(x*.965,podiumTop(1)+.1,z*.965),s:[.09,.07,.09],c:i%2?'#5f8f4a':'#77a35a'});}
+  terraceTrees(height).forEach(([x,z],i)=>{const s=.85+.25*((i*7)%3)/2;trunks.push({p:W(x,PODIUM_H+.16*s,z),s:S(.035,.32*s,.035),c:'#6b5a45'});crowns.push({p:W(x,PODIUM_H+.42*s,z),s:S(.26*s,.24*s,.26*s),c:i%3?'#5f8f4a':'#4e7c3e'});});
+  const step=podiumRing(1,48);for(let i=0;i<step.length;i+=3){const [x,z]=step[i];shrubs.push({p:W(x*.965,podiumTop(1)+.1,z*.965),s:S(.09,.07,.09),c:i%2?'#5f8f4a':'#77a35a'});}
   // Plant rooms on the crown, set back from the rim.
-  const {cx,cz}=AIOPS.tower;for(const [dx,dz,w,d] of [[-.5,-.2,.7,.5],[.45,.15,.5,.45],[0,.55,.4,.3]] as const){const phi=Math.atan2(dz,dx);boxes.push({p:W(cx+dx,crownAt(phi,height)+.14,cz+dz),s:[w,.26,d],c:'#cfccc3'});}
+  const {cx,cz}=AIOPS.tower;for(const [dx,dz,w,d] of [[-.5,-.2,.7,.5],[.45,.15,.5,.45],[0,.55,.4,.3]] as const){const phi=Math.atan2(dz,dx);boxes.push({p:W(cx+dx,crownAt(phi,height)+.14,cz+dz),s:S(w,.26,d),c:'#cfccc3'});}
   // Bollards and planters along the forecourt edge.
-  for(let k=-3;k<=3;k++)if(Math.abs(k*.9-AIOPS.atrium.x)>1.1)boxes.push({p:W(k*.9,.08,AIOPS.podium.b+AIOPS.forecourt-.25),s:[.38,.16,.2],c:'#d9d2c3'});
+  for(let j=-3;j<=3;j++)if(Math.abs(j*.9-AIOPS.atrium.x)>1.1)boxes.push({p:W(j*.9,.08,AIOPS.podium.b+AIOPS.forecourt-.25),s:S(.38,.16,.2),c:'#d9d2c3'});
   return {trunks,crowns,shrubs,boxes};
  },[plan,height]);
  if(!plan)return null;
  const P=AIOPS.podium,front=P.b;
  return <group>
-  <group position={[plan.x,TERRACE_H,plan.z]} name="ai-operations-center">
+  <group position={[plan.x,TERRACE_H,plan.z]} scale={[plan.k,plan.ky,plan.k]} name="ai-operations-center">
    <mesh geometry={geo.glass} material={mats.glass} castShadow receiveShadow {...handlers}/>
    <mesh geometry={geo.fins} material={mats.fin} raycast={noRaycast}/>
    <mesh geometry={geo.ledges} material={mats.fin} receiveShadow raycast={noRaycast}/>

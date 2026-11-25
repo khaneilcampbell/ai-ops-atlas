@@ -68,6 +68,8 @@ landmarks:
   # Nov 24: Atlas AI Operations Center on the Financial District's west waterfront plot (aiOpsCenterPlan.ts),
   # where the Business Finance, Risk & Insurance, Knowledge & Research and Client Success towers stood. It
   # houses the Knowledge Repository (with the Output Library) that came with the Knowledge & Research floor.
+  # Nov 25: swapped with the Product & Growth Tower (AIOPS_SWAP): it now stands in that tower's old Commerce
+  # spot and the tower stands on the waterfront plot. Module and agents unchanged.
   "service:ai-operations-center":
     map_name: Atlas AI Operations Center
     module: knowledge-repository

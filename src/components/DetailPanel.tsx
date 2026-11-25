@@ -264,15 +264,16 @@ export function HousedBuildings({ host }: { host: string }) {
 }
 
 /**
- * Atlas AI Operations Center (Khaneil, 2026-11-24): the curved glass tower with the bronze ribbon on the
- * Financial District's west waterfront. The four towers it replaced are its floors; their records stay.
+ * Atlas AI Operations Center (Khaneil, 2026-11-24): the curved glass tower with the bronze ribbon. Since the swap
+ * (2026-11-25) it stands in the Product & Growth Tower's old spot in the Commerce district; the four waterfront
+ * towers it replaced are still its floors, and their records stay.
  */
 function AiOpsDetail(){
   const {catalog,select}=useAtlas();
   const seated=catalog.agents.filter(a=>a.workplace?.building===AIOPS_NAME);
-  return <><Head eyebrow="Financial District · West waterfront" title={AIOPS_NAME} organization="Atlas" building={AIOPS_KEY}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={AIOPS_OFFICE_ID}/></Head>
+  return <><Head eyebrow="Commerce district · Former Product & Growth Tower plot" title={AIOPS_NAME} organization="Atlas" building={AIOPS_KEY}><span className="chip">Planned · Visual building</span><EnterBuildingButton id={AIOPS_OFFICE_ID}/></Head>
   <div className="panel-body selectable"><ModuleSection/><HousedBuildings host={AIOPS_KEY}/>
-   <p>A sculptural curved glass tower wrapped by a sweeping bronze ribbon, rising out of a rounded three-level podium. The planted terrace steps back from the tower, and a glass atrium drum stands over the glazed main entrance on the north walk.</p>
+   <p>A sculptural curved glass tower wrapped by a sweeping bronze ribbon, rising out of a rounded three-level podium. The planted terrace steps back from the tower, and a glass atrium drum stands over the glazed main entrance.</p>
    <section><div className="section-title">Floors</div><ul className="link-list">{AIOPS_FLOORS.map((f,i)=><li key={f.id}>{f.from?<button className="text-btn" onClick={()=>select({kind:"service",id:f.from!.slice(8)})}>{i===0?"Lobby":`Floor ${i}`} · {f.label} →</button>:<span>{i===0?"Lobby":`Floor ${i}`} · {f.label}</span>}<span className="muted small">{f.summary} Desk: {f.role} · Planned, not running.</span></li>)}</ul></section>
    <dl className="kv"><dt>Agents at desks</dt><dd>{seated.length?seated.map(a=>a.registry?.title??a.name).join(" · "):"None seated yet. Each floor has a desk for its planned role."}</dd><dt>Repositories / workflows</dt><dd>None linked</dd><dt>Activity</dt><dd>Visual building · No live agent activity · No model calls</dd></dl>
    <p className="muted small">The four waterfront towers it replaced keep their records, modules, agents and ids; only their map models are gone.</p>

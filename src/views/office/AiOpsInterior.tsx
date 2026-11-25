@@ -100,7 +100,7 @@ export default function AiOpsInterior({light}:{light:LightMode}){
    <hemisphereLight args={[isNight?'#91abdc':'#eef6ff',isNight?'#303e35':'#8c7e64',isNight?.45:1.25]}/>
    <directionalLight color={isNight?'#99b8ed':'#fff4da'} position={[14,30,18]} intensity={isNight?.35:1.9} castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-30} shadow-camera-right={30} shadow-camera-top={30} shadow-camera-bottom={-30}/>
    <Camera all={all}/>
-   <CityOutside allFloors={all} building={AIOPS_NAME} span={30} elevation={!all&&floor>0?floorElevation(floor)*INTERIOR_K:0} anchorAt={s=>planAiOps(s)} scaleOverride={()=>INTERIOR_K}/>
+   <CityOutside allFloors={all} building={AIOPS_NAME} span={30} elevation={!all&&floor>0?floorElevation(floor)*INTERIOR_K:0} anchorAt={s=>s.aiOps??planAiOps(s)} scaleOverride={s=>INTERIOR_K/((s.aiOps??planAiOps(s))?.k??1)}/>
    {!all&&floor>=2&&<Podium below={floorElevation(floor)*INTERIOR_K}/>}
    {shownFloors.map(f=><group key={f.level} position={[0,all?f.level*STOREY:0,0]}><Floor f={f} single={!all} night={isNight} onPick={t=>{setAgent(null);setPicked(t);}} onAgent={a=>{setPicked(null);setAgent(a);}}/></group>)}
   </Canvas>
