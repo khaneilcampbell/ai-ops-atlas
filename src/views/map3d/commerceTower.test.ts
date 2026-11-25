@@ -99,6 +99,13 @@ describe('Commerce Pipeline teardrop tower',()=>{
   expect(rods.boundingBox!.min.y).toBeGreaterThanOrEqual(podiumHeight());expect(rods.boundingBox!.max.y).toBeLessThan(H*(1-COMMERCE.slope));
   expect(readFileSync(join(__dirname,'CommerceTower.tsx'),'utf8')).toMatch(/geo\.rods\} material=\{mats\.bronze\}/);
  });
+ it('lifts the crown: brighter, sky-tinted glass toward the top, the lower floors unchanged (2026-11-25)',()=>{
+  const g=commerceGeometry(1),H=COMMERCE.height,col=(geo:typeof g.glass)=>{const p=geo.getAttribute('position'),c=geo.getAttribute('color');return Array.from({length:p.count},(_,i)=>({y:p.getY(i),g:c.getY(i),b:c.getZ(i)}));};
+  for(const v of col(g.glass))if(v.y<H*.5)expect(v.g).toBeCloseTo(1);
+  const top=col(g.crown).filter(v=>v.y>H*.85);expect(top.length).toBeGreaterThan(0);
+  for(const v of top){expect(v.g).toBeGreaterThan(1.3);expect(v.b).toBeGreaterThan(v.g);}
+  expect(g.crownBands.getAttribute('position').count).toBeGreaterThan(0);
+ });
  it('stays inside its performance budget: merged meshes, a few instances, no lights or frame loop',()=>{
   const g=commerceGeometry(1,COMMERCE.height*2);
   const meshes=Object.values(g).filter(v=>v&&typeof v==='object'&&'attributes' in v);

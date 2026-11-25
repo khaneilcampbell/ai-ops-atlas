@@ -58,6 +58,24 @@ function towerRows(levels:Level[],k:number){
  return {skin,valley,skinF,lips};
 }
 
+/** Where the crown's brighter glass begins, as a share of the tower's flat height. */
+export const CROWN=.72;
+/** The sun's direction across the map (Map3D: a late-afternoon sun from the west-south-west), for the glass's sky highlight. */
+const SUN:Pt=(([x,z])=>{const l=Math.hypot(x,z);return [x/l,z/l] as Pt;})([-.85,.4]);
+/**
+ * The crown's light (Khaneil, 2026-11-25): the glass's vertex colour lifts toward the top, a little
+ * toward the sky's blue, and a little more on the side facing the sun, so the upper floors read
+ * brighter and catch the sky like real glass. The lower floors keep colour 1, unchanged.
+ */
+export function glassTint(g:THREE.BufferGeometry,H:number){
+ const p=g.getAttribute('position'),nm=g.getAttribute('normal'),col=new Float32Array(p.count*3);
+ for(let i=0;i<p.count;i++){
+  const t=Math.max(0,Math.min(1,(p.getY(i)/H-.5)/.5)),u=t*t*(3-2*t),sun=nm?Math.max(0,nm.getX(i)*SUN[0]+nm.getZ(i)*SUN[1]):0,lift=1+u*(.6+.4*sun);
+  col[i*3]=lift*(1-.04*u);col[i*3+1]=lift;col[i*3+2]=lift*(1+.1*u);
+ }
+ g.setAttribute('color',new THREE.BufferAttribute(col,3));return g;
+}
+
 /** Quads between consecutive rows of points, with optional UVs per point. */
 function strip(rows:Pt3[][],uvAt?:(r:number,j:number)=>[number,number]){
  const pos:number[]=[],uv:number[]=[];
@@ -227,16 +245,22 @@ export function commerceGeometry(k=1,height=COMMERCE.height*k){
  const {skin,valley,skinF}=towerRows(levels,k);
  // Skin UVs are pinned to the outline (not to the moving valley), in bays along and floors up, so the facade does not slide.
  const perim=planAt(0,k).reduce((s,p,i,a)=>s+Math.hypot(a[(i+1)%n][0]-p[0],a[(i+1)%n][1]-p[1]),0),bay=.16*k;
- const glass=strip(skin,(r,j)=>[skinF[r][j]*perim/n/(bay*4),skin[r][j][1]/(c.floor*k*4)]);
+ // The crown (Khaneil, 2026-11-25: "add more light at the top"): the floors from CROWN up are their own
+ // mesh, so they can take a brighter, more reflective glass and more lit windows at night.
+ const r0=levels.findIndex(l=>l.t>=CROWN);
+ const skinUv=(o:number)=>(r:number,j:number):[number,number]=>[skinF[r+o][j]*perim/n/(bay*4),skin[r+o][j][1]/(c.floor*k*4)];
  // The ribbon's strip of the outline is ordinary curtain wall now (depth 0): same glass, same grid.
- const gold=strip(valley,(r,j)=>[(skinF[r][0]-c.ribbon.width+j*c.ribbon.width/VALLEY)*perim/n/(bay*4),valley[r][j][1]/(c.floor*k*4)]);
+ const valleyUv=(o:number)=>(r:number,j:number):[number,number]=>[(skinF[r+o][0]-c.ribbon.width+j*c.ribbon.width/VALLEY)*perim/n/(bay*4),valley[r+o][j][1]/(c.floor*k*4)];
+ const glass=merge([strip(skin.slice(0,r0+1),skinUv(0)),strip(valley.slice(0,r0+1),valleyUv(0))]);
+ const crownGlass=merge([strip(skin.slice(r0),skinUv(r0)),strip(valley.slice(r0),valleyUv(r0))]);
  const top=skin.length-1,roofLid=lid([...skin[top].slice(0,SKIN),...valley[top].slice(0,VALLEY)].map(([x,y,z])=>[x,y-.01*k,z] as Pt3));
  // Ivory stone spandrel ledges at every floor, standing a little proud of the grid (photo pass, 2026-11-25).
  const bandAt=floorHeights(k,H);
  const bands=bandAt.map(y=>{const t=y/H/(1-c.slope),r=Math.min(steps-1,Math.floor(t*steps)),u=t*steps-r;
   const row=skin[r].map((p,j)=>{const q=skin[r+1][j];return [p[0]+(q[0]-p[0])*u,y,p[2]+(q[2]-p[2])*u] as Pt3;});
   // Every other sample is plenty for a thin ledge, and halves its memory.
-  return openLedge(row.filter((_,j)=>j%2===0||j===row.length-1),k,y-.014*k,.024*k);});
+  return {y,g:openLedge(row.filter((_,j)=>j%2===0||j===row.length-1),k,y-.014*k,.024*k)};});
+ const crownFrom=CROWN*H*(1-c.slope);
  // Podium (Business District pass, 2026-11-25): a clear lobby behind warm stone piers, then
  // office storeys of the tower's dark green curtain wall that step back as they rise, each step a
  // planted ledge with a stone kerb, and the top storey's roof garden behind a glass rail.
@@ -265,8 +289,8 @@ export function commerceGeometry(k=1,height=COMMERCE.height*k){
  const rim:number[]=[],edge=[...skin[top].slice(0,SKIN),...valley[top].slice(0,VALLEY)];
  for(let i=0;i<edge.length;i++){const a=edge[i],b=edge[(i+1)%edge.length];quad(rim,[a[0],a[1]-.03*k,a[2]],[b[0],b[1]-.03*k,b[2]],[b[0],b[1]+.035*k,b[2]],[a[0],a[1]+.035*k,a[2]]);}
  return compact({
-  glass:smooth(glass),gold:smooth(gold),fins:ribs,rods:bronzeRods(k,H,podiumTop(c.podium.floors.length-1,k)+.02*k),roof:roofLid,bands:smooth(merge([...bands,geo(rim)])),
-  lobby:smooth(lobbyGlass),podiumGlass:smooth(podiumGlass),slabs:merge([slabs,poolRim,lobbyColumns(k),...kerbs]),interior:lobbyInterior(k),rail:smooth(rail),lawn,
+  glass:glassTint(smooth(merge([glass,podiumGlass])),H),crown:glassTint(smooth(crownGlass),H),fins:ribs,rods:bronzeRods(k,H,podiumTop(c.podium.floors.length-1,k)+.02*k),roof:roofLid,bands:smooth(merge(bands.filter(b=>b.y<crownFrom).map(b=>b.g))),crownBands:smooth(merge([...bands.filter(b=>b.y>=crownFrom).map(b=>b.g),geo(rim)])),
+  lobby:smooth(lobbyGlass),slabs:merge([slabs,poolRim,lobbyColumns(k),...kerbs]),interior:lobbyInterior(k),rail:smooth(rail),lawn,
   pool:lid(at(pool,ptop+.016*k)),canopy:merge([canopy(k),soffit(k)]),
   site:siteGround(k),
   trees:roofTrees(k),crownTrees:crownTrees(k,H),ledgeTrees,siteTrees:siteLawns(k).filter(l=>l.tree),

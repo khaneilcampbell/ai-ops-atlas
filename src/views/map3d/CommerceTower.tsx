@@ -35,7 +35,7 @@ function skyReflection(gl:THREE.WebGLRenderer){
  * window into a floor rather than a stripe. The emissive map lights about two thirds at night.
  */
 function curtainTexture(glassTop:string,glassFoot:string,frame:string,slab:string,seed:number){
- const make=(lit:boolean)=>{
+ const make=(lit:boolean,share=.34)=>{
   // The night map only needs lit or dark panes, so it is drawn at half size.
   const S=lit?256:512,c=document.createElement('canvas');c.width=S;c.height=S;const g=c.getContext('2d')!;g.scale(S/512,S/512);
   let r=seed;const rnd=()=>(r=(r*16807)%2147483647)/2147483647;
@@ -45,7 +45,7 @@ function curtainTexture(glassTop:string,glassFoot:string,frame:string,slab:strin
    const x=bx*128,y=fy*128,m=12,band=24,w=128-m*2,h=128-band-m;
    if(lit){
     // A few warm windows after dark, not a lit-up tower (photo pass, 2026-11-25).
-    if(rnd()<.34){const warm=200+Math.floor(rnd()*45);g.fillStyle=`rgb(255,${warm},${150+Math.floor(rnd()*60)})`;g.fillRect(x+m,y+m,w,h);g.fillStyle='rgba(255,250,235,.9)';g.fillRect(x+m,y+m,w,6);}
+    if(rnd()<share){const warm=200+Math.floor(rnd()*45);g.fillStyle=`rgb(255,${warm},${150+Math.floor(rnd()*60)})`;g.fillRect(x+m,y+m,w,h);g.fillStyle='rgba(255,250,235,.9)';g.fillRect(x+m,y+m,w,6);}
     continue;
    }
    const grad=g.createLinearGradient(0,y+m,0,y+m+h);grad.addColorStop(0,glassTop);grad.addColorStop(1,glassFoot);g.fillStyle=grad;g.fillRect(x+m,y+m,w,h);
@@ -58,7 +58,8 @@ function curtainTexture(glassTop:string,glassFoot:string,frame:string,slab:strin
   }
   const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;t.flipY=false;return t;
  };
- return {map:make(false),glow:make(true)};
+ // The crown's night map lights more of its windows (2026-11-25).
+ return {map:make(false),glow:make(true),crownGlow:make(true,.6)};
 }
 
 /** The lobby wordmark: plain warm letters, no reference signage. */
@@ -87,12 +88,17 @@ export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
   // Business District pass (Khaneil, 2026-11-25): dark green glass in a disciplined warm-ivory grid with stone
   // spandrels, like the district's towers; the ribbon is a restrained bronze rather than bright gold.
   const silver=curtainTexture('#4f7568','#213a31','#f4ecd9','#e2d7bf',73);
-  const glass=(tex:{map:THREE.Texture;glow:THREE.Texture},emissive:string,metal:number,shine:number)=>focusable(new THREE.MeshStandardMaterial({map:tex.map,emissiveMap:tex.glow,emissive,emissiveIntensity:0,roughness:.12,metalness:metal,envMap:env,envMapIntensity:shine}));
+  // Vertex colours carry the crown's lift (glassTint); both glass materials share one shader program.
+  const glass=(tex:{map:THREE.Texture;glow:THREE.Texture},emissive:string,metal:number,shine:number,rough=.12)=>focusable(new THREE.MeshStandardMaterial({map:tex.map,emissiveMap:tex.glow,emissive,emissiveIntensity:0,roughness:rough,metalness:metal,envMap:env,envMapIntensity:shine,vertexColors:true}));
   return {
-   textures:[silver.map,silver.glow],
+   textures:[silver.map,silver.glow,silver.crownGlow],
    glass:glass(silver,'#ffd9a0',.25,.25),
+   // The crown: smoother, more reflective glass that catches the sky, with more windows lit after dark.
+   crown:glass({map:silver.map,glow:silver.crownGlow},'#ffd9a0',.3,.6,.05),
    // Mullions and ledges in warm ivory stone; the ribbon's edges in bronze (same shader program as the fins).
    fin:focusable(new THREE.MeshStandardMaterial({color:'#e7dfcc',roughness:.6,metalness:.05,envMap:env,envMapIntensity:.2,side:THREE.DoubleSide})),
+   // The crown's ledges and roof rim: the same stone a shade brighter, washed warm after dark (emissive only).
+   crownFin:focusable(new THREE.MeshStandardMaterial({color:'#fbf6ea',roughness:.55,metalness:.05,envMap:env,envMapIntensity:.3,side:THREE.DoubleSide,emissive:'#ffe1b0',emissiveIntensity:0})),
    bronze:focusable(new THREE.MeshStandardMaterial({color:'#b07e45',roughness:.38,metalness:.6,envMap:env,envMapIntensity:.35,side:THREE.DoubleSide})),
    white:focusable(new THREE.MeshStandardMaterial({color:'#ece4d2',roughness:.7,metalness:.05})),
    rail:focusable(new THREE.MeshStandardMaterial({color:'#cfe3ec',roughness:.1,metalness:.2,transparent:true,opacity:.45,depthWrite:false})),
@@ -110,7 +116,7 @@ export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
   mats.glass.emissiveIntensity=night?.55:0;mats.clear.emissiveIntensity=night?.9:.25;
   mats.canopy.emissiveIntensity=night?.55:0;mats.interior.emissiveIntensity=night?.8:0;mats.pool.emissiveIntensity=night?.65:0;
   // The reflected sky is a daytime one: after dark it dims, so the lit windows read.
-  mats.glass.envMapIntensity=night?.1:.3;mats.fin.envMapIntensity=night?.08:.2;mats.bronze.envMapIntensity=night?.1:.35;
+  mats.glass.envMapIntensity=night?.1:.3;mats.crown.envMapIntensity=night?.12:.6;mats.crown.emissiveIntensity=night?.75:0;mats.crownFin.emissiveIntensity=night?.35:0;mats.crownFin.envMapIntensity=night?.08:.3;mats.fin.envMapIntensity=night?.08:.2;mats.bronze.envMapIntensity=night?.1:.35;
  },[mats,night]);
  useEffect(()=>()=>{for(const v of Object.values(mats))if(v instanceof THREE.Material)v.dispose();for(const x of mats.textures)x.dispose();},[mats]);
  const signs=useMemo(()=>{
@@ -155,16 +161,16 @@ export function CommerceTower({tower:t,base,g,m,pick,night=false}:{tower:Tower;b
  return <group name="commerce-tower">
   <group position={[t.x,base,t.z]}>
    <mesh geometry={geo.glass} material={mats.glass} castShadow receiveShadow {...handlers}/>
-   <mesh geometry={geo.gold} material={mats.glass} castShadow receiveShadow {...handlers}/>
+   <mesh geometry={geo.crown} material={mats.crown} castShadow receiveShadow {...handlers}/>
    {/* Tower fins and the podium's ribs, one mesh. */}
    {finsOn&&<mesh geometry={geo.fins} material={mats.fin} castShadow={quality<2} raycast={noRaycast}/>}
    <mesh geometry={geo.rods} material={mats.bronze} castShadow raycast={noRaycast}/>
    {/* The roof is a garden. */}
    <mesh geometry={geo.roof} material={m.lawn} receiveShadow raycast={noRaycast}/>
    <mesh geometry={geo.bands} material={mats.fin} raycast={noRaycast}/>
+   <mesh geometry={geo.crownBands} material={mats.crownFin} raycast={noRaycast}/>
    <mesh geometry={geo.interior} material={mats.interior} receiveShadow raycast={noRaycast}/>
    <mesh geometry={geo.lobby} material={mats.clear} {...handlers}/>
-   <mesh geometry={geo.podiumGlass} material={mats.glass} receiveShadow {...handlers}/>
    <mesh geometry={geo.slabs} material={mats.white} castShadow receiveShadow {...handlers}/>
    <mesh geometry={geo.lawn} material={m.lawn} receiveShadow raycast={noRaycast}/>
    <mesh geometry={geo.pool} material={mats.pool} raycast={noRaycast}/>
