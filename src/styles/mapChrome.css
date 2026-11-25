@@ -65,21 +65,6 @@
 .map-tip { background: var(--glass-strong); border: 1px solid var(--glass-line); box-shadow: var(--glass-shadow); border-radius: var(--radius-sm); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
 .map-tip .t { color: var(--ivory); }
 
-/* ── Map introduction: a compact glass card, so it reads over water, lawn, roofs and night alike ── */
-.map-stage:has(.map3d)::before { opacity: 0; }
-.map-stage .map-intro, .map-stage:has(.map3d) .map-intro {
-  top: var(--space-9); left: var(--space-10); max-width: 360px; padding: var(--space-8) var(--space-10) var(--space-9);
-  color: var(--ivory); background: var(--glass); border: 1px solid var(--glass-line); border-radius: var(--radius);
-  box-shadow: var(--glass-shadow); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
-}
-.map-intro .eyebrow, .map-stage.night .map-intro .eyebrow { color: var(--gold); letter-spacing: .2em; }
-.map-intro h1 { margin-top: var(--space-4); font-family: var(--serif); font-weight: 500; font-size: clamp(22px, 2vw, 26px); letter-spacing: -.01em; }
-.map-intro .map-intro-subheading, .map-stage.night .map-intro .map-intro-subheading { color: var(--ivory); }
-.map-intro .map-intro-description, .map-stage.night .map-intro .map-intro-description { color: var(--on-dark-2); }
-.map-intro-metrics { border-top-color: var(--glass-line); }
-.map-intro-metrics dt, .map-stage.night .map-intro-metrics dt { color: var(--on-dark-2); }
-.map-intro-metrics dd { color: var(--ivory); font-family: var(--serif); font-weight: 500; }
-
 /* ── Selected building panel (docked beside the map) ───────────────────────────────────────── */
 .panel.docked { background: var(--ivory); border-left: 1px solid var(--glass-line); box-shadow: -10px 0 30px color-mix(in srgb, var(--forest-900) 16%, transparent); }
 .panel.docked .panel-head {
@@ -99,19 +84,15 @@
 /* ── The project bar under the map ─────────────────────────────────────────────────────────── */
 .map-bar { background: linear-gradient(180deg, var(--forest-800), var(--forest-900)); border-top: 1px solid var(--glass-line); }
 
-/* Phone: the toolbar keeps mobile.css's tight padding so every control fits in one row, and the
-   intro card hugs the top-left corner. */
+/* Phone: the toolbar keeps mobile.css's tight padding so every control fits in one row. */
 @media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
   .map-stage .map-controls { padding: var(--space-1); gap: 0; }
-  .map-stage .map-intro, .map-stage:has(.map3d) .map-intro { top: var(--space-4); left: var(--space-4); right: auto; max-width: calc(100% - 16px); padding: var(--space-4) var(--space-6) var(--space-5) !important; }
-  .map-intro h1 { margin: 0; font-size: var(--text-xl); }
-  .map-intro-metrics dd { font-family: var(--sans); font-weight: 600; }
 }
 
 /* Where blur is not supported, the glass falls back to the solid forest it already was. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .m3-plaque, .map-stage .map-controls, .map-stage .map-intro, .map-legend, .map-tip, .m3-pill.hood { background: var(--glass-strong); }
+  .m3-plaque, .map-stage .map-controls, .map-legend, .map-tip, .m3-pill.hood { background: var(--glass-strong); }
 }
 @media (prefers-reduced-transparency: reduce) {
-  .m3-plaque, .map-stage .map-controls, .map-stage .map-intro, .map-legend, .map-tip, .m3-pill.hood { background: var(--forest-900); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .m3-plaque, .map-stage .map-controls, .map-legend, .map-tip, .m3-pill.hood { background: var(--forest-900); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
