@@ -1,0 +1,117 @@
+/*
+ * Map chrome (Khaneil, 2026-11-24): the interface over the 3D map, refined toward the architectural references.
+ * Deep forest dark glass for everything that floats over the city (labels, district tags, controls, tips),
+ * warm ivory for the information panel's body, restrained gold for focus and selection. Only the interface layer:
+ * the scene, its data and every control's behaviour are unchanged. Colours, type, spacing and radii come from
+ * tokens.css (Design Consistency).
+ */
+
+/* ── Building labels: compact dark glass, readable over water, lawn and roofs ─────────────── */
+.m3-plaque {
+  background: var(--glass); color: var(--ivory); border: 1px solid var(--glass-line); border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-5); box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+}
+.m3-plaque::after { border-top-color: var(--glass); }
+.m3-plaque::before { background: var(--glass-line-strong); opacity: .5; }
+.m3-plaque .t { font-size: var(--text-sm); font-weight: 600; letter-spacing: .01em; line-height: 16px; }
+.m3-plaque .s { color: var(--on-dark-2); }
+.m3-plaque:hover, .m3-plaque.hover { background: var(--glass-hover); border-color: var(--glass-line-strong); }
+/* The selected building: solid, gold-edged, with a soft gold ring, so it is the one you see first. */
+.m3-plaque.selected {
+  background: var(--glass-strong); border-color: var(--gold); color: var(--white);
+  box-shadow: 0 0 0 3px var(--gold-ring), var(--glass-shadow);
+}
+.m3-plaque.selected::after { border-top-color: var(--gold); }
+.m3-plaque.selected::before { background: var(--gold); opacity: 1; }
+.m3-plaque.selected .t { letter-spacing: .015em; }
+.m3-plaque.dim { opacity: .55; }
+/* Compact building nameplates (app.css .m3-plaque.compact) take the same glass. Only colours change:
+   their size is fixed by PLAQUE in plaques.tsx, which places the labels. */
+.m3-plaque.compact { background: var(--glass); border-color: var(--glass-line); color: var(--ivory); box-shadow: var(--glass-shadow); }
+.m3-plaque.compact::after { border-top-color: var(--glass); }
+.m3-plaque.compact::before { background: linear-gradient(var(--glass-line-strong), transparent); }
+.m3-plaque.compact.hover { background: var(--glass-hover); border-color: var(--glass-line-strong); }
+.m3-plaque.compact.hover::after { border-top-color: var(--glass-hover); }
+.m3-plaque.compact.selected { background: var(--glass-strong); border-color: var(--gold); color: var(--white); box-shadow: 0 0 0 3px var(--gold-ring), var(--glass-shadow); }
+.m3-plaque.compact.selected::after { border-top-color: var(--gold); }
+.m3-plaque.compact.selected::before { background: var(--gold); }
+
+/* District and neighbourhood tags: quieter than buildings, same family. */
+.m3-pill.hood { background: var(--glass); border-color: var(--glass-line); color: var(--ivory-2); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+.m3-pill.hood.district { background: color-mix(in srgb, var(--forest-900) 55%, transparent); color: var(--gold); border-color: transparent; }
+.m3-pill:not(.hood):not(.gold):not(.quiet) { background: var(--ivory); border-color: var(--ivory-line); color: var(--ink); }
+
+/* ── Map controls: one dark-glass bar, ivory icons, gold for what is on ───────────────────── */
+.map-stage .map-controls {
+  background: var(--glass); border: 1px solid var(--glass-line); border-radius: var(--radius); box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); color: var(--on-dark);
+  padding: var(--space-2); gap: var(--space-1);
+}
+.map-stage .map-controls .icon-btn { color: var(--on-dark); border-radius: var(--radius-sm); }
+.map-stage .map-controls .icon-btn:hover { background: var(--glass-sheen); color: var(--white); }
+.map-stage .map-controls .icon-btn.on { background: var(--gold-soft); color: var(--gold); box-shadow: inset 0 0 0 1px var(--glass-line-strong); }
+.map-stage .map-controls .sep { background: var(--glass-line); }
+.map-stage .map-controls .count { background: var(--gold-soft); color: var(--gold); }
+.map-stage .map-controls .lbl { color: inherit; }
+.map-stage .map-controls select { color: var(--on-dark); background: transparent; }
+.map-stage .map-controls option { color: var(--ink); }
+.map-stage .map-controls .map-group, .map-stage .map-controls .map-group-value { color: var(--on-dark); }
+.map-stage .map-controls .map-group:hover .map-group-face, .map-stage .map-controls .map-group:focus-within .map-group-face { background: var(--glass-sheen); }
+.map-stage .map-controls .map-group-chev { color: var(--on-dark-2); }
+.map-legend { background: var(--glass); color: var(--on-dark); border: 1px solid var(--glass-line); box-shadow: var(--glass-shadow); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+
+/* Hover tip over a building: the same glass. */
+.map-tip { background: var(--glass-strong); border: 1px solid var(--glass-line); box-shadow: var(--glass-shadow); border-radius: var(--radius-sm); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+.map-tip .t { color: var(--ivory); }
+
+/* ── Map introduction: a compact glass card, so it reads over water, lawn, roofs and night alike ── */
+.map-stage:has(.map3d)::before { opacity: 0; }
+.map-stage .map-intro, .map-stage:has(.map3d) .map-intro {
+  top: var(--space-9); left: var(--space-10); max-width: 360px; padding: var(--space-8) var(--space-10) var(--space-9);
+  color: var(--ivory); background: var(--glass); border: 1px solid var(--glass-line); border-radius: var(--radius);
+  box-shadow: var(--glass-shadow); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+}
+.map-intro .eyebrow, .map-stage.night .map-intro .eyebrow { color: var(--gold); letter-spacing: .2em; }
+.map-intro h1 { margin-top: var(--space-4); font-family: var(--serif); font-weight: 500; font-size: clamp(22px, 2vw, 26px); letter-spacing: -.01em; }
+.map-intro .map-intro-subheading, .map-stage.night .map-intro .map-intro-subheading { color: var(--ivory); }
+.map-intro .map-intro-description, .map-stage.night .map-intro .map-intro-description { color: var(--on-dark-2); }
+.map-intro-metrics { border-top-color: var(--glass-line); }
+.map-intro-metrics dt, .map-stage.night .map-intro-metrics dt { color: var(--on-dark-2); }
+.map-intro-metrics dd { color: var(--ivory); font-family: var(--serif); font-weight: 500; }
+
+/* ── Selected building panel (docked beside the map) ───────────────────────────────────────── */
+.panel.docked { background: var(--ivory); border-left: 1px solid var(--glass-line); box-shadow: -10px 0 30px color-mix(in srgb, var(--forest-900) 16%, transparent); }
+.panel.docked .panel-head {
+  background: linear-gradient(160deg, var(--forest-800), var(--forest-900)); border-bottom: 1px solid var(--glass-line);
+  box-shadow: inset 3px 0 var(--gold); padding: var(--space-11) var(--space-12) var(--space-9);
+}
+.panel.docked .panel-head .eyebrow { letter-spacing: .16em; font-size: var(--text-2xs); }
+.panel.docked .panel-head h2 { font-family: var(--serif); color: var(--ivory); letter-spacing: -.015em; }
+.panel.docked .panel-head .chip { border-color: var(--glass-line); color: var(--ivory-2); }
+.panel.docked .panel-head .btn, .panel.docked .panel-head button.btn { border-color: var(--glass-line-strong); color: var(--gold); }
+.panel.docked .panel-body { background: var(--ivory); }
+.panel.docked .section-title { color: var(--gold-deep); letter-spacing: .14em; }
+.panel.docked .panel-body > section + section { border-top-color: var(--ivory-line); }
+.panel.docked .module-card { background: var(--white); border: 1px solid var(--ivory-line); border-left: 3px solid var(--gold); border-radius: var(--radius); box-shadow: var(--shadow); }
+.panel.docked .kv dt { color: var(--ink-3); }
+
+/* ── The project bar under the map ─────────────────────────────────────────────────────────── */
+.map-bar { background: linear-gradient(180deg, var(--forest-800), var(--forest-900)); border-top: 1px solid var(--glass-line); }
+
+/* Phone: the toolbar keeps mobile.css's tight padding so every control fits in one row, and the
+   intro card hugs the top-left corner. */
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+  .map-stage .map-controls { padding: var(--space-1); gap: 0; }
+  .map-stage .map-intro, .map-stage:has(.map3d) .map-intro { top: var(--space-4); left: var(--space-4); right: auto; max-width: calc(100% - 16px); padding: var(--space-4) var(--space-6) var(--space-5) !important; }
+  .map-intro h1 { margin: 0; font-size: var(--text-xl); }
+  .map-intro-metrics dd { font-family: var(--sans); font-weight: 600; }
+}
+
+/* Where blur is not supported, the glass falls back to the solid forest it already was. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .m3-plaque, .map-stage .map-controls, .map-stage .map-intro, .map-legend, .map-tip, .m3-pill.hood { background: var(--glass-strong); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .m3-plaque, .map-stage .map-controls, .map-stage .map-intro, .map-legend, .map-tip, .m3-pill.hood { background: var(--forest-900); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
