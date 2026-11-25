@@ -69,35 +69,24 @@ function strip(rows:Pt3[][],uvAt?:(r:number,j:number)=>[number,number]){
 }
 
 /**
- * Vertical fins out of the blades' skin, clear of the gold valley, running on above the roof
- * as a screen, tallest at the point.
+ * The bronze rods (photo pass, 2026-11-25): a few polished rods standing off the tower's front face
+ * and winding down it in a tall S, from just under the roof edge to the podium terrace, a sculpture
+ * in front of the glass. Each follows the ribbon's centre line, fanned a little apart and drawing
+ * together near the top and bottom, as tubes.
  */
-function towerFins(levels:Level[],k:number,top:(i:number)=>number){
- const c=COMMERCE,n=c.ring,h=c.ribbon.width/2+.6,d=c.finDepth*k,pos:number[]=[];
- const rows=levels.map(({t,y})=>{const plan=planAt(t,k);return {plan,ns:normals(plan),mid:ribbonCentre(t,n),y};});
- const inValley=(i:number,mid:number)=>Math.abs((((i-mid)%n)+n*1.5)%n-n/2)<h;
- for(let i=0;i<n;i+=c.finEvery){
-  for(let l=0;l<rows.length-1;l++){
-   const A=rows[l],B=rows[l+1];if(inValley(i,A.mid)||inValley(i,B.mid))continue;
-   const p:Pt3=[A.plan[i][0],A.y(i),A.plan[i][1]],q:Pt3=[B.plan[i][0],B.y(i),B.plan[i][1]];
-   quad(pos,p,[p[0]+A.ns[i][0]*d,p[1],p[2]+A.ns[i][1]*d],[q[0]+B.ns[i][0]*d,q[1],q[2]+B.ns[i][1]*d],q);
+function bronzeRods(k:number,H:number,from:number){
+ const c=COMMERCE,R=c.rods,n=c.ring,out:THREE.BufferGeometry[]=[];
+ const t0=from/H,t1=1-c.slope-.02;
+ for(let r=0;r<R.count;r++){
+  const off=(r-(R.count-1)/2)*R.spread,pts:THREE.Vector3[]=[];
+  for(let s=0;s<=24;s++){
+   const t=t0+(t1-t0)*s/24,plan=planAt(t,k),ns=normals(plan),f=ribbonCentre(t,n)+off*(.6+.4*Math.sin(Math.PI*s/24));
+   const [x,z]=along(plan,f),[nx,nz]=unit(along(ns,f)),d=R.standOff*k;
+   pts.push(new THREE.Vector3(x+nx*d,t*H,z+nz*d));
   }
-  const T=rows[rows.length-1];if(inValley(i,T.mid))continue;
-  const p:Pt3=[T.plan[i][0],T.y(i),T.plan[i][1]],o:Pt3=[p[0]+T.ns[i][0]*d,p[1],p[2]+T.ns[i][1]*d];
-  quad(pos,p,o,[o[0],top(i),o[2]],[p[0],top(i),p[2]]);
+  out.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),R.samples,R.radius*k,6,false));
  }
- // One face per fin; the fin material is double-sided.
- return geo(pos);
-}
-
-/** The white lip trims: two thin blades standing out along the valley's edges, the S curves that frame the gold. */
-function lipTrims(lips:{p:Pt3;out:Pt}[][],k:number){
- const pos:number[]=[],d=COMMERCE.ribbon.lip*k;
- for(let s=0;s<2;s++)for(let l=0;l<lips.length-1;l++){
-  const a=lips[l][s],b=lips[l+1][s];
-  quad(pos,a.p,[a.p[0]+a.out[0]*d,a.p[1],a.p[2]+a.out[1]*d],[b.p[0]+b.out[0]*d,b.p[1],b.p[2]+b.out[1]*d],b.p);
- }
- return geo(pos);
+ return merge(out);
 }
 
 /** A ledge along an open run of outline points (the blades' skin), top and outer face. */
@@ -235,19 +224,19 @@ export function commerceGeometry(k=1,height=COMMERCE.height*k){
  // Tower levels: a level every two floors up to where the roof's cut begins, then the sloped top.
  const flat=H*(1-c.slope),steps=Math.max(12,Math.ceil(flat/(c.floor*k*2)));
  const levels:Level[]=[...Array.from({length:steps+1},(_,i)=>{const t=i/steps*(1-c.slope);return {t,y:()=>t*H};}),{t:1,y:(f:number)=>H*roofShare(f,n)}];
- const {skin,valley,skinF,lips}=towerRows(levels,k);
+ const {skin,valley,skinF}=towerRows(levels,k);
  // Skin UVs are pinned to the outline (not to the moving valley), in bays along and floors up, so the facade does not slide.
- const perim=planAt(0,k).reduce((s,p,i,a)=>s+Math.hypot(a[(i+1)%n][0]-p[0],a[(i+1)%n][1]-p[1]),0),bay=.11*k;
+ const perim=planAt(0,k).reduce((s,p,i,a)=>s+Math.hypot(a[(i+1)%n][0]-p[0],a[(i+1)%n][1]-p[1]),0),bay=.16*k;
  const glass=strip(skin,(r,j)=>[skinF[r][j]*perim/n/(bay*4),skin[r][j][1]/(c.floor*k*4)]);
- const gold=strip(valley,(r,j)=>[j/4,valley[r][j][1]/(c.floor*k*4)]);
- const finGeo=towerFins(levels,k,i=>H*roofShare(i,n)+c.screen*k*roofShare(i,n)**8),lipGeo=lipTrims(lips,k);
+ // The ribbon's strip of the outline is ordinary curtain wall now (depth 0): same glass, same grid.
+ const gold=strip(valley,(r,j)=>[(skinF[r][0]-c.ribbon.width+j*c.ribbon.width/VALLEY)*perim/n/(bay*4),valley[r][j][1]/(c.floor*k*4)]);
  const top=skin.length-1,roofLid=lid([...skin[top].slice(0,SKIN),...valley[top].slice(0,VALLEY)].map(([x,y,z])=>[x,y-.01*k,z] as Pt3));
- // Thin silver ledges every third floor round the blades (not across the gold).
- const bandAt=floorHeights(k,H).filter((_,i)=>i%3===2);
+ // Ivory stone spandrel ledges at every floor, standing a little proud of the grid (photo pass, 2026-11-25).
+ const bandAt=floorHeights(k,H);
  const bands=bandAt.map(y=>{const t=y/H/(1-c.slope),r=Math.min(steps-1,Math.floor(t*steps)),u=t*steps-r;
   const row=skin[r].map((p,j)=>{const q=skin[r+1][j];return [p[0]+(q[0]-p[0])*u,y,p[2]+(q[2]-p[2])*u] as Pt3;});
   // Every other sample is plenty for a thin ledge, and halves its memory.
-  return openLedge(row.filter((_,j)=>j%2===0||j===row.length-1),k,y-.012*k,.024*k);});
+  return openLedge(row.filter((_,j)=>j%2===0||j===row.length-1),k,y-.014*k,.024*k);});
  // Podium (Business District pass, 2026-11-25): a clear lobby behind warm stone piers, then
  // office storeys of the tower's dark green curtain wall that step back as they rise, each step a
  // planted ledge with a stone kerb, and the top storey's roof garden behind a glass rail.
@@ -260,21 +249,27 @@ export function commerceGeometry(k=1,height=COMMERCE.height*k){
  const slabs=merge(c.podium.floors.map((_,l)=>slab(storey(l),podiumTop(l,k),.04*k)));
  const ribs=merge([...Array.from({length:storeys-1},(_,i)=>i+1).map(l=>fins([at(storey(l),podiumTop(l-1,k)),at(storey(l),podiumTop(l,k))],2,.035*k)),lobbyFins]);
  // Planted ledges where a storey steps back: a stone kerb at the lower storey's edge and a lawn strip behind it.
- const kerbs:THREE.BufferGeometry[]=[],ledgeLawn:THREE.BufferGeometry[]=[],L=c.podium.ledge;
+ const kerbs:THREE.BufferGeometry[]=[],ledgeLawn:THREE.BufferGeometry[]=[],L=c.podium.ledge,ledgeTrees:{x:number;z:number;y:number;big:boolean}[]=[];
  for(let l=1;l<storeys;l++){if(c.podium.setback[l]-c.podium.setback[l-1]<.02)continue;
   const y=podiumTop(l-1,k),outer=storey(l-1,-L.inset),inner=storey(l);
   kerbs.push(annulus(storey(l-1,-L.inset-.02),outer,y,L.kerb*k));
   ledgeLawn.push(annulus(inner,storey(l-1,-L.inset-.02),y,L.kerb*k*.6));
+  // Shrubs and small trees along the planted ledge, between the kerb and the storey above.
+  const mid=storey(l-1,-(L.inset+c.podium.setback[l]-c.podium.setback[l-1])/2);
+  mid.forEach(([x,z],i)=>{if(i%3===0)ledgeTrees.push({x,z,y:y+L.kerb*k*.6,big:i%9===0});});
  }
  const railRing=storey(storeys-1,-.012),rail=skin2([at(railRing,ptop),at(railRing,ptop+c.podium.rail*k)]);
  const lawn=merge([lid(at(storey(storeys-1,-.04),ptop+.004*k)),...ledgeLawn]);
  const pool=poolRing(k),[pcx,pcz]=poolCentre(k),poolRim=annulus(pool,pool.map(([x,z])=>[x+(x-pcx)*.12,z+(z-pcz)*.12] as Pt),ptop,.02*k);
+ // A thin ivory rim along the sloped roof's edge (photo pass, 2026-11-25), standing a little above the garden.
+ const rim:number[]=[],edge=[...skin[top].slice(0,SKIN),...valley[top].slice(0,VALLEY)];
+ for(let i=0;i<edge.length;i++){const a=edge[i],b=edge[(i+1)%edge.length];quad(rim,[a[0],a[1]-.03*k,a[2]],[b[0],b[1]-.03*k,b[2]],[b[0],b[1]+.035*k,b[2]],[a[0],a[1]+.035*k,a[2]]);}
  return compact({
-  glass:smooth(glass),gold:smooth(gold),fins:merge([smooth(finGeo),ribs]),lips:smooth(lipGeo),roof:roofLid,bands:smooth(merge(bands)),
+  glass:smooth(glass),gold:smooth(gold),fins:ribs,rods:bronzeRods(k,H,podiumTop(c.podium.floors.length-1,k)+.02*k),roof:roofLid,bands:smooth(merge([...bands,geo(rim)])),
   lobby:smooth(lobbyGlass),podiumGlass:smooth(podiumGlass),slabs:merge([slabs,poolRim,lobbyColumns(k),...kerbs]),interior:lobbyInterior(k),rail:smooth(rail),lawn,
   pool:lid(at(pool,ptop+.016*k)),canopy:merge([canopy(k),soffit(k)]),
   site:siteGround(k),
-  trees:roofTrees(k),crownTrees:crownTrees(k,H),siteTrees:siteLawns(k).filter(l=>l.tree),
+  trees:roofTrees(k),crownTrees:crownTrees(k,H),ledgeTrees,siteTrees:siteLawns(k).filter(l=>l.tree),
  });
 }
 export type CommerceGeometry=ReturnType<typeof commerceGeometry>;

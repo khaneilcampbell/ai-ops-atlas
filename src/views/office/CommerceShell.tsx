@@ -1,18 +1,18 @@
 import {useEffect,useLayoutEffect,useMemo,useRef} from 'react';
 import * as THREE from 'three';
 import {patterned} from '../map3d/materials';
-import {COMMERCE_INTERIOR as C,columns,commerceOutline,cores,glassTop,goldAt,groundFloor,type Item} from './commerceInteriorPlan';
+import {COMMERCE_INTERIOR as C,columns,commerceOutline,cores,glassTop,groundFloor,rodsAt,type Item} from './commerceInteriorPlan';
 
 /**
  * The wave tower's floor shell and ground floor, matching the tower outside: a teardrop slab, a
- * clear curtain wall with white mullions that turns gold where the ribbon wraps the storey, two
+ * clear green curtain wall with chunky ivory mullions, the bronze rods passing outside the glass
+ * where the ribbon winds past the storey (photo pass, 2026-11-25), two
  * stone cores, and on the ground floor the bank hall from the reference plan (counter, tellers,
  * waiting seats, back office, client lounge, café, meeting room, vault, ATMs) on a column grid.
  * Merged and instanced boxes only; no lights of its own.
  */
 const MAT={
  glass:new THREE.MeshStandardMaterial({color:'#7fa395',transparent:true,opacity:.28,roughness:.08,metalness:.2,depthWrite:false,side:THREE.DoubleSide,emissive:'#cfe6f2',emissiveIntensity:0}),
- gold:new THREE.MeshStandardMaterial({color:'#9a6f40',transparent:true,opacity:.72,roughness:.35,metalness:.5,depthWrite:false,side:THREE.DoubleSide,emissive:'#ffcf86',emissiveIntensity:0}),
  white:new THREE.MeshStandardMaterial({color:'#ece4d2',roughness:.6,metalness:.05}),
  slab:patterned('#e6e2d8','stone',{roughness:.6}),
  core:new THREE.MeshStandardMaterial({color:'#d9cfbf',roughness:.85}),
@@ -86,19 +86,21 @@ function furniture(items:Item[]){
 }
 
 export default function CommerceShell({w,d,level,night}:{w:number;d:number;level:number;night:boolean}){
- useEffect(()=>{MAT.glass.emissiveIntensity=night?.12:0;MAT.gold.emissiveIntensity=night?.6:0;MAT.dark.emissiveIntensity=night?.8:.25;},[night]);
+ useEffect(()=>{MAT.glass.emissiveIntensity=night?.12:0;MAT.dark.emissiveIntensity=night?.8:.25;},[night]);
  const pts=useMemo(()=>commerceOutline(w,d),[w,d]);
  const items=useMemo(()=>level===0?groundFloor(w,d):[],[w,d,level]);
  const geo=useMemo(()=>{
-  const top=glassTop(level),door=level===0?{x:0,width:2.2}:null,gold=(i:number)=>goldAt(i,level,pts.length);
+  const top=glassTop(level),door=level===0?{x:0,width:2.2}:null;
   // A white floor band along the head of the glass.
   const band=panes(pts,()=>true,.12,null);band.translate(0,top,0);
-  return {slab:plate(pts,-.004,.14),glass:panes(pts,i=>!gold(i),top,door),gold:panes(pts,gold,top,door),band};
+  return {slab:plate(pts,-.004,.14),glass:panes(pts,()=>true,top,door),band};
  },[pts,level]);
  useEffect(()=>()=>{for(const g of Object.values(geo))g?.dispose();},[geo]);
  const parts=useMemo(()=>{
   const top=glassTop(level),n=pts.length;
-  const mullions:Inst[]=pts.filter((_,i)=>i%2===0).map(([x,z])=>({p:[x,0,z],s:[.05,top,.05]}));
+  const mullions:Inst[]=pts.filter((_,i)=>i%2===0).map(([x,z])=>({p:[x,0,z],s:[.14,top,.14]}));
+  // The bronze rods outside the glass, where the ribbon winds past this storey: a rod per stretch, standing off the face.
+  const rods:Inst[]=[];pts.forEach(([x,z],i)=>{if(!rodsAt(i,level,n))return;const [ax,az]=pts[(i+n-1)%n],[bx,bz]=pts[(i+1)%n],dx=bx-ax,dz=bz-az,l=Math.hypot(dx,dz)||1,o=.55;rods.push({p:[x+dz/l*o,0,z-dx/l*o],s:[.09,top+.3,.09]});});
   const cols:Inst[]=level===0?columns(w,d,items).map(([x,z])=>({p:[x,0,z],s:[C.columnR*2,top,C.columnR*2]})):[];
   // Round tables with four chairs, planters with a soft crown.
   const tables:Inst[]=[],chairs:Inst[]=[],pots:Inst[]=[],crowns:Inst[]=[];
@@ -106,15 +108,15 @@ export default function CommerceShell({w,d,level,night}:{w:number;d:number;level
    if(it.kind==='roundTable'){tables.push({p:[it.x,0,it.z],s:[it.w,it.h,it.d]});for(let k=0;k<4;k++){const a=k*Math.PI/2;chairs.push({p:[it.x+Math.cos(a)*.62,0,it.z+Math.sin(a)*.62],s:[.36,.46,.36]});}}
    if(it.kind==='planter'){pots.push({p:[it.x,0,it.z],s:[it.w,it.h,it.d]});crowns.push({p:[it.x,it.h+.45,it.z],s:[1,1.1,1]});}
   }
-  void n;return {mullions,cols,tables,chairs,pots,crowns,box:furniture(items)};
+  return {mullions,rods,cols,tables,chairs,pots,crowns,box:furniture(items)};
  },[pts,level,w,d,items]);
  const top=glassTop(level);
  return <group>
   <mesh geometry={geo.slab} material={MAT.slab} receiveShadow/>
   <mesh geometry={geo.glass} material={MAT.glass}/>
-  <mesh geometry={geo.gold} material={MAT.gold}/>
   <mesh geometry={geo.band} material={MAT.white}/>
   <Instances items={parts.mullions} geometry={BOX} material={MAT.white} shadow={false}/>
+  <Instances items={parts.rods} geometry={CYL} material={MAT.goldTrim}/>
   {cores(w,d).map((c,i)=><mesh key={i} geometry={BOX} material={MAT.core} position={[c.x,0,c.z]} scale={[c.w,top,c.d]} castShadow receiveShadow/>)}
   <Instances items={parts.cols} geometry={CYL} material={MAT.column}/>
   {Object.entries(parts.box).map(([m,list])=><Instances key={m} items={list} geometry={BOX} material={MAT[m as keyof typeof MAT]}/>)}

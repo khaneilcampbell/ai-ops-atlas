@@ -1,1 +1,1 @@
-- 2026-11-25 · Product & Growth Tower fits the Business District: dark green glass in an ivory stone grid, a slimmer bronze ribbon, a podium that steps back with planted ledges, stone lobby piers and a roof garden on the tower; the inside matches
+- 2026-11-25 · Product & Growth Tower rebuilt to match the reference photo: an upright rounded tower in a bold ivory stone grid with dark green glass, three bronze rods winding down its front in an S, a sloped roof garden with an ivory rim, a three-tier planted podium and a stone colonnade entrance; the inside matches (#541)
