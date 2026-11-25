@@ -8,7 +8,7 @@ import {towerTop} from './models';
 import {isRibbonTower} from './ribbonTowerPlan';
 import {plazaRings} from './streetGraph';
 import {TRANSPORT} from './transportScale';
-import {COMMERCE,commerceScale,footprint,isCommerceTower,planAt,podiumHeight,poolRing,ribbonWindow,roofShare,roofTrees,signedArea,teardrop,twistAt} from './commerceTowerPlan';
+import {COMMERCE,commerceScale,crownTrees,footprint,isCommerceTower,planAt,podiumHeight,podiumRing,podiumStorey,poolRing,ribbonWindow,roofShare,roofTrees,signedArea,teardrop,twistAt} from './commerceTowerPlan';
 import {commerceGeometry,commerceTriangles} from './commerceTowerGeometry';
 
 const GROUPINGS:GroupBy[]=['none','district','status','tag'];
@@ -83,6 +83,20 @@ describe('Commerce Pipeline teardrop tower',()=>{
    for(const k of scene.kiosks)expect(k.height!).toBeLessThan(c.customHeight!);
    if(scene.financial)expect(Math.max(...scene.financial.buildings.filter(f=>f.id!=='circa').map(f=>f.height))).toBeGreaterThan(towerTop(c));
   }
+ });
+ it('steps its podium back as it rises, with the pool and roof garden on the top storey (Business District pass, 2026-11-25)',()=>{
+  const F=COMMERCE.podium.floors.length;
+  expect(podiumStorey(0)).toEqual(podiumRing());
+  for(let l=1;l<F;l++){const lower=podiumStorey(l-1),upper=podiumStorey(l);for(const p of upper)expect(inside(p,lower)||lower.some(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<1e-9)).toBe(true);}
+  expect(COMMERCE.podium.setback[F-1]).toBeGreaterThan(COMMERCE.podium.setback[0]);
+  const top=podiumStorey(F-1);for(const p of poolRing())expect(inside(p,top)).toBe(true);
+  for(const tr of roofTrees())expect(inside([tr.x,tr.z],top)).toBe(true);
+  // The roof garden stands on the tower's sloped roof, inside its outline.
+  const H=COMMERCE.height,trees=crownTrees(1,H),roof=planAt(1);expect(trees.length).toBeGreaterThanOrEqual(5);
+  for(const tr of trees){expect(inside([tr.x,tr.z],roof)).toBe(true);expect(tr.y).toBeGreaterThan(H*(1-COMMERCE.slope)-1e-9);expect(tr.y).toBeLessThanOrEqual(H);}
+  // The bronze ribbon's edges are their own part, drawn in bronze.
+  expect(commerceGeometry(1).lips.getAttribute('position').count).toBeGreaterThan(0);
+  expect(readFileSync(join(__dirname,'CommerceTower.tsx'),'utf8')).toMatch(/geo\.lips\} material=\{mats\.bronze\}/);
  });
  it('stays inside its performance budget: merged meshes, a few instances, no lights or frame loop',()=>{
   const g=commerceGeometry(1,COMMERCE.height*2);

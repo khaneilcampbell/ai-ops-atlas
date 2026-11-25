@@ -11,14 +11,14 @@ import {COMMERCE_INTERIOR as C,columns,commerceOutline,cores,glassTop,goldAt,gro
  * Merged and instanced boxes only; no lights of its own.
  */
 const MAT={
- glass:new THREE.MeshStandardMaterial({color:'#bcd8dc',transparent:true,opacity:.28,roughness:.08,metalness:.2,depthWrite:false,side:THREE.DoubleSide,emissive:'#cfe6f2',emissiveIntensity:0}),
- gold:new THREE.MeshStandardMaterial({color:'#d6ad5e',transparent:true,opacity:.72,roughness:.25,metalness:.55,depthWrite:false,side:THREE.DoubleSide,emissive:'#ffcf86',emissiveIntensity:0}),
- white:new THREE.MeshStandardMaterial({color:'#eef1f2',roughness:.35,metalness:.35}),
+ glass:new THREE.MeshStandardMaterial({color:'#7fa395',transparent:true,opacity:.28,roughness:.08,metalness:.2,depthWrite:false,side:THREE.DoubleSide,emissive:'#cfe6f2',emissiveIntensity:0}),
+ gold:new THREE.MeshStandardMaterial({color:'#9a6f40',transparent:true,opacity:.72,roughness:.35,metalness:.5,depthWrite:false,side:THREE.DoubleSide,emissive:'#ffcf86',emissiveIntensity:0}),
+ white:new THREE.MeshStandardMaterial({color:'#ece4d2',roughness:.6,metalness:.05}),
  slab:patterned('#e6e2d8','stone',{roughness:.6}),
  core:new THREE.MeshStandardMaterial({color:'#d9cfbf',roughness:.85}),
  column:new THREE.MeshStandardMaterial({color:'#f1efe9',roughness:.5}),
  counter:new THREE.MeshStandardMaterial({color:'#efe9de',roughness:.4}),
- goldTrim:new THREE.MeshStandardMaterial({color:'#c9a45c',roughness:.3,metalness:.6}),
+ goldTrim:new THREE.MeshStandardMaterial({color:'#9a6a38',roughness:.38,metalness:.6}),
  wood:new THREE.MeshStandardMaterial({color:'#a77d55',roughness:.6}),
  fabric:new THREE.MeshStandardMaterial({color:'#8fa3b8',roughness:.9}),
  seat:new THREE.MeshStandardMaterial({color:'#5e6f7f',roughness:.85}),

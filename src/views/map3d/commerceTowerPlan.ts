@@ -46,9 +46,10 @@ export const COMMERCE={
   * The gold ribbon (realism pass, 2026-11-24): no longer a stripe painted on the skin but a
   * valley cut into the tower, splitting it into two silver blades with warm gold glass curving
   * between them, as on the reference board. How many outline points wide, how far it winds
-  * round the plan, how deep the valley is cut, and how far the white lip trims stand out.
+  * round the plan, how deep the valley is cut, and how far the lip trims stand out. Business District
+  * pass (2026-11-25): narrower and in restrained bronze, with bronze lips.
   */
- ribbon:{width:17,wind:.07,depth:.11,lip:.055},
+ ribbon:{width:12,wind:.07,depth:.09,lip:.05},
  podium:{
   /** Storey heights bottom up: a grand clear-glass lobby (realism pass, 2026-11-24: taller, about two and a half storeys), then three office floors. */
   floors:[.56,.26,.26,.26] as number[],
@@ -58,6 +59,15 @@ export const COMMERCE={
   centre:[-.56,.4] as Pt,
   /** Roof garden parapet, glass. */
   rail:.08,
+  /**
+   * Business District pass (Khaneil, 2026-11-25): the podium steps back as it rises, storey by
+   * storey, so its upper floors sit behind planted ledges. How far each storey's round end and
+   * sides are pulled in, bottom up; the point end is pulled in a quarter as much, so the roof pool
+   * keeps its place. The lobby storey keeps the full teardrop.
+   */
+  setback:[0,.06,.06,.13] as number[],
+  /** A planted ledge on each step: its width inside the lower storey's edge and its kerb height. */
+  ledge:{inset:.012,kerb:.03},
  },
  /** The pool on the podium roof beyond the tower, along the axis toward the point: share of the podium's length, and radii. */
  pool:{at:1.04,rx:.24,rz:.16},
@@ -77,7 +87,7 @@ export const COMMERCE={
   * a little past it onto the level district plaza, which is wider than the plinth).
   */
  site:{forecourt:.16,lane:.15,laneSpan:20,ramp:[13,6] as [number,number],grid:.2,treeEvery:2,edge:0},
- lobby:{core:-.16,desk:[.42,.075,.09] as [number,number,number],deskBack:.42,columnEvery:4,columnInset:.13,column:.022,soffit:.035},
+ lobby:{core:-.16,desk:[.42,.075,.09] as [number,number,number],deskBack:.42,columnEvery:4,columnInset:.13,column:.032,soffit:.035},
 } as const;
 
 export const isCommerceTower=(projectId:string)=>projectId===COMMERCE.projectId;
@@ -213,9 +223,21 @@ export const podiumHeight=(k=1)=>podiumTop(COMMERCE.podium.floors.length-1,k);
 /** The podium keeps the coarser outline: its curves are gentle and it is seen from above. */
 export const PODIUM_RING=56;
 /** The podium's outline: the full teardrop, unturned by the twist; `grow` pushes it out (negative pulls it in). */
-export function podiumRing(k=1,grow=0):Pt[]{
- const p=COMMERCE.podium,a=COMMERCE.heading;
- return teardrop(p.round+grow,p.tip+grow,p.length,PODIUM_RING).map(([x,z])=>{const [rx,rz]=rot([x,z],a);return [(rx+p.centre[0])*k,(rz+p.centre[1])*k] as Pt;});
+export function podiumRing(k=1,grow=0):Pt[]{return podiumStorey(0,k,grow);}
+/** One storey's outline: the teardrop pulled in by that storey's setback (the point end a quarter as much). */
+export function podiumStorey(level:number,k=1,grow=0):Pt[]{
+ const p=COMMERCE.podium,a=COMMERCE.heading,s=p.setback[Math.max(0,Math.min(p.setback.length-1,level))];
+ return teardrop(p.round+grow-s,p.tip+grow-s/4,p.length,PODIUM_RING).map(([x,z])=>{const [rx,rz]=rot([x,z],a);return [(rx+p.centre[0])*k,(rz+p.centre[1])*k] as Pt;});
+}
+
+/**
+ * The roof garden on the tower's sloped top (Business District pass, 2026-11-25): small trees set
+ * in from the parapet, standing on the roof's slope. Local, scaled by k; `height` is the roof at the point.
+ */
+export function crownTrees(k:number,height:number){
+ const n=COMMERCE.ring,plan=planAt(1,k),cx=plan.reduce((s,p)=>s+p[0],0)/n,cz=plan.reduce((s,p)=>s+p[1],0)/n;
+ const mean=plan.reduce((s,_,i)=>s+roofShare(i,n),0)/n;
+ return Array.from({length:7},(_,j)=>Math.round(j*n/7+n/14)).map(i=>{const [x,z]=plan[i],f=.58;return {x:cx+(x-cx)*f,z:cz+(z-cz)*f,y:height*(roofShare(i,n)*f+mean*(1-f))};});
 }
 
 /** The pool's outline on the podium roof, lying along the axis beyond the tower. */
@@ -230,9 +252,9 @@ const insidePoly=(p:Pt,poly:Pt[])=>{let c=false;for(let i=0,j=poly.length-1;i<po
 
 /** Olive trees on the podium roof: along its open edge, clear of the tower and the pool. */
 export function roofTrees(k=1){
- const ring=podiumRing(1,-.13),tower=planAt(0,1,.1),pool=poolRing(1);
+ const ring=podiumStorey(COMMERCE.podium.floors.length-1,1,-.08),tower=planAt(0,1,.1),pool=poolRing(1);
  const near=(p:Pt,poly:Pt[],d:number)=>poly.some(([x,z])=>Math.hypot(x-p[0],z-p[1])<d);
- return ring.filter((p,i)=>i%4===0&&!insidePoly(p,tower)&&!near(p,tower,.16)&&!near(p,pool,.12)).map(([x,z])=>({x:x*k,z:z*k,y:podiumHeight(k)}));
+ return ring.filter((p,i)=>i%4===0&&!insidePoly(p,tower)&&!near(p,tower,.16)&&!near(p,pool,.2)).map(([x,z])=>({x:x*k,z:z*k,y:podiumHeight(k)}));
 }
 
 /** Keeps a ground point inside the plinth's rim. */
