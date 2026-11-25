@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import {COMMERCE,commerceScale} from '../map3d/commerceTowerPlan';
-import {columns,commerceCityFit,commerceOutline,cores,fixtures,goldAt,groundFloor,inside,type Item} from './commerceInteriorPlan';
+import {columns,commerceCityFit,commerceOutline,cores,fixtures,rodsAt,groundFloor,inside,type Item} from './commerceInteriorPlan';
 
 // The wave tower inside, from the reference bank-headquarters plan (Khaneil, 2026-11-24).
 describe('Commerce wave tower interior',()=>{
@@ -24,8 +24,8 @@ describe('Commerce wave tower interior',()=>{
   expect(cols.length).toBeGreaterThan(3);
   for(const [x,z] of cols){expect(inside([x,z],pts)).toBe(true);expect(Math.abs(x)<1.4&&z>0).toBe(false);}
  });
- it('turns part of the glass gold on every floor, where the ribbon wraps it',()=>{
-  for(let level=0;level<5;level++){const n=COMMERCE.ring,gold=Array.from({length:n},(_,i)=>goldAt(i,level,n)).filter(Boolean).length;expect(gold,`floor ${level}`).toBeGreaterThan(2);expect(gold).toBeLessThan(n/2);}
+ it('passes the bronze rods outside the glass on every floor, where the ribbon winds past (photo pass, 2026-11-25)',()=>{
+  for(let level=0;level<5;level++){const n=COMMERCE.ring,rods=Array.from({length:n},(_,i)=>rodsAt(i,level,n)).filter(Boolean).length;expect(rods,`floor ${level}`).toBeGreaterThan(2);expect(rods).toBeLessThan(n/2);}
  });
  it('keeps every piece of lobby furniture clear of the others (a desk cross shares its centre on purpose)',()=>{
   const half=(i:Item)=>i.r?Math.max(i.w,i.d)/2:i.w/2,deep=(i:Item)=>i.r?Math.max(i.w,i.d)/2:i.d/2,onTop=['teller','stool','meetingTable'];

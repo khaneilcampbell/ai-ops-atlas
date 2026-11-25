@@ -8,7 +8,7 @@ import {towerTop} from './models';
 import {isRibbonTower} from './ribbonTowerPlan';
 import {plazaRings} from './streetGraph';
 import {TRANSPORT} from './transportScale';
-import {COMMERCE,commerceScale,footprint,isCommerceTower,planAt,podiumHeight,poolRing,ribbonWindow,roofShare,roofTrees,signedArea,teardrop,twistAt} from './commerceTowerPlan';
+import {COMMERCE,commerceScale,crownTrees,footprint,isCommerceTower,planAt,podiumHeight,podiumRing,podiumStorey,poolRing,ribbonWindow,roofShare,roofTrees,signedArea,teardrop,twistAt} from './commerceTowerPlan';
 import {commerceGeometry,commerceTriangles} from './commerceTowerGeometry';
 
 const GROUPINGS:GroupBy[]=['none','district','status','tag'];
@@ -35,16 +35,15 @@ describe('Commerce Pipeline teardrop tower',()=>{
    }
   }
  });
- it('draws a true teardrop that twists in an S as it rises',()=>{
+ it('draws a rounded oval that stands upright, as in the photo (photo pass, 2026-11-25)',()=>{
   const plan=teardrop();expect(plan).toHaveLength(COMMERCE.ring);expect(signedArea(plan)).toBeLessThan(0);
-  // Round at one end, a soft point at the other: wider than it is tall across its axis, longer than wide.
-  const xs=plan.map(p=>p[0]),zs=plan.map(p=>p[1]);
-  expect(Math.max(...xs)-Math.min(...xs)).toBeGreaterThan(1.4*(Math.max(...zs)-Math.min(...zs)));
-  expect(twistAt(0)).toBe(0);expect(twistAt(1)).toBeCloseTo(COMMERCE.twist);
-  // Eased: slow at the base and crown, fastest through the middle.
-  expect(twistAt(.5)-twistAt(.4)).toBeGreaterThan(twistAt(.1)-twistAt(0));
+  // Full round ends, one a little smaller: longer than it is wide, but no point.
+  const xs=plan.map(p=>p[0]),zs=plan.map(p=>p[1]),long=Math.max(...xs)-Math.min(...xs),wide=Math.max(...zs)-Math.min(...zs);
+  expect(long).toBeGreaterThan(1.15*wide);expect(COMMERCE.tip).toBeGreaterThan(.7*COMMERCE.round);
+  // No twist: the plan at the top is the base's, only a little smaller.
+  expect(twistAt(0)).toBe(0);expect(twistAt(1)).toBe(0);expect(COMMERCE.taper).toBeLessThanOrEqual(.05);
   for(const t of [0,.5,1])expect(signedArea(planAt(t))).toBeLessThan(0);
-  // The gold ribbon winds round the plan as it rises.
+  // The bronze rods' line winds across the front as it rises.
   expect(ribbonWindow(.25)[0]).not.toBe(ribbonWindow(.75)[0]);
   // The roof is cut on a slope, highest at the point (index 0).
   expect(roofShare(0)).toBe(1);expect(roofShare(COMMERCE.ring/2)).toBeCloseTo(1-COMMERCE.slope);
@@ -83,6 +82,37 @@ describe('Commerce Pipeline teardrop tower',()=>{
    for(const k of scene.kiosks)expect(k.height!).toBeLessThan(c.customHeight!);
    if(scene.financial)expect(Math.max(...scene.financial.buildings.filter(f=>f.id!=='circa').map(f=>f.height))).toBeGreaterThan(towerTop(c));
   }
+ });
+ it('steps its podium back as it rises, with the pool and roof garden on the top storey (Business District pass, 2026-11-25)',()=>{
+  const F=COMMERCE.podium.floors.length;
+  expect(podiumStorey(0)).toEqual(podiumRing());
+  for(let l=1;l<F;l++){const lower=podiumStorey(l-1),upper=podiumStorey(l);for(const p of upper)expect(inside(p,lower)||lower.some(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<1e-9)).toBe(true);}
+  expect(COMMERCE.podium.setback[F-1]).toBeGreaterThan(COMMERCE.podium.setback[0]);
+  const top=podiumStorey(F-1);for(const p of poolRing())expect(inside(p,top)).toBe(true);
+  for(const tr of roofTrees())expect(inside([tr.x,tr.z],top)).toBe(true);
+  // The roof garden stands on the tower's sloped roof, inside its outline.
+  const H=COMMERCE.height,trees=crownTrees(1,H),roof=planAt(1);expect(trees.length).toBeGreaterThanOrEqual(5);
+  for(const tr of trees){expect(inside([tr.x,tr.z],roof)).toBe(true);expect(tr.y).toBeGreaterThan(H*(1-COMMERCE.slope)-1e-9);expect(tr.y).toBeLessThanOrEqual(H);}
+  // The ribbon is bronze rods standing off the front face (photo pass, 2026-11-25), drawn in bronze,
+  // from the podium terrace up to under the roof's low edge.
+  const g=commerceGeometry(1),rods=g.rods;rods.computeBoundingBox();expect(rods.getAttribute('position').count).toBeGreaterThan(0);
+  expect(rods.boundingBox!.min.y).toBeGreaterThanOrEqual(podiumHeight());expect(rods.boundingBox!.max.y).toBeLessThan(H*(1-COMMERCE.slope));
+  expect(readFileSync(join(__dirname,'CommerceTower.tsx'),'utf8')).toMatch(/geo\.rods\} material=\{mats\.bronze\}/);
+ });
+ it('lifts the crown: brighter, sky-tinted glass toward the top, the lower floors unchanged (2026-11-25)',()=>{
+  const g=commerceGeometry(1),H=COMMERCE.height,col=(geo:typeof g.glass)=>{const p=geo.getAttribute('position'),c=geo.getAttribute('color');return Array.from({length:p.count},(_,i)=>({y:p.getY(i),g:c.getY(i),b:c.getZ(i)}));};
+  for(const v of col(g.glass))if(v.y<H*.5)expect(v.g).toBeCloseTo(1);
+  const top=col(g.crown).filter(v=>v.y>H*.85);expect(top.length).toBeGreaterThan(0);
+  for(const v of top){expect(v.g).toBeGreaterThan(1.3);expect(v.b).toBeGreaterThan(v.g);}
+  expect(g.crownBands.getAttribute('position').count).toBeGreaterThan(0);
+ });
+ it('draws no plinth outline or health ring round it (Khaneil, 2026-11-25: "remove green line")',()=>{
+  // The lot-sized outline ran under the grown podium; the glow keeps its window light and halo.
+  const src=readFileSync(join(__dirname,'activity.tsx'),'utf8');
+  expect(src).toMatch(/isCommerceTower\(t\.projectId\)\) return \{[^}]*noEdge: true/);
+  expect(src).toMatch(/!\("noEdge" in parts\) && <lineSegments/);
+  // Nor a health ring: the lot-sized green ring ran under the podium too (its health stays on the nameplate).
+  expect(readFileSync(join(__dirname,'models.tsx'),'utf8')).toMatch(/if \(!c \|\| isCommerceTower\(t\.projectId\)\) return \[\];/);
  });
  it('stays inside its performance budget: merged meshes, a few instances, no lights or frame loop',()=>{
   const g=commerceGeometry(1,COMMERCE.height*2);

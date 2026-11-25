@@ -6,7 +6,8 @@ import {COMMERCE,commerceScale,isCommerceTower,ribbonWindow,teardrop} from '../m
  * images as reference"). Plain numbers, no three.js.
  *
  * Every floor plate is the tower's teardrop, fitted round the office floor so the agents' desks
- * keep their places, in a clear curtain wall that turns gold where the ribbon wraps that storey.
+ * keep their places, in a clear green curtain wall with the bronze rods passing outside it where
+ * the ribbon winds past that storey (photo pass, 2026-11-25).
  * The ground floor follows the reference's ground-floor plan of a bank headquarters: the main hall
  * at the doors, a long transaction counter with waiting seats in front of it, the accounting
  * back office behind it in four-desk crosses, a client lounge in the pointed end, a café in the
@@ -21,7 +22,7 @@ export const COMMERCE_INTERIOR={
  /** The lobby's glass runs up to the floor above: a double-height hall, as in the section. */
  lobbyHeight:3.3,
  sill:.34,
- /** Storeys the gold ribbon is read at: the interior's five floors are the tower's lowest. */
+ /** Storeys the bronze ribbon is read at: the interior's five floors are the tower's lowest. */
  storeys:24,
  /** Column grid spacing, the reference's 10 m bays at interior scale. */
  bay:4,
@@ -74,8 +75,8 @@ export function commerceCityFit(w:number,d:number,tower:{x:number;z:number;size:
 
 /** Outline index i, mapped back to the tower's own numbering (point first), for the ribbon. */
 const towerIndex=(i:number,n:number)=>((n-1-i)%n+n)%n;
-/** Is this stretch of glass gold on this floor: the ribbon's window read at the floor's height. */
-export function goldAt(i:number,level:number,n:number=COMMERCE.ring){
+/** Do the bronze rods pass outside this stretch of glass on this floor: the ribbon's window read at the floor's height. */
+export function rodsAt(i:number,level:number,n:number=COMMERCE.ring){
  const t=(level+.5)/COMMERCE_INTERIOR.storeys;return ribbonWindow(t,n).includes(towerIndex(i,n));
 }
 
@@ -120,15 +121,17 @@ export function groundFloor(w:number,d:number):Item[]{
  // Client lounge in the pointed end: two sofas round a low table.
  const lx=X(.27),lz=Z(.22);add({kind:'table',x:lx,z:lz,w:.8,d:.8,h:.4});add({kind:'sofa',x:lx-1,z:lz,w:.75,d:1.6,h:.75,back:-1});add({kind:'sofa',x:lx+1,z:lz,w:.75,d:1.6,h:.75,back:1});
  // A glass meeting room behind it.
- const mx=X(.27),mz=Z(-.32);add({kind:'glassRoom',x:mx,z:mz,w:2.4,d:1.8,h:2.5});add({kind:'meetingTable',x:mx,z:mz,w:1.4,d:.6,h:.74});
+ const mx=X(.27),mz=Z(-.42);add({kind:'glassRoom',x:mx,z:mz,w:2.4,d:1.8,h:2.5});add({kind:'meetingTable',x:mx,z:mz,w:1.4,d:.6,h:.74});
  // Café in the round end: a bar and round tables.
  add({kind:'cafeBar',x:X(.78),z:0,w:.5,d:2.2,h:1.05});
  for(const x of [X(.85),X(.93)])for(const z of [Z(-.26),0,Z(.26)])add({kind:'roundTable',x,z,w:.7,d:.7,h:.74});
  // The vault behind the café, the reception desk by the doors, ATMs and planters on the front glass.
  add({kind:'vault',x:X(.78),z:Z(-.68),w:1.4,d:1,h:2.2});
  add({kind:'reception',x:X(.74),z:Z(.55),w:2,d:.6,h:1.05});
- for(let i=0;i<3;i++){const x=X(.44)+i*.7;add({kind:'atm',x,z:frontZ(pts,x)-.55,w:.5,d:.4,h:1.6});}
- for(const x of [X(.55),X(.7)])add({kind:'planter',x,z:frontZ(pts,x)-.7,w:.6,d:.6,h:.5});
+ // ATMs in a row on the front glass, the planters just past them (spaced off the ATMs, so the rounder
+ // photo-pass plate, 2026-11-25, never squeezes them together).
+ const atm0=X(.42);for(let i=0;i<3;i++){const x=atm0+i*.7;add({kind:'atm',x,z:frontZ(pts,x)-.55,w:.5,d:.4,h:1.6});}
+ for(const x of [atm0+2.2,atm0+3.1])add({kind:'planter',x,z:frontZ(pts,x)-.7,w:.6,d:.6,h:.5});
  const cs=cores(w,d),pad=(it:Item)=>(it.r?Math.max(it.w,it.d):it.w)/2;
  return out.filter(it=>[[-1,-1],[1,-1],[1,1],[-1,1]].every(([sx,sz])=>inside([it.x+sx*pad(it),it.z+sz*(it.r?pad(it):it.d/2)],pts))
   &&cs.every(c=>Math.abs(it.x-c.x)>c.w/2+pad(it)||Math.abs(it.z-c.z)>c.d/2+it.d/2));

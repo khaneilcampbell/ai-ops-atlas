@@ -1050,9 +1050,11 @@ export function Towers({ towers, strays, health, g, m, pick }: { towers: Tower[]
     () =>
       towers.flatMap((t) => {
         const c = HEALTH_ACCENT[health.get(t.key) ?? "unknown"];
-        if (!c) return [];
+        // The Product & Growth Tower's rounded podium covers its square plinth, so the health band only
+        // showed as a stray green line across the forecourt (Khaneil, 2026-11-25). Its health stays in its panel.
+        if (!c || isCommerceTower(t.projectId)) return [];
         // Atlas HQ leaves most of its plinth open, so its health is a thin edge ring, not a slab.
-        if (t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) || t.plainPlaza) {
+        if (t.identity.landmark || isRibbonTower(t.projectId) || t.plainPlaza) {
           const w = t.size * 1.16, e = 0.05;
           return [-1, 1].flatMap((k) => [
             { p: [t.x, TERRACE_H + 0.15, t.z + (k * (w - e)) / 2], s: [w, 0.022, e], c } as Inst,
