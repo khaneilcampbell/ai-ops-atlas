@@ -112,7 +112,7 @@ describe('Commerce Pipeline teardrop tower',()=>{
   expect(src).toMatch(/isCommerceTower\(t\.projectId\)\) return \{[^}]*noEdge: true/);
   expect(src).toMatch(/!\("noEdge" in parts\) && <lineSegments/);
   // Nor a health ring: the lot-sized green ring ran under the podium too (its health stays on the nameplate).
-  expect(readFileSync(join(__dirname,'models.tsx'),'utf8')).toMatch(/if \(isCommerceTower\(t\.projectId\)\) return \[\];/);
+  expect(readFileSync(join(__dirname,'models.tsx'),'utf8')).toMatch(/if \(!c \|\| isCommerceTower\(t\.projectId\)\) return \[\];/);
  });
  it('stays inside its performance budget: merged meshes, a few instances, no lights or frame loop',()=>{
   const g=commerceGeometry(1,COMMERCE.height*2);
