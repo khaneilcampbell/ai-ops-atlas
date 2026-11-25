@@ -1,0 +1,1 @@
+- 2026-11-25 · Workflow Intelligence has a Design mode: pick a goal, put Atlas agents in order, say what each one gets and hands on, add your approval checkpoints, save it as a draft and preview it. Drafts stay on this Mac and never change a live run. (#542)
