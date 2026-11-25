@@ -174,8 +174,7 @@ function buildingsOf(catalog: Catalog, layout: Layout, scene: Scene3D): Inventor
       else add({ id: financialKey(b.id), name: b.name, kind: "Financial District building", area: "Financial District", status: PLANNED, project: "", source: "src/views/map3d/financialPlan.ts" });
     }
     const ops = planAiOps(scene);
-    // It stands in the Product & Growth Tower's old spot in the Commerce district (the swap, AIOPS_SWAP).
-    if (ops) add({ id: AIOPS_KEY, name: AIOPS_NAME, kind: "Landmark", area: ops.k < 1 ? area.get("commerce-pipeline") ?? "Financial District" : "Financial District", status: PLANNED, project: "", source: "src/views/map3d/aiOpsCenterPlan.ts" });
+    if (ops) add({ id: AIOPS_KEY, name: AIOPS_NAME, kind: "Landmark", area: "Financial District", status: PLANNED, project: "", source: "src/views/map3d/aiOpsCenterPlan.ts" });
     add({ id: FINANCIAL_PARK_KEY, name: "Financial Park", kind: "Public space", area: "Financial District", status: PLANNED, project: "", source: "src/views/map3d/financialPlan.ts" });
   }
   const stops = scene.communityRail?.loop?.stops ?? [];

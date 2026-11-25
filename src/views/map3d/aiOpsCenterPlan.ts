@@ -1,6 +1,5 @@
 import {financialDimensions} from './financialArchitecture';
 import {financialKey} from './financialPlan';
-import {isCommerceTower} from './commerceTowerPlan';
 import type {Pt} from './roads';
 import type {Scene3D} from './scene';
 
@@ -72,53 +71,27 @@ export function floorElevation(level:number){
 export interface AiOpsPlan {
  /** Centre of the podium, world map units. */
  x:number;z:number;
- /** Mean roof height above the ground, in the building's own units (before `k`/`ky`). */
+ /** Mean roof height above the ground. */
  height:number;
- /** Drawing scale across (x, z) and up (y): 1 on the waterfront plot, smaller in the Commerce district. */
- k:number;ky:number;
  /** The landscaped plot no tree, shrub or other building may stand on (world). */
  site:{x:number;z:number;w:number;d:number};
 }
 
-/**
- * The swap (Khaneil, 2026-11-25: "move this building to atlas ai operation center location", then
- * "Swap the two buildings"): the Product & Growth Tower (Commerce Pipeline's teardrop tower) now stands
- * on the waterfront plot, drawn this much larger so it fills the plot the way the four towers did, and
- * the AI Operations Center takes the tower's old spot inside the Commerce street ring, drawn at
- * AIOPS_SWAP.k across and AIOPS_SWAP.ky up so its podium fits the old plinth. Drawn scene only: streets,
- * the ring road, rail and every planner keep the planned ground.
- */
-export const AIOPS_SWAP={k:.5,ky:.65,commerceGrow:1.42} as const;
-
-/** The waterfront plot of the four towers: its centre, the podium position and height the AI Operations Center had there. */
-export function waterfrontPlot(scene:Pick<Scene3D,'financial'>){
+/** Where it stands: centred on the four towers' plot, as tall as the tallest of them plus a storey or two. */
+export function planAiOps(scene:Pick<Scene3D,'financial'>):AiOpsPlan|undefined{
  const fd=scene.financial;if(!fd)return undefined;
  const old=fd.buildings.filter(b=>CLEARED_IDS.has(b.id));if(old.length<CLEARED_IDS.size)return undefined;
  const box=old.map(b=>{const d=financialDimensions(b.id);return {x0:b.x-d.w/2,x1:b.x+d.w/2,z0:b.z-d.d/2,z1:b.z+d.d/2};});
  const x0=Math.min(...box.map(b=>b.x0)),x1=Math.max(...box.map(b=>b.x1)),z0=Math.min(...box.map(b=>b.z0)),z1=Math.max(...box.map(b=>b.z1));
  const x=fd.x+(x0+x1)/2,z=fd.z+(z0+z1)/2-.15;
  const height=Math.max(...old.map(b=>b.height))+.6;
- return {x,z,height,site:siteAt(x,z,1)};
-}
-const siteFront=()=>({back:AIOPS.podium.b+.9,front:AIOPS.podium.b+AIOPS.forecourt});
-function siteAt(x:number,z:number,k:number){const {back,front}=siteFront();return {x,z:z+(front-back)/2*k,w:(AIOPS.podium.a*2+1)*k,d:(back+front)*k};}
-
-/**
- * Where it stands: in the Product & Growth Tower's old spot when that tower is on the map (the swap
- * above), otherwise on the waterfront plot. Its height in its own units stays the waterfront one, so
- * the interior (INTERIOR_HEIGHT) keeps matching the outside.
- */
-export function planAiOps(scene:Pick<Scene3D,'financial'>&Partial<Pick<Scene3D,'towers'>>):AiOpsPlan|undefined{
- const w=waterfrontPlot(scene);if(!w)return undefined;
- const t=scene.towers?.find(t=>isCommerceTower(t.projectId));
- if(!t)return {x:w.x,z:w.z,height:w.height,k:1,ky:1,site:w.site};
- const {k,ky}=AIOPS_SWAP,{back,front}=siteFront(),z=t.z-(front-back)/2*k;
- return {x:t.x,z,height:w.height,k,ky,site:siteAt(t.x,z,k)};
+ const back=AIOPS.podium.b+.9,front=AIOPS.podium.b+AIOPS.forecourt;
+ return {x,z,height,site:{x,z:z+(front-back)/2,w:AIOPS.podium.a*2+1,d:back+front}};
 }
 
 /** Click and camera footprint: the podium with its forecourt, up to the crown. */
 export function aiOpsFootprint(p:AiOpsPlan){
- return {x:p.x,z:p.z+AIOPS.forecourt/2*p.k,w:AIOPS.podium.a*2*p.k,d:(AIOPS.podium.b*2+AIOPS.forecourt)*p.k,y1:(p.height+AIOPS.crownSlope)*p.ky};
+ return {x:p.x,z:p.z+AIOPS.forecourt/2,w:AIOPS.podium.a*2,d:AIOPS.podium.b*2+AIOPS.forecourt,y1:p.height+AIOPS.crownSlope};
 }
 
 /** The podium outline at storey `level`: a rounded bean, the upper storey pulled in toward the tower. */
@@ -177,17 +150,14 @@ export function terraceTrees(height:number):Pt[]{
 }
 
 /**
- * The scene as drawn: the four towers left out, the Product & Growth Tower moved onto their waterfront
- * plot and the AI Operations Center added in its old spot (AIOPS_SWAP). The planned scene is not
- * changed, so streets, the railway, traffic and every planner keep the same ground.
+ * The scene as drawn: the four towers left out and the AI Operations Center added. The planned scene is
+ * not changed, so streets, the railway, traffic and every planner keep the same ground.
  */
 export function presentAiOps<S extends Scene3D>(scene:S):S{
- const w=waterfrontPlot(scene),plan=planAiOps(scene);if(!w||!plan)return scene;
- const inside=(s:AiOpsPlan['site'],p:{x:number;z:number})=>Math.abs(p.x-s.x)<s.w/2+.2&&Math.abs(p.z-s.z)<s.d/2+.2;
- const clear=(p:{x:number;z:number})=>inside(w.site,p)||inside(plan.site,p);
- const fd=scene.financial!,financial={...fd,buildings:fd.buildings.filter(b=>!CLEARED_IDS.has(b.id)),perimeterTrees:fd.perimeterTrees.filter(([x,z])=>!clear({x:fd.x+x,z:fd.z+z}))};
- const g=AIOPS_SWAP.commerceGrow,towers=scene.towers.map(t=>isCommerceTower(t.projectId)?{...t,x:w.site.x,z:w.site.z,size:t.size*g,height:t.height*g,...(t.customHeight!=null?{customHeight:t.customHeight*g}:{})}:t);
- return {...scene,financial,towers,aiOps:plan,trees:scene.trees.filter(t=>!clear(t)),bushes:scene.bushes.filter(b=>!clear(b))};
+ const plan=planAiOps(scene);if(!plan)return scene;
+ const {site}=plan,inside=(p:{x:number;z:number})=>Math.abs(p.x-site.x)<site.w/2+.2&&Math.abs(p.z-site.z)<site.d/2+.2;
+ const fd=scene.financial!,financial={...fd,buildings:fd.buildings.filter(b=>!CLEARED_IDS.has(b.id)),perimeterTrees:fd.perimeterTrees.filter(([x,z])=>!inside({x:fd.x+x,z:fd.z+z}))};
+ return {...scene,financial,aiOps:plan,trees:scene.trees.filter(t=>!inside(t)),bushes:scene.bushes.filter(b=>!inside(b))};
 }
 
 /** Where an agent seat on a floor sits, interior units before scaling (desks in rows round the core). */

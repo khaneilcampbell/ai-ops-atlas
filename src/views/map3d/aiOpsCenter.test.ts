@@ -5,8 +5,7 @@ import {buildScene} from './scene';
 import {anchorsOf} from './Map3D';
 import {FINANCIAL,financialKey} from './financialPlan';
 import {financialDimensions} from './financialArchitecture';
-import {AIOPS,AIOPS_KEY,AIOPS_SWAP,waterfrontPlot,CLEARED_FOR_AIOPS,PODIUM_H,aiOpsFootprint,floorElevation,planAiOps,presentAiOps,ribbonSpan,towerRing} from './aiOpsCenterPlan';
-import {COMMERCE,commerceRingHalf,commerceScale,isCommerceTower} from './commerceTowerPlan';
+import {AIOPS,AIOPS_KEY,CLEARED_FOR_AIOPS,PODIUM_H,aiOpsFootprint,floorElevation,planAiOps,presentAiOps,ribbonSpan,towerRing} from './aiOpsCenterPlan';
 import {aiOpsGeometry,aiOpsTriangles} from './aiOpsCenterGeometry';
 import {INTERIOR_HEIGHT,INTERIOR_K,interiorFloor} from '../office/aiOpsInteriorPlan';
 import {WORKSPACE,hostOf,housedIn} from '../../modules/workspace';
@@ -24,29 +23,13 @@ describe('Atlas AI Operations Center (Khaneil, 2026-11-24)',()=>{
   expect(drawn.communityRail).toBe(planned.communityRail);expect(drawn.financial!.street).toBe(planned.financial!.street);
  });
 
- it('the waterfront plot is clear of the street, the park, Circa and the remaining towers',()=>{
-  const w=waterfrontPlot(planned)!,fd=drawn.financial!,s=w.site;
+ it('stands on the cleared plot, clear of the street, the park, Circa and the remaining towers',()=>{
+  const p=drawn.aiOps!,fd=drawn.financial!,s=p.site;
   expect(s.z+s.d/2).toBeLessThanOrEqual(fd.z+FINANCIAL.northWalkZ);
   expect(s.x+s.w/2).toBeLessThan(fd.x+FINANCIAL.park.x);
   for(const b of fd.buildings){const d=financialDimensions(b.id),x=fd.x+b.x,z=fd.z+b.z;expect(Math.abs(x-s.x)<(d.w+s.w)/2&&Math.abs(z-s.z)<(d.d+s.d)/2,b.id).toBe(false);}
-  expect(w.height).toBeGreaterThan(Math.max(...planned.financial!.buildings.filter(b=>CLEARED_FOR_AIOPS.includes(financialKey(b.id))).map(b=>b.height)));
+  expect(p.height).toBeGreaterThan(Math.max(...planned.financial!.buildings.filter(b=>CLEARED_FOR_AIOPS.includes(financialKey(b.id))).map(b=>b.height)));
   for(const t of drawn.trees)expect(Math.abs(t.x-s.x)<s.w/2&&Math.abs(t.z-s.z)<s.d/2).toBe(false);
- });
-
- it('swaps with the Product & Growth Tower (Khaneil, 2026-11-25): the tower fills the waterfront plot, the AI Operations Center its old plinth',()=>{
-  const was=planned.towers.find(t=>isCommerceTower(t.projectId))!,now=drawn.towers.find(t=>isCommerceTower(t.projectId))!,w=waterfrontPlot(planned)!;
-  expect([now.x,now.z]).toEqual([w.site.x,w.site.z]);
-  const half=COMMERCE.plinth*commerceScale(now.size);
-  expect(half).toBeLessThan(Math.min(w.site.w,w.site.d)/2);
-  expect(now.key).toBe(was.key);
-  // Every other tower stays put.
-  expect(drawn.towers.filter(t=>t!==now).map(t=>[t.key,t.x,t.z])).toEqual(planned.towers.filter(t=>t!==was).map(t=>[t.key,t.x,t.z]));
-  const p=drawn.aiOps!,f=aiOpsFootprint(p),old=COMMERCE.plinth*commerceScale(was.size);
-  expect(p.k).toBe(AIOPS_SWAP.k);
-  expect(Math.abs(p.site.x-was.x)+p.site.w/2).toBeLessThanOrEqual(old+.3);
-  expect(Math.abs(p.site.z-was.z)+p.site.d/2).toBeLessThanOrEqual(old+.3);
-  expect(f.w/2).toBeLessThan(commerceRingHalf(was.size)-.5);
-  for(const t of drawn.trees)expect(Math.abs(t.x-p.site.x)<p.site.w/2&&Math.abs(t.z-p.site.z)<p.site.d/2).toBe(false);
  });
 
  it('is one selectable building, and the replaced towers land on it',()=>{

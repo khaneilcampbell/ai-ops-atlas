@@ -1,7 +1,6 @@
 import {test,expect,type Page} from '@playwright/test';import {writeFileSync,mkdirSync} from 'node:fs';import {openAtlas,settle,waitForScene,selectBuilding} from './atlas';
 /**
- * Atlas AI Operations Center and the Product & Growth Tower, swapped (Khaneil, 2026-11-25): the tower on the Financial
- * District's west waterfront plot, the center in the tower's old Commerce spot. Fixed camera
+ * Atlas AI Operations Center on the Financial District's west waterfront plot (Khaneil, 2026-11-24). Fixed camera
  * views over the plot, so the same script shoots the base branch (before) and this one (after), then the center
  * selected and its interior, at desktop and iPhone width.
  * Run: AIOPS_SHOTS=1 SHOT_DIR=... npx playwright test -c visual ai-ops-center
@@ -9,9 +8,7 @@ import {test,expect,type Page} from '@playwright/test';import {writeFileSync,mkd
 const out=process.env.SHOT_DIR??'artifacts/ai-ops-center';
 test.skip(!process.env.AIOPS_SHOTS,'Screenshots on request only (AIOPS_SHOTS=1).');
 const T=[-1,3.5,-11];
-const VIEWS:[string,number[],number[]][]=[['iso',[16,17,8],T],['close',[8,9,0],[-1,4.5,-11]],['street',[4,2.2,-3.2],[-1,5,-11]],['top',[-1,34,-10.4],[-1,0,-10.5]],['water',[-9,10,-30],[-1,4,-11]],
- // Swap (Khaneil, 2026-11-25): the AI Operations Center in the Product & Growth Tower's old Commerce spot.
- ['commerce-iso',[26,14,17],[14.75,3,5]],['commerce-close',[20,6.5,11],[14.75,3.2,5]]];
+const VIEWS:[string,number[],number[]][]=[['iso',[16,17,8],T],['close',[8,9,0],[-1,4.5,-11]],['street',[4,2.2,-3.2],[-1,5,-11]],['top',[-1,34,-10.4],[-1,0,-10.5]],['water',[-9,10,-30],[-1,4,-11]]];
 async function shoot(page:Page,prefix:string){
  const shots=await page.evaluate(async(views)=>{
   const source=await(await fetch('/src/views/map3d/HillsCommunity.tsx')).text(),url=source.match(/from\s*["']([^"']*react-three_fiber[^"']*)["']/)?.[1];if(!url)throw new Error('Fiber import not found');
