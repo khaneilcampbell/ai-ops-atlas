@@ -33,6 +33,7 @@ import {planStadiumSite,type StadiumSite} from "./stadiumSite";
 import {planAgency,type AgencyPlan} from "./marketingAgencyPlan";
 import {planMall,type MallPlan} from "./mallPlan";
 import {planGalleria,type GalleriaPlan} from "./galleriaPlan";
+import type {AiOpsPlan} from "./aiOpsCenterPlan";
 import {distanceToRoad,roadIntersections} from "./highway";
 import {STREET_CLEAR,streetHitTest} from "./streetAlign";
 import {districtConnections,type DistrictConnection} from "./connections";
@@ -205,6 +206,8 @@ export interface Scene3D {
   mall?:MallPlan;
   /** Atlas Galleria, the shopping mall on the green behind the Marketplace (replaced the Marketplace Gardens). */
   galleria?:GalleriaPlan;
+  /** Atlas AI Operations Center, added to the drawn scene only (aiOpsCenterPlan.ts presentAiOps). */
+  aiOps?:AiOpsPlan;
   /**
    * Canva's freight route to the airport. Not built since Khaneil's 2026-11-07 road review: the Commerce
    * district keeps its own streets and grass, without a trunk road or truck lot cut through it.

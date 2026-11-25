@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { AIOPS_KEY } from "../views/map3d/aiOpsCenterPlan";
 import type { ManifestIssue } from "../catalog/types";
 import { AGENCY_KEY } from "../views/map3d/marketingAgencyPlan";
 import { MALL_KEY } from "../views/map3d/mallPlan";
@@ -11,7 +12,7 @@ import { catalog } from "../catalog";
 import { LANDMARK_MODULES, WORKSPACE, WORKSPACE_SCHEMA, parseWorkspace, workspaceIssues } from "./workspace";
 
 /** Every landmark id the map draws itself and that workspace.yaml may give a module. */
-const MAP_KEYS = new Set([AGENCY_KEY, MALL_KEY, GALLERIA_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id), ...AIRPORT_BUILDINGS.map((b) => airportBuildingKey(b.id))]);
+const MAP_KEYS = new Set([AIOPS_KEY, AGENCY_KEY, MALL_KEY, GALLERIA_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id), ...AIRPORT_BUILDINGS.map((b) => airportBuildingKey(b.id))]);
 
 const parse = (text: string) => {
   const issues: ManifestIssue[] = [];

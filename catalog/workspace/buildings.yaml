@@ -76,6 +76,11 @@ buildings:
     display_name: Business Finance Center
     organization: Benjaire
     former_names: [Corvane Capital]
+  # Nov 24: Atlas AI Operations Center stands on the plot of the Business Finance, Risk & Insurance,
+  # Knowledge & Research and Client Success towers, which are now its floors (aiOpsCenterPlan.ts).
+  "service:ai-operations-center":
+    display_name: Atlas AI Operations Center
+    organization: Atlas
   "service:atlas-galleria":
     display_name: Business Operations HQ
     organization: Benjaire

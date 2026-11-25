@@ -19,6 +19,7 @@ import { DEALERSHIP_KEY } from "../views/map3d/dealershipPlan";
 import { planDistrictLife } from "../views/map3d/districtLifePlan";
 import { planDistrictWalkers } from "../views/map3d/districtWalkers";
 import { FINANCIAL_PARK_KEY, financialKey } from "../views/map3d/financialPlan";
+import { AIOPS_KEY, AIOPS_NAME, CLEARED_FOR_AIOPS, planAiOps } from "../views/map3d/aiOpsCenterPlan";
 import { GALLERIA_KEY, GALLERIA_NAME } from "../views/map3d/galleriaPlan";
 import { planGalleriaLife } from "../views/map3d/galleriaLifePlan";
 import { HILLS_KEY } from "../views/map3d/hillsPlan";
@@ -167,7 +168,13 @@ function buildingsOf(catalog: Catalog, layout: Layout, scene: Scene3D): Inventor
   }
   for (const k of scene.kiosks) add({ id: k.key, name: k.name, kind: "Tool office", area: area.get(k.projectId) ?? "", status: PLANNED, project: k.projectId, source: "catalog tools (src/catalog/roles.ts servicesOf)" });
   if (scene.financial) {
-    for (const b of scene.financial.buildings) add({ id: financialKey(b.id), name: b.name, kind: "Financial District building", area: "Financial District", status: PLANNED, project: "", source: "src/views/map3d/financialPlan.ts" });
+    // The four waterfront towers the Atlas AI Operations Center replaced keep their records, but the map no longer draws them.
+    for (const b of scene.financial.buildings) {
+      if (CLEARED_FOR_AIOPS.includes(financialKey(b.id))) add({ id: financialKey(b.id), name: b.name, kind: "Retired building", area: `Financial District · Floor of ${AIOPS_NAME}`, status: "Retired", project: "", source: "src/views/map3d/aiOpsCenterPlan.ts CLEARED_FOR_AIOPS" });
+      else add({ id: financialKey(b.id), name: b.name, kind: "Financial District building", area: "Financial District", status: PLANNED, project: "", source: "src/views/map3d/financialPlan.ts" });
+    }
+    const ops = planAiOps(scene);
+    if (ops) add({ id: AIOPS_KEY, name: AIOPS_NAME, kind: "Landmark", area: "Financial District", status: PLANNED, project: "", source: "src/views/map3d/aiOpsCenterPlan.ts" });
     add({ id: FINANCIAL_PARK_KEY, name: "Financial Park", kind: "Public space", area: "Financial District", status: PLANNED, project: "", source: "src/views/map3d/financialPlan.ts" });
   }
   const stops = scene.communityRail?.loop?.stops ?? [];

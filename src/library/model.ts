@@ -5,9 +5,12 @@
 // browser. File storage state and approval state are separate: a file can be saved while it waits
 // for approval, and an approved output can still be missing its file.
 
-/** The Knowledge & Research Center on the map (catalog/workspace/buildings.yaml): where the Library lives. */
-export const LIBRARY_BUILDING = "service:financial:financial-planning";
-export const LIBRARY_BUILDING_NAME = "Knowledge & Research Center";
+/**
+ * Where the Library lives: the Knowledge & Research floor of the Atlas AI Operations Center (Nov 24), which
+ * replaced the Knowledge & Research Center tower on the map (catalog/workspace/workspace.yaml `merged`).
+ */
+export const LIBRARY_BUILDING = "service:ai-operations-center";
+export const LIBRARY_BUILDING_NAME = "Atlas AI Operations Center · Knowledge & Research";
 
 export const STORAGE_STATES = ["pending", "saved", "failed"] as const;
 export type StorageState = (typeof STORAGE_STATES)[number];

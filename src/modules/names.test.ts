@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { AIOPS_KEY } from "../views/map3d/aiOpsCenterPlan";
 import { catalog } from "../catalog";
 import type { ManifestIssue } from "../catalog/types";
 import { buildingPlaque } from "../views/map3d/plaques";
@@ -16,7 +17,7 @@ import { financialBuildingMatches, landmarkMatches } from "../lib/financialSearc
 import { BUILDING_NAMES, buildingAliases, buildingDisplayName, buildingNameIssues, buildingOrganization, currentBuildingName, parseBuildingNames } from "./names";
 
 /** Every building id the map draws itself and can be renamed in catalog/workspace/buildings.yaml. */
-const MAP_KEYS = new Set([AGENCY_KEY, MALL_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id), GALLERIA_KEY, STADIUM_KEY, PLAZA_KEY, CAFE_KEY, ...AIRPORT_BUILDINGS.map((b) => airportBuildingKey(b.id))]);
+const MAP_KEYS = new Set([AIOPS_KEY, AGENCY_KEY, MALL_KEY, DEALERSHIP_KEY, ...FINANCIAL_BUILDINGS.map((b) => financialKey(b.id)), ...LOOP_STATIONS.map((s) => s.id), GALLERIA_KEY, STADIUM_KEY, PLAZA_KEY, CAFE_KEY, ...AIRPORT_BUILDINGS.map((b) => airportBuildingKey(b.id))]);
 
 describe("workspace building names", () => {
   it("loads without problems and only names buildings that exist on the map", () => {

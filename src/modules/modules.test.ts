@@ -114,7 +114,7 @@ describe("building instances", () => {
     expect(home("observability-center")).toEqual(["Security & Infrastructure Office"]);
     expect(all.find((i) => i.id === GITHUB_TOWER.projectId)?.moduleType).toBe("development-repository-hub");
     expect(home("model-intelligence-lab")).toEqual(["AI Engineering Hangar"]);
-    expect(home("knowledge-repository")).toEqual(["Knowledge & Research Center"]);
+    expect(home("knowledge-repository")).toEqual(["Knowledge & Research Center", "Atlas AI Operations Center"]);
     expect(all.filter((i) => i.districtId === null).map((i) => i.id)).toEqual(LANDMARK_MODULES.map((l) => l.id));
     // Modules are placed in their buildings and switched on once a capability is built.
     expect(all.find((i) => i.id === "atlas-marketplace")).toMatchObject({ moduleType: "commerce-product-marketplace", enabled: true });
