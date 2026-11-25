@@ -1,0 +1,1 @@
+- 2026-11-25 · The map's labels, control bar, tips and building panel get a quieter dark-glass look in forest green, ivory and gold, and the selected building stands out more.
