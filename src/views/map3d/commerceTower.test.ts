@@ -106,6 +106,14 @@ describe('Commerce Pipeline teardrop tower',()=>{
   for(const v of top){expect(v.g).toBeGreaterThan(1.3);expect(v.b).toBeGreaterThan(v.g);}
   expect(g.crownBands.getAttribute('position').count).toBeGreaterThan(0);
  });
+ it('draws no plinth outline or health ring round it (Khaneil, 2026-11-25: "remove green line")',()=>{
+  // The lot-sized outline ran under the grown podium; the glow keeps its window light and halo.
+  const src=readFileSync(join(__dirname,'activity.tsx'),'utf8');
+  expect(src).toMatch(/isCommerceTower\(t\.projectId\)\) return \{[^}]*noEdge: true/);
+  expect(src).toMatch(/!\("noEdge" in parts\) && <lineSegments/);
+  // Nor a health ring: the lot-sized green ring ran under the podium too (its health stays on the nameplate).
+  expect(readFileSync(join(__dirname,'models.tsx'),'utf8')).toMatch(/if \(isCommerceTower\(t\.projectId\)\) return \[\];/);
+ });
  it('stays inside its performance budget: merged meshes, a few instances, no lights or frame loop',()=>{
   const g=commerceGeometry(1,COMMERCE.height*2);
   const meshes=Object.values(g).filter(v=>v&&typeof v==='object'&&'attributes' in v);

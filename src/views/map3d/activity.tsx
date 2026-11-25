@@ -111,7 +111,11 @@ function BuildingGlow({ b, tower, mask, state, g, reduced }: { b: Tower | House;
       const t = b as Tower;
       // Atlas HQ, Benjaire HQ, Commerce Pipeline and the GitHub tower are not boxes: a box-shaped glow
       // would hide them, so they light their plinth's edges and the ground halo instead.
-      if (t.identity.landmark || isRibbonTower(t.projectId) || isCommerceTower(t.projectId) || isGithubTower(t.projectId) || isIntelligenceHub(t.projectId) || isPortfolioSite(t.projectId) || isSocLab(t.projectId)) return { floors: [], box: [t.x, TERRACE_H, t.z, t.size * 1.18, 0.17, t.size * 1.18] as const, shaped: true };
+      // The Product & Growth Tower is drawn bigger than its lot (COMMERCE_GROW), so a plinth outline at the
+      // lot's size ran as a green line under its podium (Khaneil, 2026-11-25: "remove green line"): it keeps
+      // the window light and the ground halo, with no outline.
+      if (isCommerceTower(t.projectId)) return { floors: [], box: [t.x, TERRACE_H, t.z, t.size * 1.18, 0.17, t.size * 1.18] as const, shaped: true, noEdge: true };
+      if (t.identity.landmark || isRibbonTower(t.projectId) || isGithubTower(t.projectId) || isIntelligenceHub(t.projectId) || isPortfolioSite(t.projectId) || isSocLab(t.projectId)) return { floors: [], box: [t.x, TERRACE_H, t.z, t.size * 1.18, 0.17, t.size * 1.18] as const, shaped: true };
       const s = t.size * 1.006;
       return { floors: Array.from({ length: t.floors }, (_, i) => [t.x, FLOOR_BASE + i * FLOOR_H, t.z, s, s] as const), box: [t.x, FLOOR_BASE, t.z, t.size + 0.06, t.floors * FLOOR_H, t.size + 0.06] as const };
     }
@@ -126,7 +130,7 @@ function BuildingGlow({ b, tower, mask, state, g, reduced }: { b: Tower | House;
         <mesh key={i} geometry={g.box} material={mats.win} position={[x, y, z]} scale={[w, tower ? FLOOR_H : (parts.hh ?? 0), d]} raycast={noRaycast} renderOrder={2} />
       ))}
       {!("shaped" in parts) && <mesh geometry={g.box} material={mats.tint} position={[bx, by, bz]} scale={[bw, bh, bd]} raycast={noRaycast} renderOrder={2} />}
-      <lineSegments geometry={EDGES} material={mats.edge} position={[bx, by + bh / 2, bz]} scale={[bw, bh, bd]} raycast={noRaycast} />
+      {!("noEdge" in parts) && <lineSegments geometry={EDGES} material={mats.edge} position={[bx, by + bh / 2, bz]} scale={[bw, bh, bd]} raycast={noRaycast} />}
       <mesh geometry={HALO} material={mats.halo} position={[bx, HALO_Y, bz]} scale={[Math.max(bw, bd) * 2.6, 1, Math.max(bw, bd) * 2.6]} raycast={noRaycast} renderOrder={1} />
     </group>
   );
