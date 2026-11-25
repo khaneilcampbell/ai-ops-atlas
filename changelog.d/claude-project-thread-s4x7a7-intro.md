@@ -1,0 +1,1 @@
+- 2026-11-25 · The "Your Digital Infrastructure" introduction on the map is back to clear text over the map, without the dark card behind it (#PR)
