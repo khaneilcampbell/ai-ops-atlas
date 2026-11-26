@@ -12,7 +12,12 @@ for (const width of [1512, 390])
     mkdirSync(out, { recursive: true });
     await goTo(page, "Agents");
     await page.getByRole("tab", { name: "Roster" }).click();
-    await expect(page.locator("table.roster tbody tr[data-id]")).toHaveCount(19); // 19 agents (Trade Desk and Market Research joined in #518); Leila's 5 skills sit on her row
+    // One row per agent, matching the "All N" chip (Leila's 5 skills sit on her row, not as rows).
+    // Read N from the chip so adding an agent doesn't break this check.
+    const all = Number((await page.getByRole("button", { name: /^All \d+/ }).innerText()).match(/\d+/)![0]);
+    expect(all).toBeGreaterThan(10);
+    await expect(page.locator("table.roster tbody tr[data-id]")).toHaveCount(all);
+    await expect(page.locator('table.roster tr[data-id="benjaire-product-lab"] .roster-skills')).toHaveText("5 skills");
     await page.locator('table.roster tr[data-id="benjaire-inquiry-manager"]').click();
     await settle(page, 1);
     await page.screenshot({ path: `${out}/roster-${width}.png` });
