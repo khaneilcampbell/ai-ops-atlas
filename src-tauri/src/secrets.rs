@@ -23,7 +23,21 @@ use std::sync::Mutex;
 use keyring::Entry;
 use serde::Serialize;
 
-const SERVICE: &str = "com.khaneilcampbell.ai-ops-atlas";
+/// The installed app's Keychain service. A developer build (`tauri dev`, a debug build) uses its
+/// own service instead, so a preview running on the Mac never reads the installed app's vault.
+/// Reading it made macOS ask for the login password (the Keychain's own "allow access" dialog
+/// has no Touch ID), and every rebuild got a new ad-hoc signature, so it asked again each time.
+const SERVICE: &str = service_for(cfg!(debug_assertions));
+const RELEASE_SERVICE: &str = "com.khaneilcampbell.ai-ops-atlas";
+const DEV_SERVICE: &str = "com.khaneilcampbell.ai-ops-atlas.dev";
+
+const fn service_for(debug: bool) -> &'static str {
+    if debug {
+        DEV_SERVICE
+    } else {
+        RELEASE_SERVICE
+    }
+}
 const ACCOUNT: &str = "github-token";
 const ANTHROPIC_ACCOUNT: &str = "anthropic-api-key";
 const ACTIONS_ACCOUNT: &str = "github-actions-write-token";
@@ -529,6 +543,14 @@ mod auth {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn developer_builds_never_share_the_installed_apps_keychain_item() {
+        assert_eq!(service_for(false), "com.khaneilcampbell.ai-ops-atlas");
+        assert_ne!(service_for(true), service_for(false));
+        // Tests are debug builds, so they use the developer service too.
+        assert_eq!(SERVICE, DEV_SERVICE);
+    }
     use std::cell::RefCell;
 
     #[derive(Default)]

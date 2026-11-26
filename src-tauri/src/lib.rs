@@ -27,6 +27,12 @@ pub fn run() {
             usage_sync::setup(app)?;
             actions::setup(app)?;
             handoff::window_ready(app);
+            // A developer build runs as a bare binary next to the installed app, with its own
+            // Dock icon. Name its window so it can't be mistaken for the installed Atlas.
+            #[cfg(debug_assertions)]
+            if let Some(window) = tauri::Manager::get_webview_window(app, "main") {
+                let _ = window.set_title("Atlas (developer preview)");
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
