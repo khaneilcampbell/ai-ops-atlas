@@ -5,19 +5,19 @@ for(const light of ['day','night'] as const)test(`Compact connected city: ${ligh
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await openAtlas(page,{light,storage:{powerMode:'saver'}});await waitForScene(page);await settle(page,2);
  await page.screenshot({path:`artifacts/compact-city/after-${light}.png`});
- await selectBuilding(page,'Financial District');await settle(page,2);await page.screenshot({path:`artifacts/compact-city/financial-${light}.png`});
- await page.getByRole('button',{name:'Financial District Station →',exact:true}).click();await settle(page,3);await expect(page.getByRole('heading',{name:'Financial District Station',exact:true})).toBeVisible();
+ await selectBuilding(page,'Workflow Automation Hub');await page.getByRole('button',{name:'Business Operations Station →',exact:true}).click();await settle(page,2);await page.screenshot({path:`artifacts/compact-city/financial-${light}.png`});
+ await settle(page,1);await expect(page.getByRole('heading',{name:'Business Operations Station',exact:true})).toBeVisible();
  await page.screenshot({path:`artifacts/compact-city/financial-station-${light}.png`});
  await page.getByRole('button',{name:'Workflow Automation Hub →',exact:true}).click();await settle(page,2);await expect(page.getByRole('heading',{name:'Workflow Automation Hub',exact:true})).toBeVisible();
- await page.getByRole('button',{name:'Back to Product Marketplace',exact:true}).click();await settle(page,2);await page.getByRole('button',{name:'Enter building',exact:true}).click();await settle(page,3);
- const nav=page.getByRole('navigation',{name:'Choose Product Marketplace floor',exact:true});await expect(nav).toBeVisible();await nav.getByRole('button',{name:'Floor 1',exact:true}).click();await settle(page,2);await expect(nav.getByRole('button',{name:'Floor 1',exact:true})).toHaveAttribute('aria-pressed','true');
- await page.getByRole('button',{name:'Exit Product Marketplace and return to city',exact:true}).click();await settle(page,2);expect(errors).toEqual([]);
+ await page.getByRole('button',{name:'Back to Product & Growth Arcade',exact:true}).click();await settle(page,2);await page.getByRole('button',{name:'Enter building',exact:true}).click();await settle(page,3);
+ const nav=page.getByRole('navigation',{name:'Choose Product & Growth Arcade floor',exact:true});await expect(nav).toBeVisible();await nav.getByRole('button',{name:'Floor 1',exact:true}).click();await settle(page,2);await expect(nav.getByRole('button',{name:'Floor 1',exact:true})).toHaveAttribute('aria-pressed','true');
+ await page.getByRole('button',{name:'Exit Product & Growth Arcade and return to city',exact:true}).click();await settle(page,2);expect(errors).toEqual([]);
 
 });
 for(const light of ['day','night'] as const)test(`Final perimeter and local connections: ${light}`,async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await openAtlas(page,{light,storage:{powerMode:'saver'}});await waitForScene(page);await settle(page,2);await page.screenshot({path:`artifacts/compact-city/after-${light}.png`});
- await selectBuilding(page,'Financial District');await settle(page,2);await page.screenshot({path:`artifacts/compact-city/financial-${light}.png`});
- await page.getByRole('button',{name:'Financial District Station →',exact:true}).click();await settle(page,2);await page.screenshot({path:`artifacts/compact-city/financial-station-${light}.png`});
+ await selectBuilding(page,'Workflow Automation Hub');await page.getByRole('button',{name:'Business Operations Station →',exact:true}).click();await settle(page,2);await page.screenshot({path:`artifacts/compact-city/financial-${light}.png`});
+ await settle(page,1);await page.screenshot({path:`artifacts/compact-city/financial-station-${light}.png`});
  await page.getByRole('button',{name:'Workflow Automation Hub →',exact:true}).click();await settle(page,2);await page.screenshot({path:`artifacts/compact-city/marketplace-connections-${light}.png`});expect(errors).toEqual([]);
 });
 for(const light of ['day','night'] as const)test(`Overview fit includes the railway: ${light}`,async({page})=>{

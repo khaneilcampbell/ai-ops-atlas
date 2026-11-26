@@ -39,10 +39,10 @@ const ONLY = process.env.BUILDING_ONLY?.split(",");
 const BUILDINGS: [string, string][] = ([
   ["Atlas Command Center", "project:ai-ops-atlas"],
   ["Business Operations HQ", "project:benjaire-site"],
-  ["Commerce Operations Center", "project:commerce-pipeline"],
-  ["Security Operations Center", "project:soc-lab"],
-  ["Portfolio Web Studio", "project:portfolio-site"],
-  ["Development Hub", "project:github-profile"],
+  ["Product & Growth Tower", "project:commerce-pipeline"],
+  ["Security & Infrastructure Center", "project:soc-lab"],
+  ["Projects & Portfolio Studio", "project:portfolio-site"],
+  ["AI Engineering & Research Center", "project:github-profile"],
   ["Agent Operations Center", "project:intelligence-hub"],
 ] as [string, string][]).filter(([, k]) => !ONLY || ONLY.includes(k.slice(8)));
 

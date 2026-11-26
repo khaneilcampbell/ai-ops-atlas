@@ -47,9 +47,9 @@ async function camera(page: Page): Promise<Cam> {
 
 const BUILDINGS: { name: string; file: string; office: boolean }[] = [
   { name: "Atlas Command Center", file: "office", office: true },
-  { name: "Commerce Operations Center", file: "commerce", office: true },
-  { name: "Product Marketplace", file: "mall", office: false },
-  { name: "Growth & Marketing Studio", file: "agency", office: false },
+  { name: "Product & Growth Tower", file: "commerce", office: true },
+  { name: "Product & Growth Arcade", file: "mall", office: false },
+  { name: "Product & Growth Studio", file: "agency", office: false },
 ];
 
 for (const b of BUILDINGS)

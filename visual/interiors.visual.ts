@@ -41,7 +41,7 @@ test("project interiors: all floors, top-floor agents, lobby and exit",async({pa
 // Skyline until that district was removed (Khaneil, 2026-11-08).
 const BUSINESS="Atlas · Operations";
 /** The name the interior shows for it (catalog/workspace/buildings.yaml). */
-const BUSINESS_NAME="Observability Center";
+const BUSINESS_NAME="Security & Infrastructure Office";
 async function enterBusiness(page:import("@playwright/test").Page){
   await page.evaluate(async(b)=>{const m=await import("/src/views/office/store.ts" as string);m.enterBuilding(`skyline-business:${b}`,true);},BUSINESS);
 }
@@ -85,7 +85,7 @@ test("phone: floor navigation and exit stay accessible",async({page})=>{
 
 test("deep commerce building: full night cutaway stays framed and lit",async({page})=>{
   await openAtlas(page,{light:"night"});
-  await selectBuilding(page,"Commerce Operations Center");
+  await selectBuilding(page,"Product & Growth Tower");
   await page.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);await waitForOffice(page);
   await expect(page.getByRole("navigation",{name:"Building floor navigation"}).getByRole("button",{name:"All floors",exact:true})).toHaveAttribute("aria-pressed","true");
   await shot(page,"interior-commerce-night-all");
@@ -118,17 +118,11 @@ test("floor switching preserves the renderer in project and business buildings",
 });
 
 
-test("tool buildings show their purpose and workers before explicit entry",async({page})=>{
+// Tool offices left the map in #528: a building is one entity, so its tools have no nameplate or panel of their own.
+test("tool offices are part of their building, with no nameplate of their own",async({page})=>{
   await openAtlas(page,{storage:{mapProjectGrouping:"none"}});
-  await selectBuilding(page,"Commerce Operations Center");
-  const tool=page.locator(".m3-pill",{hasText:"Design Studio"}).first();
-  await tool.dispatchEvent("click");await settle(page,2);
+  await selectBuilding(page,"Product & Growth Tower");
   const inspector=page.getByRole("complementary",{name:"Inspector"});
-  await expect(inspector.getByRole("heading",{name:"Design Studio",exact:true})).toBeVisible();
-  await expect(inspector).toContainText("Purpose");
-  await expect(page.getByRole("region",{name:"Design Studio interior"})).toHaveCount(0);
-  await inspector.getByRole("button",{name:"Enter building",exact:true}).click();await settle(page,3);
-  await expect(page.getByRole("region",{name:"Design Studio interior"})).toBeVisible();
-  await page.getByRole("button",{name:"Exit Design Studio and return to city"}).click();await settle(page,2);
-  await expect(inspector.getByRole("heading",{name:"Design Studio",exact:true})).toBeVisible();
+  await expect(inspector.getByRole("heading",{name:"Product & Growth Tower",exact:true})).toBeVisible();
+  await expect(page.locator(".m3-pill",{hasText:"Design Studio"})).toHaveCount(0);
 });

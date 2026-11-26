@@ -85,7 +85,7 @@ for (const light of ["day", "night"] as const)
     if (!before) await expect.poll(async () => markers.count(), { timeout: 60_000 }).toBeGreaterThan(2);
     await shot(page, `1512-${light}-2-overview`);
     await everyoneIndoors(page);
-    if (!before) await expect(page.locator('.m3-occupancy[aria-label^="Team Events Arena:"]')).toHaveCount(1);
+    if (!before) await expect(page.locator('.m3-occupancy[aria-label^="Atlas Commons Arena:"]')).toHaveCount(1);
     await shot(page, `1512-${light}-2b-every-building`);
     await everyoneAtWork(page);
     if (before || light === "night") return;

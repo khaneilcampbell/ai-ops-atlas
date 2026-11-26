@@ -61,7 +61,7 @@ test("every building plaque shares one size, font, color and status dot", async 
   await zoomIn(page, 1);
   await shot(page, "overview-day");
   expectConsistent(await plaqueLooks(page));
-  for (const name of ["Financial District", "Product Marketplace", "Infrastructure Operations Hub", "Atlas Airport"]) {
+  for (const name of ["Financial Operations Tower", "Product & Growth Arcade", "Security & Infrastructure Showroom", "Atlas Airport"]) {
     await selectBuilding(page, name);
     await waitForScene(page);
     await shot(page, `${name.toLowerCase().replace(/\s+/g, "-")}-day`);
@@ -75,7 +75,7 @@ test("plaques keep the same look at night", async ({ page }) => {
   await waitForScene(page);
   await zoomIn(page, 1);
   await shot(page, "overview-night");
-  await selectBuilding(page, "Financial District");
+  await selectBuilding(page, "Financial Operations Tower");
   await shot(page, "financial-district-night");
 });
 
@@ -85,7 +85,7 @@ test.describe("phone", () => {
     test.skip(!SHOT_DIR, "screenshots only");
     await openAtlas(page, { storage: { mapProjectGrouping: "none" } });
     await waitForScene(page);
-    await selectBuilding(page, "Financial District");
+    await selectBuilding(page, "Financial Operations Tower");
     await shot(page, "phone-financial");
   });
 });
